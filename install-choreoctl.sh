@@ -8,7 +8,7 @@
 # https://raw.githubusercontent.com/helm/helm/master/scripts/get-helm-3
 
 : ${BINARY_NAME:="choreoctl"}
-: ${PROJECT_NAME:="chorectl"} # if project name does not match binary name
+: ${PROJECT_NAME:="choreo"} # if project name does not match binary name
 : ${USE_SUDO:="true"}
 : ${USE_PKG:="false"} # default --use-pkg flag value. will use package installation by default unless the default is changed to false
 : ${VERIFY_CHECKSUM:="false"}
