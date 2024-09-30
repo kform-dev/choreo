@@ -1,0 +1,73 @@
+/*
+Copyright 2024 Nokia.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
+syntax = "proto3";
+
+package discoverypb;
+option go_package = "github.com/kform-dev/choreo/pkg/proto/discoverypb";
+
+service Discovery {
+    rpc Get (Get.Request) returns (Get.Response) {}
+    rpc Watch (Watch.Request) returns (stream Watch.Response) {}
+  }
+
+message APIResource {
+    string resource = 1; // this resource name (plural)
+    string group = 2;
+    string version = 3; 
+    string kind = 4; 
+    string listKind = 5; 
+    bool namespaced = 6; 
+    repeated string categories = 7; 
+}
+
+message Get {
+    message Request {
+        string branch = 1;
+        string ref = 2;
+    }
+
+    message Response {
+        repeated APIResource apiresources = 1;
+    }
+}
+
+message Watch {
+    message Request {
+        string branch = 1;
+        string ref = 2;
+        Options options = 3;
+    }
+
+    message Response {
+        APIResource apiResource = 1;
+        EventType eventType = 2;
+    }
+
+    enum EventType{
+        ERROR = 0;
+        ADDED = 1;
+        MODIFIED = 2;
+        DELETED = 3;
+        BOOKMARK = 4;
+    }  
+
+    message Options {
+        bool watch = 1 ; // indicate watch only, otherwise list and watch is used
+        string trace = 2;
+        string origin = 3; 
+    }
+}

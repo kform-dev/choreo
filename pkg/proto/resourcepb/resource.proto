@@ -1,0 +1,224 @@
+/*
+Copyright 2024 Nokia.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
+syntax = "proto3";
+
+package resourcepb;
+option go_package = "github.com/kform-dev/choreo/pkg/proto/resourcepb";
+
+service Resource {
+    rpc Get (Get.Request) returns (Get.Response) {}
+    rpc List (List.Request) returns (List.Response) {}
+    rpc Create (Create.Request) returns (Create.Response) {}
+    rpc Update (Update.Request) returns (Update.Response) {}
+    rpc Apply (Apply.Request) returns (Apply.Response) {}
+    rpc Delete (Delete.Request) returns (Delete.Response) {}
+    rpc Watch (Watch.Request) returns (stream Watch.Response) {}
+  }
+
+
+message Get {
+    message Request {
+        bytes object = 1; // the assumption is that a client generates the GVK, Name
+        Options options = 2;
+        
+    }
+
+    message Response {
+        bytes object = 1; // the retrieved data
+    }
+
+    message Options {
+        string branch = 1;
+        string ref = 2;
+        bool showManagedField = 3;
+        string trace = 4;
+        string origin = 5; 
+        //bool allowCreate = 1;
+        // -> resourceVersion is not needed for this simplified server
+    }
+}
+
+message List {
+    message Request {
+        bytes object = 1; // the assumption is that a client generates the GVK, Name, Namespace and/or Index
+        Options options = 2; 
+    }
+
+    message Response {
+        bytes object = 1; // the retrieved data with a list of items embedded
+    }
+
+    message Options {
+        string branch = 1;
+        string ref = 2;
+        ExpressionSelector exprSelector = 3;
+        bool showManagedField = 4;
+        string trace = 5;
+        string origin = 6; // name of the origin
+    }
+}
+
+message Create {
+    message Request {
+        bytes object = 1;
+        Options options = 2;
+    }
+
+    message Response {
+        bytes object = 1;
+    }
+
+    message Options {
+        string branch = 1;
+        bool dryRun = 2;
+        string trace = 3;
+        string origin = 4; 
+        //bool allowCreate = 1;
+    }
+}
+
+message Update {
+    message Request {
+        bytes object = 1;
+        Options options = 2;
+    }
+
+    message Response {
+        bytes object = 1;
+    }
+
+    message Options {
+        string branch = 1;
+        bool dryRun = 2;
+        string trace = 3;
+        string origin = 4; 
+        //bool allowCreate = 1;
+    }
+}
+
+message Apply {
+    message Request {
+        bytes object = 1;
+        Options options = 2;
+    }
+
+    message Response {
+        bytes object = 1;
+    }
+
+    message Options {
+        string branch = 1;
+        bool dryRun =2;
+        string fieldManager = 3;
+        bool force = 4;
+        string trace = 5;
+        string origin = 6; 
+    }
+}
+
+message Delete {
+    message Request {
+        bytes object = 1; // assumption is the client generates the proper message
+        Options options = 2; // options make sense for bulk delete
+    }
+
+    message Response {
+    }
+
+    message Options {
+        string branch = 1;
+        bool dryRun = 2;
+        ExpressionSelector exprSelector = 3;
+        string trace = 4;
+        string origin = 5; 
+    }
+}
+
+message Watch {
+    message Request {
+        string id = 1;
+        bytes object = 2; // assumption is the client generates the proper object with GVK, NS, Index, etc
+        Options options = 3;
+    }
+
+    message Response {
+        bytes object = 1;
+        EventType eventType = 2;
+
+    }
+
+    enum EventType{
+        ERROR = 0;
+        ADDED = 1;
+        MODIFIED = 2;
+        DELETED = 3;
+        BOOKMARK = 4;
+    }  
+
+    message Options {
+        string branch = 1;
+        string ref = 2;
+        bool watch = 3 ; // indicate watch only, otherwise list and watch is used
+        ExpressionSelector exprSelector = 4;
+        string trace = 5;
+        string origin = 6; 
+    }
+}
+
+// A expression selector is a query over a set of resources. The result of matchLabels and
+// matchExpressions are ANDed. 
+// An empty selector matches all objects. A null selector matches no objects.
+// +structType=atomic
+message ExpressionSelector {
+    // match is a map of {expression,value} pairs. A single {expression,value} in the match
+    // map is equivalent to an element of matchExpressions, whose expression field is "expression", the
+    // operator is "In", and the values array contains only "value". The requirements are ANDed.
+    // +optional
+    map<string, string> match = 1;
+  
+    // matchExpressions is a list of field selector requirements. The requirements are ANDed.
+    // +optional
+    repeated ExpressionSelectorRequirement matchExpressions = 2;
+}
+
+// A expression selector requirement is a selector that contains values, an expression, and an operator that
+// relates the expression and values.
+message ExpressionSelectorRequirement {
+    // expression is a cel expression
+    string expression = 1;
+  
+    // operator represents a expression's relationship to a set of values.
+    Operator operator = 2;
+  
+    // values is an array of string values. If the operator is In or NotIn,
+    // the values array must be non-empty. If the operator is Exists or DoesNotExist,
+    // the values array must be empty. 
+    // +optional
+    repeated string values = 3;
+}
+
+enum Operator{
+    Equals = 0;
+    DoubleEquals = 1;
+    NotEquals = 2;
+    In = 3;
+    NotIn = 4;
+    Exists = 5;
+    DoesNotExist = 6;
+    GreaterThan = 7;
+    LessThan = 8;
+}

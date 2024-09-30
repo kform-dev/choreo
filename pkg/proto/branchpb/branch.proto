@@ -1,0 +1,212 @@
+/*
+Copyright 2024 Nokia.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
+syntax = "proto3";
+
+package branchpb;
+option go_package = "github.com/kform-dev/choreo/pkg/proto/branchpb";
+
+service Branch {
+    rpc Get (Get.Request) returns (Get.Response) {}
+    rpc List (List.Request) returns (List.Response) {}
+    rpc Create (Create.Request) returns (Create.Response) {}
+    rpc Delete (Delete.Request) returns (Delete.Response) {}
+    rpc Merge (Merge.Request) returns (Merge.Response) {}
+    rpc Diff (Diff.Request) returns (Diff.Response) {}
+    rpc Stash (Stash.Request) returns (Stash.Response) {}
+    rpc Checkout (Checkout.Request) returns (Checkout.Response) {}
+    rpc StreamFiles (Get.Request) returns (stream Get.File) {}
+    rpc Watch (Watch.Request) returns (stream Watch.Response) {}
+  }
+
+message BranchObject {
+    string name = 1; 
+    bool checkedOut = 2;
+}
+
+message Get {
+    message Request {
+        string branch = 1; 
+        Options options = 2;
+    }
+
+    message Response {
+        BranchObject branchObj = 1;
+        repeated Log logs = 2;
+    }
+
+    message Log {
+        string commitHash = 1;
+        string authorName = 2;
+        string authorEmail = 3;
+        string date = 4;
+        string message = 5;
+    }
+
+    message File {
+        string name = 1;
+        string data = 2;
+    }
+
+    message Options {
+    }
+}
+
+message List {
+    message Request {
+        Options options = 2; 
+    }
+
+    message Response {
+        repeated BranchObject branchObjects = 1;
+    }
+
+    message Options {
+    }
+}
+
+message Create {
+    message Request {
+        string branch = 1;
+        Options options = 2;
+    }
+
+    message Response {
+    }
+
+    message Options {
+    }
+}
+
+message Delete {
+    message Request {
+        string branch = 1; 
+        Options options = 2; 
+    }
+
+    message Response {
+    }
+
+    message Options {
+    }
+}
+
+message Merge {
+    message Request {
+        string srcBranch = 1; 
+        string dstBranch = 2; 
+        Options options = 3; 
+    }
+
+    message Response {
+    }
+
+    message Options {
+    }
+}
+
+message Diff {
+    message Request {
+        string srcBranch = 1; 
+        string dstBranch = 2; 
+        Options options = 3; 
+    }
+
+    message Response {
+        repeated Diff diffs = 1;
+    }
+
+    message Diff {
+        string srcFileName = 1;
+        string dstFileName = 2;
+        FileAction Action = 3;
+    }
+
+    enum FileAction {
+        ADDED = 0;
+        MODIFIED = 1;
+        DELETED = 2;  
+    }
+
+    message Options {
+    }
+}
+
+message Stash {
+    message Request {
+        string branch = 1; 
+        Options options = 2; 
+    }
+
+    message Response {
+    }
+
+    message Options {
+    }
+}
+
+message Checkout {
+    message Request {
+        string branch = 1; 
+        Options options = 2; 
+    }
+
+    message Response {
+    }
+
+    message Options {
+    }
+}
+
+message Watch {
+    message Request {
+        string id = 1;
+        Options options = 2;
+    }
+
+    message Response {
+        BranchObject branchObj = 1;
+        EventType eventType = 2;
+    }
+
+    enum EventType{
+        ERROR = 0;
+        ADDED = 1;
+        MODIFIED = 2;
+        DELETED = 3;
+        BOOKMARK = 4;
+    }  
+
+    message Options {
+        bool watch = 1 ; // indicate watch only, otherwise list and watch is used
+        string trace = 2;
+        string origin = 3; 
+    }
+}
+
+//Done
+// create
+// delete
+
+// TODO
+// checkout -> we dont really need as this is a reference to the operation we perform
+// merge
+// get branch history
+// push -> to a remote repo
+// pull -> from a remote repo
+// diff source target
+// stash ??
+// rename a branch ???

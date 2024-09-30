@@ -1,0 +1,83 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.15.0
+  name: apiresources.choreo.kform.dev
+spec:
+  group: choreo.kform.dev
+  names:
+    kind: APIResources
+    listKind: APIResourcesList
+    plural: apiresources
+    singular: apiresources
+  scope: Namespaced
+  versions:
+  - name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: APIResources defines the APIResources API
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: APIResourcesSpec defines the desired state of Reconciler
+            properties:
+              groups:
+                description: Groups define the resources per group
+                items:
+                  properties:
+                    categories:
+                      description: Categories defines if the categories of the resource
+                      items:
+                        type: string
+                      type: array
+                    group:
+                      description: Group defines the group of the resource
+                      type: string
+                    kind:
+                      description: Kind defines the kind of the resource
+                      type: string
+                    listKind:
+                      description: ListKind defines the kind of the resource
+                      type: string
+                    namespaced:
+                      description: Namespaced defines if the resource is namespaced
+                      type: boolean
+                    resource:
+                      description: Resource defines name of the resourcce
+                      type: string
+                    version:
+                      description: Version defines the version of the resource
+                      type: string
+                  required:
+                  - group
+                  - kind
+                  - listKind
+                  - namespaced
+                  - resource
+                  - version
+                  type: object
+                type: array
+            required:
+            - groups
+            type: object
+        type: object
+    served: true
+    storage: true

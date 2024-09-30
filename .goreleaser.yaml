@@ -1,0 +1,63 @@
+version: 2
+
+before:
+  hooks:
+    - go mod tidy
+    - go mod download
+    #- go generate ./...
+
+builds:
+- id: choreoctl
+  main: cmd/choreoctl/main.go
+  env:
+    - CGO_ENABLED=0
+  ldflags:
+      - -s -w -X github.com/kform-dev/choreo/cmd/choreoctl/commands.version={{.Version}} -X github.com/kform-dev/choreo/cmd/choreoctl/commands.commit={{.ShortCommit}} -X github.com/kform-dev/choreo/cmd.choreoctl.commands.date={{.Date}}
+  goos:
+    - darwin
+    - linux
+    #- freebsd
+    #- openbsd
+    #- windows
+  goarch:
+    #- '386'
+    - amd64
+    #- arm
+    - arm64
+  ignore:
+    - goarch: arm
+      goos: windows
+    - goarch: arm64
+      goos: freebsd
+    - goarch: arm64
+      goos: windows
+    - goarch: arm64
+      goos: openbsd
+  mod_timestamp: '{{ .CommitTimestamp }}'
+checksum:
+  name_template: "{{ .ProjectName }}_checksums.txt"
+archives:
+- format: tar.gz
+  # this name template makes the OS and Arch compatible with the results of `uname`.
+  name_template: >-
+    {{ .ProjectName }}_
+    {{- replace .Version "v" "" }}_
+    {{- .Os }}_
+    {{- if eq .Arch "amd64" }}x86_64
+    {{- else if eq .Arch "386" }}i386
+    {{- else if eq .Arch "arm" }}armv7
+    {{- else if eq .Arch "arm64" }}aarch64
+    {{- else }}{{ .Arch }}{{ end }}
+  files:
+  - none*
+  # use zip for windows archives
+  format_overrides:
+  - goos: windows
+    format: zip
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"

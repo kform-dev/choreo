@@ -1,0 +1,257 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.15.0
+  name: reconcilers.choreo.kform.dev
+spec:
+  group: choreo.kform.dev
+  names:
+    categories:
+    - choreo
+    kind: Reconciler
+    listKind: ReconcilerList
+    plural: reconcilers
+    singular: reconciler
+  scope: Cluster
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .status.conditions[?(@.type=='Ready')].status
+      name: READY
+      type: string
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: Reconciler defines the Reconciler API
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: ReconcilerSpec defines the desired state of Reconciler
+            properties:
+              code:
+                additionalProperties:
+                  type: string
+                description: Code supporting the reconciler
+                type: object
+              for:
+                description: For defines the resource and business logic of the reconciler
+                  for this Reconciler.
+                properties:
+                  group:
+                    description: Group defines the group and version of the resource
+                    type: string
+                  kind:
+                    description: Kind defines the kind of the resource
+                    type: string
+                  selector:
+                    description: |-
+                      A selector to restrict the resources by their fields on which the pipeline is triggered
+                      Defaults to everything.
+                    properties:
+                      match:
+                        additionalProperties:
+                          type: string
+                        description: |-
+                          match is a map of {expression,value} pairs. A single {expression,value} in the match
+                          map is equivalent to an element of matchExpressions, whose expression field is "expression", the
+                          operator is "In", and the values array contains only "value". The requirements are ANDed.
+                        type: object
+                      matchExpressions:
+                        description: matchExpressions is a list of field selector
+                          requirements. The requirements are ANDed.
+                        items:
+                          description: |-
+                            A expression selector requirement is a selector that contains values, an expression, and an operator that
+                            relates the expression and values.
+                          properties:
+                            expression:
+                              description: expression is a cel expression
+                              type: string
+                            operator:
+                              description: operator represents a expression's relationship
+                                to a set of values.
+                              type: string
+                            values:
+                              description: |-
+                                values is an array of string values. If the operator is In or NotIn,
+                                the values array must be non-empty. If the operator is Exists or DoesNotExist,
+                                the values array must be empty.
+                              items:
+                                type: string
+                              type: array
+                          required:
+                          - expression
+                          - operator
+                          type: object
+                        type: array
+                    type: object
+                    x-kubernetes-map-type: atomic
+                  version:
+                    description: Version defines the version of the resource
+                    type: string
+                required:
+                - group
+                - kind
+                - version
+                type: object
+              owns:
+                description: |-
+                  Owns define the child resources this Reconciler generates as part of its business logic.
+                  The For resource of this Reconciler owns the derived child resources.
+                  The OwnerReferences are set by the internal reconciler logic. Changes to any of these resources
+                  will trigger the Reconciler reconciler
+                items:
+                  properties:
+                    group:
+                      description: Group defines the group and version of the resource
+                      type: string
+                    kind:
+                      description: Kind defines the kind of the resource
+                      type: string
+                    selector:
+                      description: |-
+                        A selector to restrict the resources by their fields on which the pipeline is triggered
+                        Defaults to everything.
+                      properties:
+                        match:
+                          additionalProperties:
+                            type: string
+                          description: |-
+                            match is a map of {expression,value} pairs. A single {expression,value} in the match
+                            map is equivalent to an element of matchExpressions, whose expression field is "expression", the
+                            operator is "In", and the values array contains only "value". The requirements are ANDed.
+                          type: object
+                        matchExpressions:
+                          description: matchExpressions is a list of field selector
+                            requirements. The requirements are ANDed.
+                          items:
+                            description: |-
+                              A expression selector requirement is a selector that contains values, an expression, and an operator that
+                              relates the expression and values.
+                            properties:
+                              expression:
+                                description: expression is a cel expression
+                                type: string
+                              operator:
+                                description: operator represents a expression's relationship
+                                  to a set of values.
+                                type: string
+                              values:
+                                description: |-
+                                  values is an array of string values. If the operator is In or NotIn,
+                                  the values array must be non-empty. If the operator is Exists or DoesNotExist,
+                                  the values array must be empty.
+                                items:
+                                  type: string
+                                type: array
+                            required:
+                            - expression
+                            - operator
+                            type: object
+                          type: array
+                      type: object
+                      x-kubernetes-map-type: atomic
+                    version:
+                      description: Version defines the version of the resource
+                      type: string
+                  required:
+                  - group
+                  - kind
+                  - version
+                  type: object
+                type: array
+              type:
+                description: Type defines the software technology this library contains
+                type: string
+              watches:
+                description: |-
+                  Watches defines the resources on which the main reconciler can be retriggered. The pipeline/business logic
+                  determines if the reconciler is to be retriggered.
+                items:
+                  properties:
+                    group:
+                      description: Group defines the group and version of the resource
+                      type: string
+                    kind:
+                      description: Kind defines the kind of the resource
+                      type: string
+                    selector:
+                      description: |-
+                        A selector to restrict the resources by their fields on which the pipeline is triggered
+                        Defaults to everything.
+                      properties:
+                        match:
+                          additionalProperties:
+                            type: string
+                          description: |-
+                            match is a map of {expression,value} pairs. A single {expression,value} in the match
+                            map is equivalent to an element of matchExpressions, whose expression field is "expression", the
+                            operator is "In", and the values array contains only "value". The requirements are ANDed.
+                          type: object
+                        matchExpressions:
+                          description: matchExpressions is a list of field selector
+                            requirements. The requirements are ANDed.
+                          items:
+                            description: |-
+                              A expression selector requirement is a selector that contains values, an expression, and an operator that
+                              relates the expression and values.
+                            properties:
+                              expression:
+                                description: expression is a cel expression
+                                type: string
+                              operator:
+                                description: operator represents a expression's relationship
+                                  to a set of values.
+                                type: string
+                              values:
+                                description: |-
+                                  values is an array of string values. If the operator is In or NotIn,
+                                  the values array must be non-empty. If the operator is Exists or DoesNotExist,
+                                  the values array must be empty.
+                                items:
+                                  type: string
+                                type: array
+                            required:
+                            - expression
+                            - operator
+                            type: object
+                          type: array
+                      type: object
+                      x-kubernetes-map-type: atomic
+                    version:
+                      description: Version defines the version of the resource
+                      type: string
+                  required:
+                  - group
+                  - kind
+                  - version
+                  type: object
+                type: array
+            required:
+            - for
+            type: object
+          status:
+            description: ReconcilerStatus defines the observed state of Reconciler
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
