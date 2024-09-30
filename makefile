@@ -37,7 +37,6 @@ vet: ## Run go vet against code.
 
 .PHONY: all
 all: fmt vet ## Build manager binary.
-	go build -ldflags "-X github.com/kform-dev/choreo/cmd/choreo/commands.version=${GIT_COMMIT}" -o $(LOCALBIN)/choreo -v cmd/choreo/main.go
 	go build -ldflags "-X github.com/kform-dev/choreo/cmd/choreoctl/commands.version=${GIT_COMMIT}" -o $(LOCALBIN)/choreoctl -v cmd/choreoctl/main.go
 
 ##@ Build Dependencies
