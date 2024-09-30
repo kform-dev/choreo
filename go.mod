@@ -32,13 +32,13 @@ require (
 	golang.org/x/sync v0.8.0
 	google.golang.org/grpc v1.65.0
 	google.golang.org/protobuf v1.34.2
-	k8s.io/api v0.31.0-alpha.3
+	k8s.io/api v0.32.0-alpha.0
 	k8s.io/apiextensions-apiserver v0.30.2
-	k8s.io/apimachinery v0.31.0-alpha.3
+	k8s.io/apimachinery v0.32.0-alpha.0
 	k8s.io/apiserver v0.31.0-alpha.3
-	k8s.io/client-go v0.31.0-alpha.3
+	k8s.io/client-go v0.32.0-alpha.0
 	k8s.io/kube-openapi v0.0.0-20240620174524-b456828f718b
-	k8s.io/utils v0.0.0-20240502163921-fe8a2dddb1d0
+	k8s.io/utils v0.0.0-20240711033017-18e509b52bc8
 	sigs.k8s.io/controller-runtime v0.18.4
 	sigs.k8s.io/kustomize/kyaml v0.17.2
 	sigs.k8s.io/structured-merge-diff/v4 v4.4.1
