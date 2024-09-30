@@ -1,7 +1,6 @@
 module github.com/kform-dev/choreo
 
 go 1.22.2
-
 //replace github.com/kform-dev/kform => ../kform
 
 //replace github.com/henderiw/store => /Users/henderiw/code/tmp/store
@@ -40,7 +39,7 @@ require (
 	k8s.io/kube-openapi v0.0.0-20240620174524-b456828f718b
 	k8s.io/utils v0.0.0-20240502163921-fe8a2dddb1d0
 	sigs.k8s.io/controller-runtime v0.18.4
-	sigs.k8s.io/kustomize/kyaml v0.17.2
+	sigs.k8s.io/kustomize/kyaml v0.18.0
 	sigs.k8s.io/structured-merge-diff/v4 v4.4.1
 	sigs.k8s.io/yaml v1.4.0
 )
