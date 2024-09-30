@@ -9,6 +9,7 @@ before:
 builds:
 - id: choreoctl
   main: cmd/choreoctl/main.go
+  binary: choreoctl
   env:
     - CGO_ENABLED=0
   ldflags:
