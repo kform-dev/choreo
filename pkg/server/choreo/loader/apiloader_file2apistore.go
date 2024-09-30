@@ -70,7 +70,6 @@ func (r *APILoaderFile2APIStoreAndAPI) Load(ctx context.Context) error {
 	*/
 
 	abspath := filepath.Join(r.RepoPath, r.PathInRepo, *r.Flags.CRDPath)
-	fmt.Println(abspath)
 	if err := r.loadAPIs(ctx, crdloader.GetFileAPICRDReader(abspath)); err != nil {
 		errm = errors.Join(errm, fmt.Errorf("cannot load api file in repo, err: %v", err))
 	}

@@ -18,7 +18,6 @@ package registry
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/henderiw/logger/log"
 	"github.com/kform-dev/choreo/pkg/server/apiserver/rest"
@@ -59,14 +58,8 @@ func (r *storage) Apply(ctx context.Context, new runtime.Unstructured, opts ...r
 		// this ensures the fieldmanager does not add the before-first-apply manager as the operation
 
 		empty := object.Empty(new)
-		fmt.Println("apply fieldmanager", o.FieldManager)
-		//fmt.Println("apply old", empty)
-		//fmt.Println("apply new", new)
-		fmt.Println("apply old", empty.GetObjectKind().GroupVersionKind())
-		fmt.Println("apply new", new.GetObjectKind().GroupVersionKind())
 		obj, err := r.fieldManager.Apply(empty, new, o.FieldManager, o.Force)
 		if err != nil {
-			fmt.Println("apply failed", err)
 			return nil, status.Errorf(codes.InvalidArgument, "fieldmanager apply failed err: %s", err.Error())
 		}
 		uobj, ok := obj.(runtime.Unstructured)
