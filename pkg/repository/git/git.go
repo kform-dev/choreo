@@ -24,6 +24,7 @@ import (
 	"path/filepath"
 
 	"github.com/go-git/go-git/v5"
+	"github.com/go-git/go-git/v5/config"
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/go-git/go-git/v5/plumbing/object"
 	"github.com/go-git/go-git/v5/plumbing/transport"
@@ -64,7 +65,7 @@ func Open(ctx context.Context, path string, url, refName string) (*git.Repositor
 	repo, err := git.PlainOpen(path)
 	if err == git.ErrRepositoryNotExists {
 		// Repository does not exist, perform a clone of a specific commit
-		repo, err := cloneAll(ctx, path, url, refName)
+		repo, err := cloneAll(ctx, path, url)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -79,11 +80,11 @@ func Open(ctx context.Context, path string, url, refName string) (*git.Repositor
 	}
 
 	// Repository exists, check if the specific commit is available
+	// if so return; if not fetch latest updates and check if commit exists.
 	commit, err := ResolveToCommit(repo, refName)
 	if err != nil {
 		// Commit is not present, fetch it
-		repo, err := cloneAll(ctx, path, url, refName)
-		if err != nil {
+		if err := fetchUpdates(ctx, repo, url); err != nil {
 			return nil, nil, err
 		}
 		commit, err := ResolveToCommit(repo, refName)
@@ -97,7 +98,7 @@ func Open(ctx context.Context, path string, url, refName string) (*git.Repositor
 	return repo, commit, nil
 }
 
-func cloneAll(ctx context.Context, path, url, refName string) (*git.Repository, error) {
+func cloneAll(ctx context.Context, path, url string) (*git.Repository, error) {
 	log := log.FromContext(ctx)
 	// Cloning the repository, initially only specifying a branch or tag
 	co := &git.CloneOptions{
@@ -113,14 +114,35 @@ func cloneAll(ctx context.Context, path, url, refName string) (*git.Repository, 
 		var err error
 		repo, err = git.PlainClone(path, false, co)
 		if err != nil {
-			log.Error("Failed to clone with specific commit", "error", err)
-			return fmt.Errorf("cannot clone repo with specific commit %s, err: %v", refName, err)
+			log.Error("Failed to clone with url", "url", url, "error", err)
+			return fmt.Errorf("cannot clone repo url %s, err: %v", url, err)
 		}
-		// Checkout the specific commit
-		//return checkoutRef(repo, refName)
 		return nil
 	})
 	return repo, err
+}
+
+func fetchUpdates(ctx context.Context, repo *git.Repository, url string) error {
+	log := log.FromContext(ctx)
+	// Fetch all branches and tags from the remote
+	fetchOptions := &git.FetchOptions{
+		RemoteURL: url,
+		RefSpecs: []config.RefSpec{
+			"+refs/heads/*:refs/remotes/origin/*",
+			"+refs/tags/*:refs/tags/*",
+		},
+		Tags: git.AllTags,
+	}
+	err := repo.Fetch(fetchOptions)
+	if err != nil {
+		if err == git.NoErrAlreadyUpToDate {
+			log.Info("Repository already up-to-date")
+			return nil
+		}
+		log.Error("Failed to fetch updates", "error", err)
+		return fmt.Errorf("failed to fetch updates: %v", err)
+	}
+	return nil
 }
 
 // CheckoutRef checks out a specific ref

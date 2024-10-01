@@ -35,7 +35,7 @@ var (
 
 const (
 	repoUrl     = "https://github.com/kform-dev/choreo"
-	downloadURL = "https://github.com/kform-dev/choreo/raw/main/install.sh"
+	downloadURL = "https://github.com/kform-dev/choreo/raw/main/install-choreoctl.sh"
 )
 
 func GetVersionCommand(ctx context.Context) *cobra.Command {
