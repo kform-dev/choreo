@@ -42,7 +42,7 @@ func NewMainChoreoInstance(ctx context.Context, path string, flags *genericcliop
 		// the path is relative within the repo
 		pathInRepo = strings.TrimPrefix(path, repoPath+"/")
 	}
-	repo, err := repogit.New(ctx, repoPath, "")
+	repo, err := repogit.NewLocalRepo(ctx, repoPath)
 	if err != nil {
 		return nil, err
 	}

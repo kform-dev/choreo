@@ -20,7 +20,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io/fs"
 	"os"
 	"path/filepath"
 
@@ -54,7 +53,7 @@ func IsGitRepo(path string) bool {
 }
 
 // Open open the git repo and either clones or fecthes the remote info
-func Open(ctx context.Context, path string, url string) (*git.Repository, error) {
+func Open(ctx context.Context, path string, url, refName string) (*git.Repository, *object.Commit, error) {
 	cleanup := ""
 	defer func() {
 		if cleanup != "" {
@@ -62,26 +61,91 @@ func Open(ctx context.Context, path string, url string) (*git.Repository, error)
 		}
 	}()
 
-	if fi, err := os.Stat(path); errors.Is(err, fs.ErrNotExist) {
-		repo, err := cloneNonExisting(ctx, path, url)
+	repo, err := git.PlainOpen(path)
+	if err == git.ErrRepositoryNotExists {
+		// Repository does not exist, perform a clone of a specific commit
+		repo, err := cloneAll(ctx, path, url, refName)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
+		}
+		commit, err := ResolveToCommit(repo, refName)
+		if err != nil {
+			return nil, nil, err
 		}
 		cleanup = ""
-		return repo, nil
-	} else if fi.IsDir() {
-		repo, err := cloneExisting(ctx, path, url)
-		if err != nil {
-			return nil, err
-		}
-		cleanup = ""
-		return repo, nil
+		return repo, commit, nil
+	} else if err != nil {
+		return nil, nil, fmt.Errorf("failed to open existing repo: %v", err)
 	}
-	return nil, fmt.Errorf("path %s is not a directory", path)
 
+	// Repository exists, check if the specific commit is available
+	commit, err := ResolveToCommit(repo, refName)
+	if err != nil {
+		// Commit is not present, fetch it
+		repo, err := cloneAll(ctx, path, url, refName)
+		if err != nil {
+			return nil, nil, err
+		}
+		commit, err := ResolveToCommit(repo, refName)
+		if err != nil {
+			return nil, nil, err
+		}
+		cleanup = ""
+		return repo, commit, nil
+	}
+	// Commit is already present
+	return repo, commit, nil
 }
 
-func cloneNonExisting(ctx context.Context, path, url string) (*git.Repository, error) {
+func cloneAll(ctx context.Context, path, url, refName string) (*git.Repository, error) {
+	log := log.FromContext(ctx)
+	// Cloning the repository, initially only specifying a branch or tag
+	co := &git.CloneOptions{
+		URL:          url,
+		Depth:        0,
+		SingleBranch: false,
+		Tags:         git.AllTags,
+	}
+
+	var repo *git.Repository
+	err := doGitWithAuth(ctx, func(auth transport.AuthMethod) error {
+		co.Auth = auth
+		var err error
+		repo, err = git.PlainClone(path, false, co)
+		if err != nil {
+			log.Error("Failed to clone with specific commit", "error", err)
+			return fmt.Errorf("cannot clone repo with specific commit %s, err: %v", refName, err)
+		}
+		// Checkout the specific commit
+		//return checkoutRef(repo, refName)
+		return nil
+	})
+	return repo, err
+}
+
+// CheckoutRef checks out a specific ref
+func CheckoutRef(repo *git.Repository, refName string) error {
+	wt, err := repo.Worktree()
+	if err != nil {
+		return fmt.Errorf("cannot get worktree: %v", err)
+	}
+
+	fmt.Println("refName", refName)
+	hash, err := GetHash(repo, refName)
+	if err != nil {
+		return fmt.Errorf("cannot get hash: %v", err)
+	}
+	fmt.Println("refName", hash.String())
+	err = wt.Checkout(&git.CheckoutOptions{
+		Hash: *hash,
+	})
+	if err != nil {
+		return fmt.Errorf("cannot checkout commit %s, err: %v", refName, err)
+	}
+	return nil
+}
+
+func CloneNonExisting(ctx context.Context, path, url string) (*git.Repository, error) {
 	var err error
 	var repo *git.Repository
 	// init clone options
@@ -104,7 +168,7 @@ func cloneNonExisting(ctx context.Context, path, url string) (*git.Repository, e
 	return repo, nil
 }
 
-func cloneExisting(ctx context.Context, path, url string) (*git.Repository, error) {
+func CloneExisting(_ context.Context, path, _ string) (*git.Repository, error) {
 	repo, err := git.PlainOpen(path)
 	if err != nil {
 		return nil, fmt.Errorf("cannot open repo: %s", err)
@@ -181,6 +245,29 @@ func doGitWithAuth(ctx context.Context, op func(transport.AuthMethod) error) err
 func getAuthMethod(_ context.Context, _ bool) (transport.AuthMethod, error) {
 	// If no secret is provided, we try without any auth.
 	return nil, nil
+}
+
+// resolveToCommit takes a repository and a reference name (tag or commit hash) and resolves it to a commit object
+func GetHash(repo *git.Repository, refName string) (*plumbing.Hash, error) {
+	// Check if the refName is a hash directly
+	hash, err := repo.ResolveRevision(plumbing.Revision(refName))
+	if err == nil {
+		// It's a direct hash or a lightweight tag
+		return hash, nil
+	}
+
+	// Resolve reference, could be an annotated tag
+	ref, err := repo.Reference(plumbing.ReferenceName(refName), true)
+	if err != nil {
+		return nil, fmt.Errorf("could not resolve reference: %v", err)
+	}
+
+	// Check if the reference is a tag object (annotated tag)
+	if ref.Type() == plumbing.HashReference {
+		hash := ref.Hash()
+		return &hash, nil
+	}
+	return nil, fmt.Errorf("cannot find hash for refName %s", refName)
 }
 
 // resolveToCommit takes a repository and a reference name (tag or commit hash) and resolves it to a commit object

@@ -37,40 +37,33 @@ import (
 	lgit "github.com/kform-dev/choreo/pkg/repository/git"
 )
 
-func New(ctx context.Context, repopath, url string) (repository.Repository, error) {
-	var err error
-	var gitrepo *git.Repository
-	if url != "" {
-		if !Exists(repopath) {
-			gitrepo, err = lgit.Open(ctx, repopath, url)
-			if err != nil {
-				return nil, err
-			}
-		}
+func NewLocalRepo(ctx context.Context, repopath string) (repository.Repository, error) {
+	gitrepo, err := git.PlainOpen(repopath)
+	if err != nil {
+		return nil, err
 	}
-	if gitrepo == nil {
-		gitrepo, err = git.PlainOpen(repopath)
-		if err != nil {
-			return nil, err
-		}
-	}
-
 	return &repo{
 		repopath: repopath,
 		repo:     gitrepo,
 	}, nil
 }
 
+func NewUpstreamRepo(ctx context.Context, repopath, url, commitHash string) (repository.Repository, *object.Commit, error) {
+	gitrepo, commit, err := lgit.Open(ctx, repopath, url, commitHash)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return &repo{
+		repopath: repopath,
+		repo:     gitrepo,
+	}, commit, nil
+}
+
 type repo struct {
 	repo     *git.Repository
 	repopath string
 }
-
-/*
-func (r *repo) AddResourceClient(client resourceclient.Client) {
-	r.client = client
-}
-*/
 
 func (r *repo) GetPath() string {
 	return r.repopath

@@ -29,7 +29,6 @@ import (
 	"github.com/kform-dev/choreo/pkg/cli/genericclioptions"
 	"github.com/kform-dev/choreo/pkg/client/go/resourceclient"
 	"github.com/kform-dev/choreo/pkg/repository"
-	"github.com/kform-dev/choreo/pkg/repository/git"
 	"github.com/kform-dev/choreo/pkg/repository/repogit"
 	uobject "github.com/kform-dev/choreo/pkg/util/object"
 	"github.com/kform-dev/kform/pkg/fsys"
@@ -95,29 +94,29 @@ func (r *UpstreamLoader) Load(ctx context.Context) error {
 		replace := strings.NewReplacer("/", "-", ":", "-")
 		childRepoPath := filepath.Join(r.TempDir, replace.Replace(url))
 
-		repo, err := repogit.New(ctx, childRepoPath, url)
+		refName := upstreamRef.GetPlumbingReference()
+
+		repo, commit, err := repogit.NewUpstreamRepo(ctx, childRepoPath, url, refName)
 		if err != nil {
 			errm = errors.Join(errm, fmt.Errorf("cannot open repo %s, err: %v", url, err))
 			return
 		}
 
-		refName := upstreamRef.Spec.Ref.Name
-		if upstreamRef.Spec.Ref.Type == choreov1alpha1.RefType_Tag {
-			refName = git.TagName(refName).TagInLocal().String()
-		}
+		/*
+			refName := upstreamRef.Spec.Ref.Name
+			if upstreamRef.Spec.Ref.Type == choreov1alpha1.RefType_Tag {
+				refName = git.TagName(refName).TagInLocal().String()
+			}
 
-		pathInRepo := "."
-		if upstreamRef.Spec.Directory != nil {
-			pathInRepo = *upstreamRef.Spec.Directory
-		}
 
-		commit, err := repo.GetRefCommit(refName)
-		if err != nil {
-			errm = errors.Join(errm, fmt.Errorf("cannot get commit %s from repo %s, err: %v", refName, url, err))
-			return
-		}
+			commit, err := repo.GetRefCommit(refName)
+			if err != nil {
+				errm = errors.Join(errm, fmt.Errorf("cannot get commit %s from repo %s, err: %v", refName, url, err))
+				return
+			}
+		*/
 
-		if err := r.CallbackFn(ctx, repo, pathInRepo, r.Flags, commit, upstreamRef.LoaderAnnotation().String()); err != nil {
+		if err := r.CallbackFn(ctx, repo, upstreamRef.GetPathInRepo(), r.Flags, commit, upstreamRef.LoaderAnnotation().String()); err != nil {
 			errm = errors.Join(errm, fmt.Errorf("callback failed for %s from repo %s, err: %v", refName, url, err))
 			return
 		}

@@ -16,10 +16,28 @@ limitations under the License.
 
 package v1alpha1
 
+import "github.com/kform-dev/choreo/pkg/repository/git"
+
 func (r *UpstreamRef) LoaderAnnotation() LoaderAnnotation {
 	return LoaderAnnotation{
 		Kind: "Upstream",
 		URL:  r.Spec.URL,
 		Ref:  r.Spec.Ref.Name,
 	}
+}
+
+func (r *UpstreamRef) GetPlumbingReference() string {
+	refName := r.Spec.Ref.Name
+	if r.Spec.Ref.Type == RefType_Tag {
+		refName = git.TagName(refName).TagInLocal().String()
+	}
+	return refName
+}
+
+func (r *UpstreamRef) GetPathInRepo() string {
+	pathInRepo := "."
+	if r.Spec.Directory != nil {
+		pathInRepo = *r.Spec.Directory
+	}
+	return pathInRepo
 }
