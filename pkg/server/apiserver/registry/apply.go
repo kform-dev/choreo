@@ -87,7 +87,6 @@ func (r *storage) Apply(ctx context.Context, new runtime.Unstructured, opts ...r
 	if !ok {
 		return nil, status.Errorf(codes.Internal, "fieldmanager does not return an unstructured object")
 	}
-	//fmt.Println("update apply", new)
 
 	return r.update(ctx, new, old, &rest.UpdateOptions{DryRun: o.DryRun})
 }

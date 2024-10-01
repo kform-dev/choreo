@@ -19,7 +19,6 @@ package loader
 import (
 	"context"
 	"errors"
-	"fmt"
 	"path/filepath"
 
 	"github.com/henderiw/store"
@@ -76,7 +75,6 @@ type InputLoader struct {
 }
 
 func (r *InputLoader) Load(ctx context.Context, reader pkgio.Reader[*yaml.RNode]) error {
-	fmt.Println("input loader", reader)
 	if reader == nil {
 		// reader nil, mean the path does not exist, whcich is ok
 		return nil
@@ -88,8 +86,6 @@ func (r *InputLoader) Load(ctx context.Context, reader pkgio.Reader[*yaml.RNode]
 
 	var errm error
 	datastore.List(func(k store.Key, rn *yaml.RNode) {
-		fmt.Println("input loader", rn.GetKind(), rn.GetName())
-
 		a := rn.GetAnnotations()
 		if len(a) == 0 {
 			a = map[string]string{}
