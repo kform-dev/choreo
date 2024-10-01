@@ -87,6 +87,9 @@ func Open(ctx context.Context, path string, url, refName string) (*git.Repositor
 		if err := fetchUpdates(ctx, repo, url); err != nil {
 			return nil, nil, err
 		}
+		if err := resetToRemoteHead(ctx, repo, "origin/main"); err != nil {
+            return nil, nil, err
+        }
 		commit, err := ResolveToCommit(repo, refName)
 		if err != nil {
 			return nil, nil, err
@@ -144,6 +147,29 @@ func fetchUpdates(ctx context.Context, repo *git.Repository, url string) error {
 	}
 	return nil
 }
+
+func resetToRemoteHead(ctx context.Context, repo *git.Repository, branch string) error {
+    log := log.FromContext(ctx)
+    ref, err := repo.Reference(plumbing.ReferenceName(branch), true)
+    if err != nil {
+        log.Error("Failed to get reference", "branch", branch, "error", err)
+        return fmt.Errorf("failed to get reference for branch %s: %v", branch, err)
+    }
+    wt, err := repo.Worktree()
+    if err != nil {
+        log.Error("Failed to get worktree", "error", err)
+        return fmt.Errorf("cannot get worktree: %v", err)
+    }
+    err = wt.Reset(&git.ResetOptions{
+        Mode:   git.HardReset,
+        Commit: ref.Hash(),
+    })
+    if err != nil {
+        log.Error("Failed to reset worktree", "error", err)
+        return fmt.Errorf("cannot reset worktree: %v", err)
+    }
+    return nil
+} 
 
 // CheckoutRef checks out a specific ref
 func CheckoutRef(repo *git.Repository, refName string) error {
