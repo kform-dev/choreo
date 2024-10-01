@@ -26,7 +26,7 @@ require (
 	go.starlark.net v0.0.0-20240705175910-70002002b310
 	go4.org/netipx v0.0.0-20231129151722-fdeea329fbba
 	golang.org/x/sync v0.8.0
-	google.golang.org/grpc v1.67.0
+	google.golang.org/grpc v1.67.1
 	google.golang.org/protobuf v1.34.2
 	k8s.io/api v0.32.0-alpha.0
 	k8s.io/apiextensions-apiserver v0.31.1
