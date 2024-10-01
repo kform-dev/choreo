@@ -84,7 +84,7 @@ func Open(ctx context.Context, path string, url, refName string) (*git.Repositor
 	commit, err := ResolveToCommit(repo, refName)
 	if err != nil {
 		// Commit is not present, fetch it
-		if err := fetchUpdates(ctx, repo, url); err != nil {
+		if err := fetchUpdates(ctx, repo); err != nil {
 			return nil, nil, err
 		}
 		commit, err := ResolveToCommit(repo, refName)
@@ -94,7 +94,7 @@ func Open(ctx context.Context, path string, url, refName string) (*git.Repositor
 		cleanup = ""
 		return repo, commit, nil
 	}
-	if err := resetToRemoteHead(ctx, repo, "origin/main"); err != nil {
+	if err := resetToRemoteHead(ctx, repo, MainBranch.BranchInRemote()); err != nil {
 		return nil, nil, err
 	}
 	// Commit is already present
@@ -125,11 +125,11 @@ func cloneAll(ctx context.Context, path, url string) (*git.Repository, error) {
 	return repo, err
 }
 
-func fetchUpdates(ctx context.Context, repo *git.Repository, url string) error {
+func fetchUpdates(ctx context.Context, repo *git.Repository) error {
 	log := log.FromContext(ctx)
 	// Fetch all branches and tags from the remote
 	fetchOptions := &git.FetchOptions{
-		RemoteURL: url,
+		RemoteName: OriginName,
 		RefSpecs: []config.RefSpec{
 			"+refs/heads/*:refs/remotes/origin/*",
 			"+refs/tags/*:refs/tags/*",
@@ -148,9 +148,9 @@ func fetchUpdates(ctx context.Context, repo *git.Repository, url string) error {
 	return nil
 }
 
-func resetToRemoteHead(ctx context.Context, repo *git.Repository, branch string) error {
+func resetToRemoteHead(ctx context.Context, repo *git.Repository, branch plumbing.ReferenceName) error {
 	log := log.FromContext(ctx)
-	ref, err := repo.Reference(plumbing.ReferenceName(branch), true)
+	ref, err := repo.Reference(branch, true)
 	if err != nil {
 		log.Error("Failed to get reference", "branch", branch, "error", err)
 		return fmt.Errorf("failed to get reference for branch %s: %v", branch, err)

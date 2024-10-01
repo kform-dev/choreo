@@ -95,8 +95,8 @@ func (r *CheckedOut) loadAPIFromUpstreamRefs(ctx context.Context, branchCtx *Bra
 			Client:       childChoreoInstance.GetAPIClient(),
 			APIStore:     apiStore,
 			InternalGVKs: childChoreoInstance.GetAPIStore().GetGVKSet(),
-			PathInRepo:   childChoreoInstance.GetPathInRepo(), // required for the commit read
-			DBPath:       childChoreoInstance.GetDBPath(),
+			PathInRepo:   r.Choreo.mainChoreoInstance.GetPathInRepo(), // required for the commit read
+			DBPath:       r.Choreo.mainChoreoInstance.GetDBPath(),
 		}
 		if err := loader.Load(ctx, childChoreoInstance.GetCommit()); err != nil {
 			return err
