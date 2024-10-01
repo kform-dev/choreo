@@ -13,7 +13,7 @@ builds:
   env:
     - CGO_ENABLED=0
   ldflags:
-      - -s -w -X github.com/kform-dev/choreo/cmd/choreoctl/commands.version={{.Version}} -X github.com/kform-dev/choreo/cmd/choreoctl/commands.commit={{.ShortCommit}} -X github.com/kform-dev/choreo/cmd.choreoctl.commands.date={{.Date}}
+      - -s -w -X github.com/kform-dev/choreo/cmd/choreoctl/commands.version={{.Version}} -X github.com/kform-dev/choreo/cmd/choreoctl/commands.commit={{.ShortCommit}} -X github.com/kform-dev/choreo/cmd/choreoctl/commands.date={{.Date}}
   goos:
     - darwin
     - linux
