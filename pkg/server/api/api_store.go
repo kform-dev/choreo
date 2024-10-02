@@ -18,6 +18,7 @@ package api
 
 import (
 	"context"
+	"sort"
 
 	"github.com/henderiw/store"
 	"github.com/henderiw/store/memory"
@@ -73,6 +74,11 @@ func (r *APIStore) GetAPIResources() []*discoverypb.APIResource {
 	r.List(func(k store.Key, rctx *ResourceContext) {
 		apiResources = append(apiResources, rctx.APIResource)
 	})
+
+	sort.Slice(apiResources, func(i, j int) bool {
+		return apiResources[i].Resource < apiResources[j].Resource
+	})
+
 	return apiResources
 }
 
