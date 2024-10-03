@@ -1,0 +1,14 @@
+apiVersion: device.network.kubenet.dev/v1alpha1
+kind: Interface
+metadata:
+  name: kubenet.region1.us-east.node1.0.0.system
+  namespace: default
+  uid: ba800ba4-5736-46d6-af6c-2c457534d266
+spec:
+  endpoint: 0
+  name: system
+  node: node1
+  partition: kubenet
+  port: 0
+  region: region1
+  site: us-east

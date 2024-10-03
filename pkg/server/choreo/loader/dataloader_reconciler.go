@@ -21,6 +21,7 @@ import (
 	"errors"
 	"fmt"
 	"path/filepath"
+	"strings"
 
 	"github.com/henderiw/store"
 	choreov1alpha1 "github.com/kform-dev/choreo/apis/choreo/v1alpha1"
@@ -78,67 +79,99 @@ func (r *ReconcilerLoader) Load(ctx context.Context, reader pkgio.Reader[[]byte]
 
 	// For starlark we have 2 files fro which the name before the extension match
 	// As such we keep a structure with the name, extension, byte
-	files := map[string]map[string][]byte{}
-	datastore.List(func(k store.Key, b []byte) {
-		path := k.Name
-		base := filepath.Base(path)
-		ext := filepath.Ext(path)
-		name := base[:len(base)-len(ext)]
-
-		if _, exists := files[name]; !exists {
-			files[name] = map[string][]byte{}
-		}
-		files[name][ext] = b
-	})
-
+	reconcilers := map[string]*choreov1alpha1.Reconciler{}
 	var errm error
-	for name, data := range files {
-		reconcilerType := getReconcilerType(data)
-		switch reconcilerType {
-		case choreov1alpha1.SoftwardTechnologyType_Starlark:
-			reconcilerConfig := &choreov1alpha1.Reconciler{}
-			if err := yaml.Unmarshal(data[".yaml"], reconcilerConfig); err != nil {
-				errm = errors.Join(errm, fmt.Errorf("invalid reconciler %s, err: %v", name, err))
-				continue
-			}
-			reconcilerConfig.SetName(name)
-			reconcilerConfig.Spec.Type = ptr.To(choreov1alpha1.SoftwardTechnologyType_Starlark)
-			reconcilerConfig.Spec.Code = map[string]string{
-				"reconciler.star": string(data[".star"]),
-			}
+	datastore.List(func(k store.Key, b []byte) {
+		if filepath.Ext(k.Name) == ".yaml" {
+			reconcilerName := strings.TrimSuffix(k.Name, ".yaml")
 
+			reconcilerConfig := &choreov1alpha1.Reconciler{}
+			if err := yaml.Unmarshal(b, reconcilerConfig); err != nil {
+				errm = errors.Join(errm, fmt.Errorf("invalid reconciler %s, err: %v", k.Name, err))
+				return
+			}
+			reconcilerConfig.SetName(reconcilerName)
+			reconcilerConfig.Spec.Code = map[string]string{}
 			reconcilerConfig.SetAnnotations(map[string]string{
 				choreov1alpha1.ChoreoLoaderOriginKey: choreov1alpha1.FileLoaderAnnotation.String(),
 			})
 
+			reconcilers[reconcilerName] = reconcilerConfig
+		}
+	})
+
+	datastore.List(func(k store.Key, b []byte) {
+		if filepath.Ext(k.Name) == ".yaml" {
+			return // we already loaded the yaml files
+		}
+		reconcilerName, err := getReconcilerName(reconcilers, k.Name)
+		if err != nil {
+			errm = errors.Join(errm, err)
+			return
+		}
+		reconcilerConfig := reconcilers[reconcilerName]
+
+		switch filepath.Ext(k.Name) {
+		case ".tpl":
+			if reconcilerConfig.Spec.Type != nil && *reconcilerConfig.Spec.Type != choreov1alpha1.SoftwardTechnologyType_GoTemplate {
+				errm = errors.Join(errm, fmt.Errorf("a given reconciler %s can only have 1 sw technology type got %s and %s", reconcilerName, (*reconcilerConfig.Spec.Type).String(), choreov1alpha1.SoftwardTechnologyType_GoTemplate.String()))
+				return
+			}
+			reconcilerConfig.Spec.Type = ptr.To(choreov1alpha1.SoftwardTechnologyType_GoTemplate)
+			if reconcilerConfig.Spec.Code == nil {
+				reconcilerConfig.Spec.Code = map[string]string{}
+			}
+			templateName := strings.TrimPrefix(k.Name, reconcilerName+".")
+			reconcilerConfig.Spec.Code[templateName] = string(b)
+
+		case ".star":
+			if reconcilerConfig.Spec.Type != nil {
+				errm = errors.Join(errm, fmt.Errorf("a starlark reconciler %s can only have 1 code file", reconcilerName))
+				return
+			}
+			reconcilerConfig.Spec.Type = ptr.To(choreov1alpha1.SoftwardTechnologyType_Starlark)
+			if reconcilerConfig.Spec.Code == nil {
+				reconcilerConfig.Spec.Code = map[string]string{}
+			}
+			reconcilerConfig.Spec.Code["reconciler.star"] = string(b)
+		}
+
+		reconcilers[reconcilerName] = reconcilerConfig
+	})
+
+	for _, reconcilerConfig := range reconcilers {
+		if reconcilerConfig.Spec.Type != nil {
+			r.NewReconcilers.Insert(reconcilerConfig.Name)
+
 			obj, err := object.GetUnstructructered(reconcilerConfig)
 			if err != nil {
-				errm = errors.Join(errm, fmt.Errorf("cannot unmarshal %s, err: %v", name, err))
+				errm = errors.Join(errm, fmt.Errorf("cannot unmarshal %s, err: %v", reconcilerConfig.Name, err))
 				continue
 			}
 
-			r.NewReconcilers.Insert(name)
+			r.NewReconcilers.Insert(reconcilerConfig.Name)
 			if err := r.Client.Apply(ctx, obj, &resourceclient.ApplyOptions{
 				Branch:       r.Branch,
 				FieldManager: ManagedFieldManagerInput,
 				Origin:       ManagedFieldManagerInput,
 			}); err != nil {
-				errm = errors.Join(errm, fmt.Errorf("invalid reconciler %s, err: %v", name, err))
+				errm = errors.Join(errm, fmt.Errorf("invalid reconciler %s, err: %v", reconcilerConfig.Name, err))
 				continue
 			}
 
-		default:
-			errm = errors.Join(errm, fmt.Errorf("invalid reconciler %s", name))
 		}
 	}
+
 	return errm
 }
 
-func getReconcilerType(data map[string][]byte) choreov1alpha1.SoftwardTechnologyType {
-	if _, exists := data[".star"]; exists {
-		return choreov1alpha1.SoftwardTechnologyType_Starlark
+func getReconcilerName(reconcilers map[string]*choreov1alpha1.Reconciler, filename string) (string, error) {
+	for reconcilerName := range reconcilers {
+		if strings.HasPrefix(filename, reconcilerName) {
+			return reconcilerName, nil
+		}
 	}
-	return choreov1alpha1.SoftwardTechnologyType_Kform
+	return "", fmt.Errorf("no reconciler config found for %s", filename)
 }
 
 func (r *ReconcilerLoader) Clean(ctx context.Context) error {

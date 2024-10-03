@@ -396,3 +396,27 @@ func EnsureDir(dirname string) error {
 	}
 	return nil
 }
+
+func SetFinalizer(u *unstructured.Unstructured, finalizerStr string) {
+	finalizers := u.GetFinalizers()
+	if len(finalizers) == 0 {
+		finalizers = []string{}
+	}
+	for _, finalizer := range finalizers {
+		if finalizer == finalizerStr {
+			return
+		}
+	}
+	finalizers = append(finalizers, finalizerStr)
+	u.SetFinalizers(finalizers)
+}
+
+func DeleteFinalizer(u *unstructured.Unstructured, finalizerStr string) {
+	finalizers := u.GetFinalizers()
+	for i, finalizer := range finalizers {
+		if finalizer == finalizerStr {
+			finalizers = append(finalizers[:i], finalizers[i+1:]...)
+			u.SetFinalizers(finalizers)
+		}
+	}
+}

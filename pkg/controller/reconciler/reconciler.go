@@ -29,6 +29,7 @@ import (
 	"github.com/kform-dev/choreo/pkg/controller/eventhandler"
 	"github.com/kform-dev/choreo/pkg/controller/informers"
 	"github.com/kform-dev/choreo/pkg/controller/reconcile"
+	"github.com/kform-dev/choreo/pkg/controller/reconciler/gotemplate"
 	"github.com/kform-dev/choreo/pkg/controller/reconciler/starlark"
 	"github.com/kform-dev/choreo/pkg/proto/runnerpb"
 	"github.com/kform-dev/choreo/pkg/server/selector"
@@ -60,10 +61,15 @@ func newReconciler(
 		resultCh:                resultCh,
 		branchName:              branchName,
 	}
+
 	r.createWorkQueue(ctx)
 	r.addEventHandlerToInformerFactory(reconcilerConfig.DeepCopy(), informerFactory)
 
-	r.typedReconcilerFn, _ = getTypeReconcilerFn(reconcilerConfig, libs, client, branchName)
+	var err error
+	r.typedReconcilerFn, err = getTypeReconcilerFn(reconcilerConfig, libs, client, branchName)
+	if err != nil {
+		panic(err)
+	}
 
 	// need to create a consumer
 	return r
@@ -296,14 +302,16 @@ func (r *reconciler) reconcileHandler(ctx context.Context, req types.NamespacedN
 	}
 }
 
-func getTypeReconcilerFn(reconcileConfig *choreov1alpha1.Reconciler, libs *unstructured.UnstructuredList, client resourceclient.Client, branch string) (reconcile.TypedReconcilerFn, error) {
-	if reconcileConfig.Spec.Type == nil {
-		return nil, fmt.Errorf("reconcilerTypenot specified for %s", reconcileConfig.GetName())
+func getTypeReconcilerFn(reconcilerConfig *choreov1alpha1.Reconciler, libs *unstructured.UnstructuredList, client resourceclient.Client, branch string) (reconcile.TypedReconcilerFn, error) {
+	if reconcilerConfig.Spec.Type == nil {
+		return nil, fmt.Errorf("reconcilerTypenot specified for %s", reconcilerConfig.GetName())
 	}
-	switch *reconcileConfig.Spec.Type {
+	switch *reconcilerConfig.Spec.Type {
 	case choreov1alpha1.SoftwardTechnologyType_Starlark:
-		return starlark.NewReconcilerFn(client, reconcileConfig, libs, branch), nil
+		return starlark.NewReconcilerFn(client, reconcilerConfig, libs, branch), nil
+	case choreov1alpha1.SoftwardTechnologyType_GoTemplate:
+		return gotemplate.NewReconcilerFn(client, reconcilerConfig, branch), nil
 	default:
-		return nil, fmt.Errorf("reconcilerType %s is unsupported", (*reconcileConfig.Spec.Type).String())
+		return nil, fmt.Errorf("reconcilerType %s is unsupported", (*reconcilerConfig.Spec.Type).String())
 	}
 }
