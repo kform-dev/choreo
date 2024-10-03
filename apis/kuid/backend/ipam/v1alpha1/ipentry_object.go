@@ -60,7 +60,7 @@ func GetIPEntry(ctx context.Context, k store.Key, prefix netip.Prefix, labels ma
 		PrefixType:    GetIPPrefixTypeFromString(labels[backend.KuidIPAMIPPrefixTypeKey]),
 		ClaimType:     GetIPClaimTypeFromString(labels[backend.KuidClaimTypeKey]),
 		Prefix:        pi.String(),
-		AddressFamily: ptr.To[iputil.AddressFamily](pi.GetAddressFamily()),
+		AddressFamily: ptr.To(pi.GetAddressFamily()),
 	}
 	if _, ok := labels[backend.KuidIPAMDefaultGatewayKey]; ok {
 		spec.DefaultGateway = ptr.To[bool](true)

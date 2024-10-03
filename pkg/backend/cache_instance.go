@@ -16,6 +16,8 @@ limitations under the License.
 
 package backend
 
+import "sync"
+
 // newCacheContext holds the cache instance context
 // with a status to indicate if it is initialized or not
 // initialized false: means it is NOT initialized,
@@ -28,14 +30,19 @@ func newCacheInstance[T1 any](i T1) *cacheInstance[T1] {
 }
 
 type cacheInstance[T1 any] struct {
+	m           sync.RWMutex
 	initialized bool
 	instance    T1
 }
 
-func (r *cacheInstance[T1]) Initialized() {
+func (r *cacheInstance[T1]) SetInitialized() {
+	r.m.Lock()
+	defer r.m.Unlock()
 	r.initialized = true
 }
 
 func (r *cacheInstance[T1]) IsInitialized() bool {
+	r.m.RLock()
+	defer r.m.RUnlock()
 	return r.initialized
 }

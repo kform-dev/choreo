@@ -57,7 +57,7 @@ func New(flags *genericclioptions.ConfigFlags, choreo choreo.Choreo) Runner {
 }
 
 type runner struct {
-	m      sync.Mutex
+	m      sync.RWMutex
 	status RunnerStatus
 	// added on new
 	flags  *genericclioptions.ConfigFlags
@@ -88,21 +88,17 @@ func (r *runner) AddContext(ctx context.Context) {
 }
 
 func (r *runner) Start(ctx context.Context, branch string) error {
-	r.m.Lock()
-	if r.status != RunnerStatus_Stopped {
-		r.m.Unlock()
+	if r.getStatus() != RunnerStatus_Stopped {
 		return fmt.Errorf("runner is already running, status %s", r.status.String())
 	}
 	if err := r.runValidate(ctx, branch); err != nil {
 		return err
 	}
 
-	r.status = RunnerStatus_Running
 	// we use the server context to cancel/handle the status of the server
 	// since the ctx we get is from the client
 	runctx, cancel := context.WithCancel(r.ctx)
-	r.cancel = cancel
-	r.m.Unlock()
+	r.setStatusAndCancel(RunnerStatus_Running, cancel)
 
 	go func() {
 		defer r.Stop()
@@ -118,9 +114,7 @@ func (r *runner) Start(ctx context.Context, branch string) error {
 }
 
 func (r *runner) RunOnce(ctx context.Context, branch string) (*runnerpb.Once_Response, error) {
-	r.m.Lock()
-	if r.status != RunnerStatus_Stopped {
-		r.m.Unlock()
+	if r.getStatus() != RunnerStatus_Stopped {
 		return nil, fmt.Errorf("runner is already running, status %s", r.status.String())
 	}
 
@@ -128,12 +122,10 @@ func (r *runner) RunOnce(ctx context.Context, branch string) (*runnerpb.Once_Res
 		return nil, err
 	}
 
-	r.status = RunnerStatus_Once
 	// we use the server context to cancel/handle the status of the server
 	// since the ctx we get is from the client
 	_, cancel := context.WithCancel(r.ctx)
-	r.cancel = cancel
-	r.m.Unlock()
+	r.setStatusAndCancel(RunnerStatus_Once, cancel)
 
 	defer r.Stop()
 
@@ -141,13 +133,10 @@ func (r *runner) RunOnce(ctx context.Context, branch string) (*runnerpb.Once_Res
 }
 
 func (r *runner) Stop() {
-	r.m.Lock()
-	defer r.m.Unlock()
-	if r.cancel != nil {
+	if r.getCancel() != nil {
 		r.cancel() // Cancel the context, which triggers stopping in the StartContinuous loop
-		r.cancel = nil
 	}
-	r.status = RunnerStatus_Stopped
+	r.setStatusAndCancel(RunnerStatus_Stopped, nil)
 	// don't nilify the other resources, since they will be reinitialized
 }
 
@@ -268,12 +257,29 @@ func (r *runner) runReconciler(ctx context.Context, branch string, once bool) (*
 		if !ok {
 			return nil, nil
 		}
-		fmt.Println("result", result)
 		return result, nil
 
 	case <-ctx.Done():
-		fmt.Println("runner context cancelled")
 		wg.Wait()
 		return nil, nil
 	}
+}
+
+func (r *runner) getStatus() RunnerStatus {
+	r.m.RLock()
+	defer r.m.RUnlock()
+	return r.status
+}
+
+func (r *runner) setStatusAndCancel(status RunnerStatus, cancel func()) {
+	r.m.Lock()
+	defer r.m.Unlock()
+	r.status = status
+	r.cancel = cancel
+}
+
+func (r *runner) getCancel() func() {
+	r.m.RLock()
+	defer r.m.RUnlock()
+	return r.cancel
 }

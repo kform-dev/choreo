@@ -46,6 +46,7 @@ func NewCommand(ctx context.Context, opts *options.ChoreoOptions) *cobra.Command
 	}
 	flags := cmd.PersistentFlags()
 	o.Flags().AddServerControllerFlags(flags)
+	o.Flags().AddClientFlags(flags)
 	flags.AddGoFlagSet(flag.CommandLine)
 
 	// flags are generically added

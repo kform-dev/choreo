@@ -18,6 +18,7 @@ package v1alpha1
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 
 	"github.com/henderiw/idxtable/pkg/tree/gtree"
@@ -102,6 +103,21 @@ func (r *IPIndex) GetStatus() (map[string]any, error) {
 	return status, nil
 }
 
+func (r *IPIndex) GetClaims() ([]*IPClaim, error) {
+	ipclaims := make([]*IPClaim, len(r.Spec.Prefixes))
+	var errm, err error
+	for i, prefix := range r.Spec.Prefixes {
+		ipclaims[i], err = r.GetClaim(prefix)
+		if err != nil {
+			errm = errors.Join(errm, err)
+		}
+	}
+	if errm != nil {
+		return nil, errm
+	}
+	return ipclaims, nil
+}
+
 func (r *IPIndex) GetClaim(prefix Prefix) (*IPClaim, error) {
 	pi, err := iputil.New(prefix.Prefix)
 	if err != nil {
@@ -111,7 +127,7 @@ func (r *IPIndex) GetClaim(prefix Prefix) (*IPClaim, error) {
 	return BuildIPClaim(
 		metav1.ObjectMeta{
 			Namespace: r.GetNamespace(),
-			Name:      pi.GetSubnetName(),
+			Name:      fmt.Sprintf("%s.%s", r.Name, pi.GetSubnetName()),
 			OwnerReferences: []metav1.OwnerReference{
 				{
 					APIVersion: r.APIVersion,
@@ -123,7 +139,7 @@ func (r *IPIndex) GetClaim(prefix Prefix) (*IPClaim, error) {
 		},
 		&IPClaimSpec{
 			Index:        r.Name,
-			PrefixType:   ptr.To(IPPrefixType_Aggregate),
+			PrefixType:   prefix.PrefixType,
 			Prefix:       ptr.To(prefix.Prefix),
 			PrefixLength: ptr.To(uint32(pi.GetPrefixLength())),
 			CreatePrefix: ptr.To(true),

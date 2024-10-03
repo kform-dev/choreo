@@ -75,6 +75,6 @@ func (r *cache[T1]) SetInitialized(ctx context.Context, k store.Key) error {
 	if err != nil {
 		return fmt.Errorf("index %s not initialized", k.String())
 	}
-	cacheInstance.Initialized()
+	cacheInstance.SetInitialized()
 	return nil
 }

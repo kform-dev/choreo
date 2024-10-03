@@ -488,7 +488,7 @@ func pruneList(objList []interface{}, nonManagedFields map[string]interface{}) [
 				}
 			case pe.Value != nil:
 				// Handle "v:" prefix for list items (values)
-				if fmt.Sprintf("%v", item) == value.ToString(*pe.Value) {
+				if fmt.Sprintf("%q", item) == value.ToString(*pe.Value) {
 					// Remove the item if it matches the managed value
 					objList = append(objList[:i], objList[i+1:]...)
 				}
@@ -533,6 +533,7 @@ func mergeFieldMaps(dest, src map[string]interface{}) {
 }
 
 func removeManagedFieldsFromUnstructured(obj runtime.Unstructured) {
+	log := log.FromContext(context.Background())
 	// Access the unstructured content
 	unstructuredContent := obj.UnstructuredContent()
 
@@ -548,11 +549,12 @@ func removeManagedFieldsFromUnstructured(obj runtime.Unstructured) {
 	// Set the updated metadata back to the unstructured content
 	err = unstructured.SetNestedMap(unstructuredContent, metadata, "metadata")
 	if err != nil {
-		fmt.Println("Error setting metadata:", err)
+		log.Error("error setting metadata", "error", err)
 	}
 }
 
 func removeResourceVersionAndGenerationFromUnstructured(obj runtime.Unstructured) {
+	log := log.FromContext(context.Background())
 	// Access the unstructured content
 	unstructuredContent := obj.UnstructuredContent()
 
@@ -569,7 +571,7 @@ func removeResourceVersionAndGenerationFromUnstructured(obj runtime.Unstructured
 	// Set the updated metadata back to the unstructured content
 	err = unstructured.SetNestedMap(unstructuredContent, metadata, "metadata")
 	if err != nil {
-		fmt.Println("Error setting metadata:", err)
+		log.Error("error setting metadata", "error", err)
 	}
 }
 
@@ -908,6 +910,7 @@ func isIPv4(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, 
 	if err != nil {
 		return nil, err
 	}
+
 	return starlark.Bool(pi.IsIpv4()), nil
 }
 
@@ -922,6 +925,7 @@ func isIPv6(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, 
 	if err != nil {
 		return nil, err
 	}
+
 	return starlark.Bool(pi.IsIpv6()), nil
 }
 

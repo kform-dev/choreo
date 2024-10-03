@@ -59,7 +59,7 @@ func (r *applicator) getRoutesByOwner(_ context.Context, claim *ipamv1alpha1.IPC
 
 	ribRoutes[""] = r.cacheInstanceCtx.rib.GetByLabel(ownerSelector)
 
-	// ranges and prefixes using network type can have multiple plrefixes
+	// ranges and prefixes using network type can have multiple prefixes
 	if claimSummaryType == ipamv1alpha1.IPClaimSummaryType_Range ||
 		(claimSummaryType == ipamv1alpha1.IPClaimSummaryType_Prefix && claimPrefixType == ipamv1alpha1.IPPrefixType_Network) {
 		// multiple routes can exist for this
@@ -85,30 +85,6 @@ func (r *applicator) getRoutesByOwner(_ context.Context, claim *ipamv1alpha1.IPC
 	}
 	return ribRoutes, nil
 }
-
-/*
-func (r *applicator) deleteNonClaimedRoutes(ctx context.Context, existingRoutes map[string]table.Routes, route *table.Route, reclaimTreeName string) error {
-	for ribName, existingRoutes := range existingRoutes {
-		for _, existingRoute := range existingRoutes {
-			// TODO need to check if we can avoid a prefix with multiple contributing routes
-			if route != nil && (*route).Prefix().String() == existingRoute.Prefix().String() && reclaimTreeName == ribName {
-				continue
-			}
-			if ribName == "" {
-				r.cacheInstanceCtx.rib.Delete(existingRoute)
-			} else {
-				k := store.ToKey(ribName)
-				if ipTable, err := r.cacheInstanceCtx.ranges.Get(ctx, k); err == nil {
-					if err := ipTable.Release(existingRoute.Prefix().Addr().String()); err != nil {
-						return err
-					}
-				}
-			}
-		}
-	}
-	return nil
-}
-*/
 
 // apply only works on the main rib
 func (r *applicator) apply(ctx context.Context, claim *ipamv1alpha1.IPClaim, pis []*iputil.Prefix, networkParent bool, parentLabels map[string]string) error {
@@ -248,14 +224,6 @@ func getRoutesFromClaim(_ context.Context, claim *ipamv1alpha1.IPClaim, pi *iput
 	claimName := claim.Name
 	claimKind := ipamv1alpha1.IPClaimKind
 	claimUID := claim.UID
-	for _, owner := range claim.GetOwnerReferences() {
-		if owner.APIVersion == ipamv1alpha1.SchemeGroupVersion.Identifier() &&
-			owner.Kind == ipamv1alpha1.IPIndexKind {
-			claimName = owner.Name
-			claimKind = owner.Kind
-			claimUID = owner.UID
-		}
-	}
 
 	// system defined labels
 	ipClaimType, _ := claim.GetIPClaimType()

@@ -29,10 +29,10 @@ import (
 	selectorv1alpha1 "github.com/kform-dev/choreo/apis/selector/v1alpha1"
 	"github.com/kform-dev/choreo/pkg/server/apiserver/rest"
 	"github.com/kform-dev/choreo/pkg/server/selector"
+	"github.com/kform-dev/choreo/pkg/util/object"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/apimachinery/pkg/util/sets"
 )
 
 func (r *be) restore(ctx context.Context, index *ipamv1alpha1.IPIndex) error {
@@ -51,35 +51,45 @@ func (r *be) restore(ctx context.Context, index *ipamv1alpha1.IPIndex) error {
 		return err
 	}
 
-	claimmap, err := r.listClaims(ctx, k)
+	claimmap, err := r.listClaims(ctx, map[string]string{
+		"spec.index": index.Name,
+	})
 	if err != nil {
 		return nil
 	}
 
-	prefixes := make(map[string]ipamv1alpha1.Prefix)
-	for _, prefix := range index.Spec.Prefixes {
-		prefixes[prefix.Prefix] = prefix
-	}
+	/*
+		prefixes := make(map[string]ipamv1alpha1.Prefix)
+		for _, prefix := range index.Spec.Prefixes {
+			prefixes[prefix.Prefix] = prefix
+		}
+	*/
 
-	if err := r.restoreIndexPrefixes(ctx, cacheInstanceCtx, curEntries, index, prefixes); err != nil {
+	/*
+		if err := r.restoreIndexPrefixes(ctx, cacheInstanceCtx, curEntries, index, prefixes); err != nil {
+			return err
+		}
+	*/
+	if err := r.restoreClaims(ctx, cacheInstanceCtx, curEntries, ipamv1alpha1.IPIndexKind, ipamv1alpha1.IPClaimType_StaticPrefix, claimmap); err != nil {
 		return err
 	}
-	if err := r.restoreClaims(ctx, cacheInstanceCtx, curEntries, ipamv1alpha1.IPClaimType_StaticPrefix, claimmap); err != nil {
+	if err := r.restoreClaims(ctx, cacheInstanceCtx, curEntries, ipamv1alpha1.IPClaimKind, ipamv1alpha1.IPClaimType_StaticPrefix, claimmap); err != nil {
 		return err
 	}
-	if err := r.restoreClaims(ctx, cacheInstanceCtx, curEntries, ipamv1alpha1.IPClaimType_StaticRange, claimmap); err != nil {
+	if err := r.restoreClaims(ctx, cacheInstanceCtx, curEntries, ipamv1alpha1.IPClaimKind, ipamv1alpha1.IPClaimType_StaticRange, claimmap); err != nil {
 		return err
 	}
-	if err := r.restoreClaims(ctx, cacheInstanceCtx, curEntries, ipamv1alpha1.IPClaimType_DynamicPrefix, claimmap); err != nil {
+	if err := r.restoreClaims(ctx, cacheInstanceCtx, curEntries, ipamv1alpha1.IPClaimKind, ipamv1alpha1.IPClaimType_DynamicPrefix, claimmap); err != nil {
 		return err
 	}
-	if err := r.restoreClaims(ctx, cacheInstanceCtx, curEntries, ipamv1alpha1.IPClaimType_StaticAddress, claimmap); err != nil {
+	if err := r.restoreClaims(ctx, cacheInstanceCtx, curEntries, ipamv1alpha1.IPClaimKind, ipamv1alpha1.IPClaimType_StaticAddress, claimmap); err != nil {
 		return err
 	}
-	if err := r.restoreClaims(ctx, cacheInstanceCtx, curEntries, ipamv1alpha1.IPClaimType_DynamicAddress, claimmap); err != nil {
+	if err := r.restoreClaims(ctx, cacheInstanceCtx, curEntries, ipamv1alpha1.IPClaimKind, ipamv1alpha1.IPClaimType_DynamicAddress, claimmap); err != nil {
 		return err
 	}
 	log.Debug("restore prefixes entries left", "items", len(curEntries))
+
 	return nil
 }
 
@@ -134,25 +144,6 @@ func (r *be) saveAll(ctx context.Context, k store.Key) error {
 		newu := &unstructured.Unstructured{
 			Object: uobj,
 		}
-		/*
-			if !found {
-				if _, err := r.entryStorage.Create(ctx, newu, &rest.CreateOptions{}); err != nil {
-					log.Error("saveAll create failed", "name", newEntry.GetName(), "error", err.Error())
-					return err
-				}
-				continue
-			}
-			olduobj, err := runtime.DefaultUnstructuredConverter.ToUnstructured(entry)
-			if err != nil {
-				return err
-			}
-			oldu := &unstructured.Unstructured{
-				Object: olduobj,
-			}
-
-			oldu.Object["spec"] = newu.Object["spec"]
-			log.Debug("save all ipEntry update", "ipEntry", entry.GetName())
-		*/
 
 		if _, err := r.entryStorage.Apply(ctx, newu, &rest.ApplyOptions{
 			FieldManager: "backend",
@@ -176,13 +167,6 @@ func (r *be) destroy(ctx context.Context, k store.Key) error {
 
 func (r *be) getEntriesFromCache(ctx context.Context, k store.Key) ([]*ipamv1alpha1.IPEntry, error) {
 	//log := log.FromContext(ctx).With("key", k.String())
-	/*
-		if !r.cache.IsInitialized(ctx, k) {
-			log.Error("cache index not initialized")
-			return nil, fmt.Errorf("cache index not initialized")
-		}
-	*/
-
 	cacheInstanceCtx, err := r.cache.Get(ctx, k)
 	if err != nil {
 		return nil, fmt.Errorf("cache index not initialized")
@@ -259,12 +243,10 @@ func (r *be) listEntries(ctx context.Context, k store.Key) ([]*ipamv1alpha1.IPEn
 	return entryList, nil
 }
 
-func (r *be) listClaims(ctx context.Context, k store.Key) (map[string]*ipamv1alpha1.IPClaim, error) {
+func (r *be) listClaims(ctx context.Context, match map[string]string) (map[string]*ipamv1alpha1.IPClaim, error) {
 	selector, err := selector.ExprSelectorAsSelector(
 		&selectorv1alpha1.ExpressionSelector{
-			Match: map[string]string{
-				"spec.index": k.Name,
-			},
+			Match: match,
 		},
 	)
 	if err != nil {
@@ -293,62 +275,12 @@ func (r *be) listClaims(ctx context.Context, k store.Key) (map[string]*ipamv1alp
 	return claimmap, nil
 }
 
-func (r *be) restoreIndexPrefixes(ctx context.Context, cacheInstanceCtx *CacheInstanceContext, entries []*ipamv1alpha1.IPEntry, index *ipamv1alpha1.IPIndex, prefixes map[string]ipamv1alpha1.Prefix) error {
-	//log := log.FromContext(ctx)
-	storedPrefixEntries := sets.New[string]()
+func (r *be) restoreClaims(ctx context.Context, cacheInstanceCtx *CacheInstanceContext, entries []*ipamv1alpha1.IPEntry, kind string, claimType ipamv1alpha1.IPClaimType, ipclaimmap map[string]*ipamv1alpha1.IPClaim) error {
 	for i := len(entries) - 1; i >= 0; i-- {
 		entry := entries[i]
 		for _, ownerref := range entry.GetOwnerReferences() {
 			if ownerref.APIVersion == ipamv1alpha1.SchemeGroupVersion.Identifier() &&
-				ownerref.Kind == ipamv1alpha1.IPClaimKind {
-				_, ok := prefixes[entry.Spec.Prefix]
-				if ok {
-					// remove the entry since it is processed
-					entries = append(entries[:i], entries[i+1:]...)
-					storedPrefixEntries.Insert(entry.Spec.Prefix)
-				}
-			}
-		}
-	}
-
-	for _, ipprefix := range prefixes {
-		claim, err := index.GetClaim(ipprefix)
-		if err != nil {
-			return nil
-		}
-		if err := r.restoreClaim(ctx, cacheInstanceCtx, claim); err != nil {
-			return err
-		}
-	}
-
-	// At init when there is no entries initialized this allows to store the entries in the database
-	if storedPrefixEntries.Len() == 0 {
-		entries, err := r.getEntriesFromCache(ctx, index.GetKey())
-		if err != nil {
-			return err
-		}
-		for _, entry := range entries {
-			uobj, err := runtime.DefaultUnstructuredConverter.ToUnstructured(entry)
-			if err != nil {
-				return err
-			}
-			u := &unstructured.Unstructured{
-				Object: uobj,
-			}
-			if _, err := r.entryStorage.Apply(ctx, u, &rest.ApplyOptions{FieldManager: "backend"}); err != nil {
-				return err
-			}
-		}
-	}
-	return nil
-}
-
-func (r *be) restoreClaims(ctx context.Context, cacheInstanceCtx *CacheInstanceContext, entries []*ipamv1alpha1.IPEntry, claimType ipamv1alpha1.IPClaimType, ipclaimmap map[string]*ipamv1alpha1.IPClaim) error {
-	for i := len(entries) - 1; i >= 0; i-- {
-		entry := entries[i]
-		for _, ownerref := range entry.GetOwnerReferences() {
-			if ownerref.APIVersion == ipamv1alpha1.SchemeGroupVersion.Identifier() &&
-				ownerref.Kind == ipamv1alpha1.IPClaimKind {
+				ownerref.Kind == kind {
 				if claimType == entry.Spec.ClaimType {
 					nsn := types.NamespacedName{Namespace: entry.GetNamespace(), Name: ownerref.Name}
 					claim, ok := ipclaimmap[nsn.String()]
@@ -386,4 +318,51 @@ func (r *be) restoreClaim(ctx context.Context, cacheInstanceCtx *CacheInstanceCo
 		return err
 	}
 	return nil
+}
+
+func (r *be) updateIPIndexClaims(ctx context.Context, index *ipamv1alpha1.IPIndex) error {
+	key := index.GetKey()
+
+	newClaims, err := index.GetClaims()
+	if err != nil {
+		return err
+	}
+
+	match := map[string]string{
+		"spec.index": key.Name,
+		"metadata.ownerReferences.exists(ref, ref.kind == 'IPIndexKind')": "true",
+	}
+	existingClaims, err := r.listClaims(ctx, match)
+	if err != nil {
+		return err
+	}
+
+	var errm error
+	for _, claim := range newClaims {
+		u, err := object.GetUnstructructered(claim)
+		if err != nil {
+			errm = errors.Join(errm, err)
+			continue
+		}
+		if _, err := r.claimStorage.Apply(ctx, u, &rest.ApplyOptions{
+			FieldManager: "backend",
+		}); err != nil {
+			errm = errors.Join(errm, err)
+			continue
+		}
+
+	}
+
+	for _, claim := range existingClaims {
+		if _, err := r.claimStorage.Delete(ctx, claim.GetName()); err != nil {
+			errm = errors.Join(errm, err)
+			continue
+		}
+	}
+
+	if errm != nil {
+		return errm
+	}
+
+	return r.saveAll(ctx, key)
 }

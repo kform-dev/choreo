@@ -35,6 +35,14 @@ type Prefix struct {
 	// Prefix defines the ip cidr in prefix notation.
 	// +kubebuilder:validation:Pattern=`(([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])/(([0-9])|([1-2][0-9])|(3[0-2]))|((:|[0-9a-fA-F]{0,4}):)([0-9a-fA-F]{0,4}:){0,5}((([0-9a-fA-F]{0,4}:)?(:|[0-9a-fA-F]{0,4}))|(((25[0-5]|2[0-4][0-9]|[01]?[0-9]?[0-9])\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9]?[0-9])))(/(([0-9])|([0-9]{2})|(1[0-1][0-9])|(12[0-8])))`
 	Prefix string `json:"prefix" yaml:"prefix" protobuf:"bytes,1,opt,name=prefix"`
+	// PrefixType defines the prefixtype of IPIndex;
+	// - network kind is used for physical, virtual nics on a device
+	// - pool kind is used for allocating dedicated IP addresses
+	// - aggregate kind is used for claiming an aggregate prefix; only used for networkInstance prefixes
+	// +kubebuilder:validation:Enum=network;aggregate;pool;
+	// +kubebuilder:default:=aggregate
+	// +optional
+	PrefixType *IPPrefixType `json:"prefixType,omitempty" yaml:"prefixType,omitempty" protobuf:"bytes,2,opt,name=prefixType"`
 	// UserDefinedLabels define metadata to the resource.
 	// defined in the spec to distingiush metadata labels from user defined labels
 	resourcev1alpha1.UserDefinedLabels `json:",inline" yaml:",inline" protobuf:"bytes,2,opt,name=userDefinedLabels"`

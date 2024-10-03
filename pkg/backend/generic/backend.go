@@ -61,8 +61,8 @@ func (r *be) AddStorage(entryStorage, claimStorage rest.Storage) {
 
 // CreateIndex creates a backend index
 func (r *be) CreateIndex(ctx context.Context, obj runtime.Unstructured) error {
-	r.m.Lock()
-	defer r.m.Unlock()
+	//r.m.Lock()
+	//defer r.m.Unlock()
 	index, err := r.indexObjectFn(obj)
 	if err != nil {
 		return err

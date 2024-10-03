@@ -41,10 +41,10 @@ type BackendConfig struct {
 
 func GetBackendConfig() map[schema.GroupVersion]*BackendConfig {
 	backends := map[schema.GroupVersion]*BackendConfig{
-		asv1alpha1.SchemeGroupVersion:    &BackendConfig{Backend: asv1alpha1.NewBackend(), IndexKind: asv1alpha1.ASIndexKind, EntryKind: asv1alpha1.ASEntryKind, ClaimKind: asv1alpha1.ASClaimKind},
-		vlanv1alpha1.SchemeGroupVersion:  &BackendConfig{Backend: vlanv1alpha1.NewBackend(), IndexKind: vlanv1alpha1.VLANIndexKind, EntryKind: vlanv1alpha1.VLANEntryKind, ClaimKind: vlanv1alpha1.VLANClaimKind},
-		ipamv1alpha1.SchemeGroupVersion:  &BackendConfig{Backend: ipam.New(), IndexKind: ipamv1alpha1.IPIndexKind, EntryKind: ipamv1alpha1.IPEntryKind, ClaimKind: ipamv1alpha1.IPClaimKind},
-		genidv1alpha1.SchemeGroupVersion: &BackendConfig{Backend: genidv1alpha1.NewBackend(), IndexKind: genidv1alpha1.GENIDIndexKind, EntryKind: genidv1alpha1.GENIDEntryKind, ClaimKind: genidv1alpha1.GENIDClaimKind},
+		asv1alpha1.SchemeGroupVersion:    {Backend: asv1alpha1.NewBackend(), IndexKind: asv1alpha1.ASIndexKind, EntryKind: asv1alpha1.ASEntryKind, ClaimKind: asv1alpha1.ASClaimKind},
+		vlanv1alpha1.SchemeGroupVersion:  {Backend: vlanv1alpha1.NewBackend(), IndexKind: vlanv1alpha1.VLANIndexKind, EntryKind: vlanv1alpha1.VLANEntryKind, ClaimKind: vlanv1alpha1.VLANClaimKind},
+		ipamv1alpha1.SchemeGroupVersion:  {Backend: ipam.New(), IndexKind: ipamv1alpha1.IPIndexKind, EntryKind: ipamv1alpha1.IPEntryKind, ClaimKind: ipamv1alpha1.IPClaimKind},
+		genidv1alpha1.SchemeGroupVersion: {Backend: genidv1alpha1.NewBackend(), IndexKind: genidv1alpha1.GENIDIndexKind, EntryKind: genidv1alpha1.GENIDEntryKind, ClaimKind: genidv1alpha1.GENIDClaimKind},
 	}
 	for _, backendConfig := range backends {
 		setupBackend(backendConfig)

@@ -51,8 +51,8 @@ func (r *be) AddStorage(entryStorage, claimStorage rest.Storage) {
 
 // CreateIndex creates a backend index
 func (r *be) CreateIndex(ctx context.Context, obj runtime.Unstructured) error {
-	r.m.Lock()
-	defer r.m.Unlock()
+	//r.m.Lock()
+	//defer r.m.Unlock()
 	index := &ipamv1alpha1.IPIndex{}
 	err := runtime.DefaultUnstructuredConverter.FromUnstructured(obj.UnstructuredContent(), index)
 	if err != nil {
@@ -61,7 +61,6 @@ func (r *be) CreateIndex(ctx context.Context, obj runtime.Unstructured) error {
 
 	ctx = bebackend.InitIndexContext(ctx, "create", index)
 	log := log.FromContext(ctx)
-	log.Debug("start")
 	key := index.GetKey()
 
 	log.Debug("start", "isInitialized", r.cache.IsInitialized(ctx, key))
@@ -78,7 +77,7 @@ func (r *be) CreateIndex(ctx context.Context, obj runtime.Unstructured) error {
 			log.Error("cannot restore index", "error", err.Error())
 			return err
 		}
-		log.Debug("restored")
+
 		index.SetConditions(condv1alpha1.Ready())
 		status, err := index.GetStatus()
 		if err != nil {
@@ -88,10 +87,13 @@ func (r *be) CreateIndex(ctx context.Context, obj runtime.Unstructured) error {
 		objdata["status"] = status
 		obj.SetUnstructuredContent(objdata)
 
-		return r.cache.SetInitialized(ctx, key)
+		if err := r.cache.SetInitialized(ctx, key); err != nil {
+			return err
+		}
+		log.Debug("restored")
 	}
-	log.Debug("finished")
-	return nil
+	log.Debug("update IPIndex clains")
+	return r.updateIPIndexClaims(ctx, index)
 }
 
 // DeleteIndex deletes a backend index

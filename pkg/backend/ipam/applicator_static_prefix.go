@@ -94,7 +94,7 @@ func (r *staticPrefixApplicator) validateParents(ctx context.Context, claim *ipa
 		// a parent route is always required unless you are an aggregate route owned
 		// by an IP Index
 		if !claim.IsOwnedByIPIndex() {
-			return fmt.Errorf("no parent found, only possible for aggregate routes owned by IPIndex")
+			return fmt.Errorf("no parent found, only possible for routes owned by IPIndex")
 		}
 		return nil
 	}
