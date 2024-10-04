@@ -1,0 +1,22 @@
+apiVersion: device.network.kubenet.dev/v1alpha1
+kind: SubInterface
+metadata:
+  name: kubenet.region1.us-east.node1.0.0.system.0
+  namespace: default
+  uid: 5b685b88-ca7a-44ae-a3f5-035ea705c656
+spec:
+  endpoint: 0
+  id: 0
+  ipv4:
+    addresses:
+    - 10.10.10.1/32
+  ipv6:
+    addresses:
+    - 1000::1/128
+  name: system
+  node: node1
+  partition: kubenet
+  port: 0
+  region: region1
+  site: us-east
+  type: routed

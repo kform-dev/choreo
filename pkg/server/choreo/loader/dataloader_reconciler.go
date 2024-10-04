@@ -124,6 +124,18 @@ func (r *ReconcilerLoader) Load(ctx context.Context, reader pkgio.Reader[[]byte]
 			templateName := strings.TrimPrefix(k.Name, reconcilerName+".")
 			reconcilerConfig.Spec.Code[templateName] = string(b)
 
+		case ".jinja2":
+			if reconcilerConfig.Spec.Type != nil && *reconcilerConfig.Spec.Type != choreov1alpha1.SoftwardTechnologyType_JinjaTemplate {
+				errm = errors.Join(errm, fmt.Errorf("a given reconciler %s can only have 1 sw technology type got %s and %s", reconcilerName, (*reconcilerConfig.Spec.Type).String(), choreov1alpha1.SoftwardTechnologyType_GoTemplate.String()))
+				return
+			}
+			reconcilerConfig.Spec.Type = ptr.To(choreov1alpha1.SoftwardTechnologyType_JinjaTemplate)
+			if reconcilerConfig.Spec.Code == nil {
+				reconcilerConfig.Spec.Code = map[string]string{}
+			}
+			templateName := strings.TrimPrefix(k.Name, reconcilerName+".")
+			reconcilerConfig.Spec.Code[templateName] = string(b)
+
 		case ".star":
 			if reconcilerConfig.Spec.Type != nil {
 				errm = errors.Join(errm, fmt.Errorf("a starlark reconciler %s can only have 1 code file", reconcilerName))

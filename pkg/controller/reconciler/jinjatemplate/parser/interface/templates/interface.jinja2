@@ -1,0 +1,9 @@
+{%- macro interface(spec) export -%}
+      interface:
+      - name: {{ spec.name }}
+        description: k8s-{{ spec.name }}
+        admin-state: enable
+    {%- if spec.vlanTagging %}
+        vlan-tagging: true
+    {%- endif %}
+{%- endmacro %}

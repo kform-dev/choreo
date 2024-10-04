@@ -11,4 +11,4 @@ spec:
   config:
   - path: /
     value: 
-      {{- template "srlinterface" .spec}}
+      {{- template "srlinterface" .spec }}

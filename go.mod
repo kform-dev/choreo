@@ -6,6 +6,7 @@ replace github.com/henderiw/apiserver-builder => github.com/henderiw/apiserver-b
 
 require (
 	github.com/adrg/xdg v0.5.0
+	github.com/flosch/pongo2/v6 v6.0.0
 	github.com/gdamore/tcell/v2 v2.7.4
 	github.com/go-git/go-git/v5 v5.12.0
 	github.com/google/cel-go v0.21.0

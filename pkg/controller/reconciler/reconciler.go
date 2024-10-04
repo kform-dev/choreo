@@ -30,6 +30,7 @@ import (
 	"github.com/kform-dev/choreo/pkg/controller/informers"
 	"github.com/kform-dev/choreo/pkg/controller/reconcile"
 	"github.com/kform-dev/choreo/pkg/controller/reconciler/gotemplate"
+	"github.com/kform-dev/choreo/pkg/controller/reconciler/jinjatemplate"
 	"github.com/kform-dev/choreo/pkg/controller/reconciler/starlark"
 	"github.com/kform-dev/choreo/pkg/proto/runnerpb"
 	"github.com/kform-dev/choreo/pkg/server/selector"
@@ -311,6 +312,8 @@ func getTypeReconcilerFn(reconcilerConfig *choreov1alpha1.Reconciler, libs *unst
 		return starlark.NewReconcilerFn(client, reconcilerConfig, libs, branch), nil
 	case choreov1alpha1.SoftwardTechnologyType_GoTemplate:
 		return gotemplate.NewReconcilerFn(client, reconcilerConfig, branch), nil
+	case choreov1alpha1.SoftwardTechnologyType_JinjaTemplate:
+		return jinjatemplate.NewReconcilerFn(client, reconcilerConfig, branch), nil
 	default:
 		return nil, fmt.Errorf("reconcilerType %s is unsupported", (*reconcilerConfig.Spec.Type).String())
 	}

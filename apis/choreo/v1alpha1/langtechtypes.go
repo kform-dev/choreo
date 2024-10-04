@@ -38,11 +38,12 @@ func (r LangTechType) String() string {
 type SoftwardTechnologyType string
 
 const (
-	SoftwardTechnologyType_Invalid    SoftwardTechnologyType = "invalid"
-	SoftwardTechnologyType_Starlark   SoftwardTechnologyType = "starlark"
-	SoftwardTechnologyType_Kform      SoftwardTechnologyType = "kform"
-	SoftwardTechnologyType_GoTemplate SoftwardTechnologyType = "gotemplate"
-	SoftwardTechnologyType_Internal   SoftwardTechnologyType = "internal"
+	SoftwardTechnologyType_Invalid       SoftwardTechnologyType = "invalid"
+	SoftwardTechnologyType_Starlark      SoftwardTechnologyType = "starlark"
+	SoftwardTechnologyType_Kform         SoftwardTechnologyType = "kform"
+	SoftwardTechnologyType_GoTemplate    SoftwardTechnologyType = "gotemplate"
+	SoftwardTechnologyType_JinjaTemplate SoftwardTechnologyType = "jinjatemplate"
+	SoftwardTechnologyType_Internal      SoftwardTechnologyType = "internal"
 )
 
 func (r SoftwardTechnologyType) String() string {
@@ -53,6 +54,8 @@ func (r SoftwardTechnologyType) String() string {
 		return "kform"
 	case SoftwardTechnologyType_GoTemplate:
 		return "gotmplate"
+	case SoftwardTechnologyType_JinjaTemplate:
+		return "jinjatmplate"
 	case SoftwardTechnologyType_Invalid:
 		return "internal"
 	default:
