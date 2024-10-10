@@ -16,6 +16,7 @@ limitations under the License.
 
 package builder
 
+/*
 import (
 	"context"
 
@@ -34,3 +35,4 @@ func (r *choreoServerBuilder) Execute(ctx context.Context, path string, flags *g
 	cmd := server.NewCommand(ctx, o)
 	return cmd.Execute()
 }
+*/

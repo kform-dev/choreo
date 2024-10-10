@@ -17,39 +17,36 @@ limitations under the License.
 package resource
 
 import (
-	"github.com/go-git/go-git/v5/plumbing/object"
 	"github.com/henderiw/store"
 	"github.com/kform-dev/choreo/pkg/server/apiserver/rest"
+	"github.com/kform-dev/choreo/pkg/server/choreo"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
-func (r *srv) validatebranch(branch string) error {
+func (r *srv) getBranchContext(branch string) (*choreo.BranchCtx, error) {
+	if branch == "" {
+		var bctx *choreo.BranchCtx
+		r.choreo.GetBranchStore().GetStore().List(func(k store.Key, bc *choreo.BranchCtx) {
+			if bc.State.String() == "CheckedOut" {
+				bctx = bc
+			}
+		})
+		if bctx == nil {
+			return nil, status.Errorf(codes.NotFound, "no checkedout branch found")
+		}
+		return bctx, nil
+	}
 	bctx, err := r.choreo.GetBranchStore().GetStore().Get(store.ToKey(branch))
 	if err != nil {
-		return status.Errorf(codes.NotFound, "branch %s does not exist", branch)
+		return nil, status.Errorf(codes.NotFound, "err: %s", err.Error())
 	}
-	if bctx.State.String() != "CheckedOut" {
-		return status.Errorf(codes.InvalidArgument, "cannot apply to a branch %s which is not checkedout", branch)
-	}
-	return nil
+	return bctx, nil
 }
 
-func (r *srv) getCommit(branch string) (*object.Commit, error) {
-	bctx, err := r.choreo.GetBranchStore().GetStore().Get(store.ToKey(branch))
-	if err != nil {
-		return nil, status.Errorf(codes.NotFound, "branch %s does not exist", branch)
-	}
-	return bctx.State.GetCommit(), nil
-}
-
-func (r *srv) getStorage(branch string, u *unstructured.Unstructured) (rest.Storage, error) {
-	bctx, err := r.choreo.GetBranchStore().GetStore().Get(store.ToKey(branch))
-	if err != nil {
-		return nil, status.Errorf(codes.NotFound, "branch %s does not exist", branch)
-	}
+func (r *srv) getStorage(bctx *choreo.BranchCtx, u *unstructured.Unstructured) (rest.Storage, error) {
 	gv, err := schema.ParseGroupVersion(u.GetAPIVersion())
 	if err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "invalid apiVersion, err: %s", err.Error())

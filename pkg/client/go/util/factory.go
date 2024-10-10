@@ -21,6 +21,7 @@ import (
 
 	"github.com/kform-dev/choreo/pkg/cli/genericclioptions"
 	"github.com/kform-dev/choreo/pkg/client/go/branchclient"
+	"github.com/kform-dev/choreo/pkg/client/go/choreoclient"
 	"github.com/kform-dev/choreo/pkg/client/go/config"
 	"github.com/kform-dev/choreo/pkg/client/go/discovery"
 	"github.com/kform-dev/choreo/pkg/client/go/resourceclient"
@@ -30,6 +31,7 @@ import (
 
 type Factory interface {
 	GetConfig() *config.Config
+	GetChoreoClient() choreoclient.Client
 	GetDiscoveryClient() discovery.CachedDiscoveryInterface
 	GetResourceMapper() resourcemapper.Mapper
 	GetResourceClient() resourceclient.Client
@@ -44,6 +46,11 @@ func NewFactory(clientGetter genericclioptions.ClientGetter) (Factory, error) {
 	}
 
 	config := clientGetter.ToConfig()
+
+	choreoClient, err := clientGetter.ToChoreoClient()
+	if err != nil {
+		return nil, err
+	}
 
 	discoveryCLient, err := clientGetter.ToDiscoveryClient()
 	if err != nil {
@@ -69,6 +76,7 @@ func NewFactory(clientGetter genericclioptions.ClientGetter) (Factory, error) {
 
 	return &factory{
 		config:          config,
+		choreoClient:    choreoClient,
 		discoveryCLient: discoveryCLient,
 		resourceMapper:  resourceMapper,
 		resourceClient:  resourceClient,
@@ -79,6 +87,7 @@ func NewFactory(clientGetter genericclioptions.ClientGetter) (Factory, error) {
 
 type factory struct {
 	config          *config.Config
+	choreoClient    choreoclient.Client
 	discoveryCLient discovery.CachedDiscoveryInterface
 	resourceMapper  resourcemapper.Mapper
 	resourceClient  resourceclient.Client
@@ -95,11 +104,23 @@ func (r *factory) Close() error {
 	if err := r.resourceClient.Close(); err != nil {
 		errm = errors.Join(errm, err)
 	}
+
+	if err := r.choreoClient.Close(); err != nil {
+		errm = errors.Join(errm, err)
+	}
+
+	if err := r.branchClient.Close(); err != nil {
+		errm = errors.Join(errm, err)
+	}
 	return errm
 }
 
 func (r *factory) GetConfig() *config.Config {
 	return r.config
+}
+
+func (r *factory) GetChoreoClient() choreoclient.Client {
+	return r.choreoClient
 }
 
 func (r *factory) GetDiscoveryClient() discovery.CachedDiscoveryInterface {

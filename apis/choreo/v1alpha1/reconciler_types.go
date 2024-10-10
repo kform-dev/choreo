@@ -80,6 +80,7 @@ type Reconciler struct {
 }
 
 // ReconcilerList contains a list of Reconcilers
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 type ReconcilerList struct {
 	metav1.TypeMeta `json:",inline" yaml:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`

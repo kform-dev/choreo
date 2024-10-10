@@ -37,4 +37,5 @@ type ChoreoInstance interface {
 	GetCommit() *object.Commit
 	GetAPIClient() resourceclient.Client
 	GetAnnotationVal() string
+	Destroy() error
 }

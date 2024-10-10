@@ -38,12 +38,13 @@ func (r *NotCheckedOut) String() string { return "NotCheckedOut" }
 func (r *NotCheckedOut) Activate(ctx context.Context, branchCtx *BranchCtx) error {
 	// the internal apis are already loaded
 	// load crds from db in apistore using the apiclient
+	mainChoreoInstance := r.Choreo.status.Get().MainChoreoInstance
 	loader := &loader.APILoaderCommit2APIStore{
-		Client:       r.Choreo.mainChoreoInstance.GetAPIClient(),
+		Client:       mainChoreoInstance.GetAPIClient(),
 		APIStore:     branchCtx.APIStore,
-		InternalGVKs: r.Choreo.mainChoreoInstance.GetAPIStore().GetGVKSet(),
-		PathInRepo:   r.Choreo.mainChoreoInstance.GetPathInRepo(), // required for the commit read
-		DBPath:       r.Choreo.mainChoreoInstance.GetDBPath(),
+		InternalGVKs: mainChoreoInstance.GetAPIStore().GetGVKSet(),
+		PathInRepo:   mainChoreoInstance.GetPathInRepo(), // required for the commit read
+		DBPath:       mainChoreoInstance.GetDBPath(),
 	}
 	if err := loader.Load(ctx, branchCtx.State.GetCommit()); err != nil {
 		return err

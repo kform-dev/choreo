@@ -32,32 +32,44 @@ import (
 	"github.com/kform-dev/choreo/pkg/server/choreo/loader"
 )
 
-func NewMainChoreoInstance(ctx context.Context, path string, flags *genericclioptions.ConfigFlags) (ChoreoInstance, error) {
-	pathInRepo := "."
-	repoPath, git := git.IsPartOfGitRepo(path)
-	if !git {
-		return nil, fmt.Errorf("non git repos not supported yet")
-	}
-	if path != repoPath {
-		// the path is relative within the repo
-		pathInRepo = strings.TrimPrefix(path, repoPath+"/")
-	}
-	repo, err := repogit.NewLocalRepo(ctx, repoPath)
-	if err != nil {
-		return nil, err
-	}
+const DummyBranch = "dummy"
+
+type Config struct {
+	Path       string
+	Repo       repository.Repository
+	Commit     *object.Commit
+	PathInRepo string
+	Flags      *genericclioptions.ConfigFlags
+}
+
+func NewMainChoreoInstance(ctx context.Context, config *Config) (ChoreoInstance, error) {
 	r := &MainChoreoInstance{
-		repo:       repo,
-		pathInRepo: pathInRepo,
-		flags:      flags,
-		// init
+		flags: config.Flags,
 	}
+
+	if config.Repo == nil {
+		var err error
+		config.Repo, config.PathInRepo, err = getRepoFromPath(ctx, config.Path)
+		if err != nil {
+			return nil, err
+		}
+	}
+	r.repo = config.Repo
+	r.pathInRepo = config.PathInRepo
+	r.commit = config.Commit
+
 	// a tempdir is use for the mean choreo instance to load refs
 	// (upstream/choreo refs)
-	r.tempPath = filepath.Join(path, ".choreo")
+	r.tempPath = filepath.Join(r.GetPath(), ".choreo")
 	if err := EnsureDir(r.tempPath); err != nil {
 		return r, err
 	}
+	if r.commit != nil {
+		if err := r.repo.CheckoutCommit(r.commit, DummyBranch); err != nil {
+			return r, err
+		}
+	}
+
 	/*
 		r.tempPath, err = os.MkdirTemp("choreo", filepath.Base(path))
 		if err != nil {
@@ -72,17 +84,46 @@ func NewMainChoreoInstance(ctx context.Context, path string, flags *genericcliop
 	r.apiclient = resourceclient.NewAPIStorageClient(r.apiStoreInternal)
 
 	return r, nil
+}
 
+func getRepoFromPath(ctx context.Context, path string) (repository.Repository, string, error) {
+	pathInRepo := "."
+	repoPath, git := git.IsPartOfGitRepo(path)
+	if !git {
+		return nil, "", fmt.Errorf("non git repos not supported yet")
+	}
+	if path != repoPath {
+		// the path is relative within the repo
+		pathInRepo = strings.TrimPrefix(path, repoPath+"/")
+	}
+	repo, err := repogit.NewLocalRepo(ctx, repoPath)
+	if err != nil {
+		return nil, "", err
+	}
+	return repo, pathInRepo, nil
 }
 
 type MainChoreoInstance struct {
 	flags      *genericclioptions.ConfigFlags
 	repo       repository.Repository
 	pathInRepo string
+	commit     *object.Commit
 	tempPath   string
 	apiclient  resourceclient.Client // apiclient is the client which allows to get access to the local db -> used for commit based api loading
 
 	apiStoreInternal *api.APIStore // this provides the storage layer - w/o the branch view
+}
+
+func (r *MainChoreoInstance) Destroy() error {
+	if err := r.repo.StashBranch(DummyBranch); err != nil {
+		fmt.Println("statsh branch failed", err)
+		return err
+	}
+	if err := r.repo.DeleteBranch(DummyBranch); err != nil {
+		fmt.Println("delete branch failed", err)
+		return err
+	}
+	return nil
 }
 
 func (r *MainChoreoInstance) LoadInternalAPIs() error {

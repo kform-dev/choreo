@@ -109,3 +109,7 @@ func (r *ChildChoreoInstance) GetCommit() *object.Commit { return r.commit }
 func (r *ChildChoreoInstance) GetAPIClient() resourceclient.Client { return r.apiclient }
 
 func (r *ChildChoreoInstance) GetAnnotationVal() string { return r.annotationVal }
+
+func (r *ChildChoreoInstance) Destroy() error {
+	return nil
+}

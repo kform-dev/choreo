@@ -24,6 +24,7 @@ import (
 
 	"github.com/adrg/xdg"
 	"github.com/kform-dev/choreo/pkg/client/go/branchclient"
+	"github.com/kform-dev/choreo/pkg/client/go/choreoclient"
 	"github.com/kform-dev/choreo/pkg/client/go/config"
 	"github.com/kform-dev/choreo/pkg/client/go/discovery"
 	"github.com/kform-dev/choreo/pkg/client/go/discovery/cached/disk"
@@ -63,6 +64,8 @@ const (
 type ClientGetter interface {
 	// ToConfig returns config
 	ToConfig() *config.Config
+	// ToDiscoveryClient returns discovery client
+	ToChoreoClient() (choreoclient.Client, error)
 	// ToDiscoveryClient returns discovery client
 	ToDiscoveryClient() (discovery.CachedDiscoveryInterface, error)
 	// ToResourceMapper returns a restmapper
@@ -105,7 +108,7 @@ func NewConfigFlags() *ConfigFlags {
 	configPath := filepath.Join(xdg.ConfigHome, defaultConfigFileSubDir)
 	return &ConfigFlags{
 		Debug:               ptr.To(false),
-		Address:             ptr.To("127.0.0.1:51000"),
+		Address:             ptr.To("0.0.0.0:51000"),
 		CRDPath:             ptr.To("crds"),
 		DBPath:              ptr.To("db"),
 		ReconcilerPath:      ptr.To("reconcilers"),
@@ -120,7 +123,7 @@ func NewConfigFlags() *ConfigFlags {
 		Output:              ptr.To(""),
 		Config:              ptr.To(filepath.Join(configPath, defaultConfigFileName)),
 		InternalReconcilers: ptr.To(false),
-		Branch:              ptr.To("main"),
+		Branch:              ptr.To(""),
 	}
 }
 
@@ -141,6 +144,15 @@ func (r *ConfigFlags) toConfig() *config.Config {
 		MaxMsgSize: *r.MaxRcvMsg,
 		Timeout:    time.Duration(*r.Timeout) * time.Second,
 	}
+}
+
+func (r *ConfigFlags) ToChoreoClient() (choreoclient.Client, error) {
+	return r.toChoreoClient()
+}
+
+func (r *ConfigFlags) toChoreoClient() (choreoclient.Client, error) {
+	config := r.toConfig()
+	return choreoclient.NewClient(config)
 }
 
 func (r *ConfigFlags) ToDiscoveryClient() (discovery.CachedDiscoveryInterface, error) {

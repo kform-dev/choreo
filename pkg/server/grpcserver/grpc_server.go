@@ -26,11 +26,13 @@ import (
 	"github.com/kform-dev/choreo/pkg/cli/genericclioptions"
 	recrunner "github.com/kform-dev/choreo/pkg/controller/runner"
 	"github.com/kform-dev/choreo/pkg/proto/branchpb"
+	"github.com/kform-dev/choreo/pkg/proto/choreopb"
 	"github.com/kform-dev/choreo/pkg/proto/discoverypb"
 	"github.com/kform-dev/choreo/pkg/proto/resourcepb"
 	"github.com/kform-dev/choreo/pkg/proto/runnerpb"
-	"github.com/kform-dev/choreo/pkg/server/choreo"
+	choreoserver "github.com/kform-dev/choreo/pkg/server/choreo"
 	"github.com/kform-dev/choreo/pkg/server/grpcserver/services/branch"
+	"github.com/kform-dev/choreo/pkg/server/grpcserver/services/choreo"
 	"github.com/kform-dev/choreo/pkg/server/grpcserver/services/discovery"
 	"github.com/kform-dev/choreo/pkg/server/grpcserver/services/resource"
 	"github.com/kform-dev/choreo/pkg/server/grpcserver/services/runner"
@@ -45,7 +47,7 @@ import (
 type Config struct {
 	Name   string
 	Flags  *genericclioptions.ConfigFlags
-	Choreo choreo.Choreo
+	Choreo choreoserver.Choreo
 }
 
 func New(cfg *Config) *GRPCServer {
@@ -71,7 +73,7 @@ type GRPCServer struct {
 	address string
 	cancel  context.CancelFunc
 	server  *grpc.Server
-	choreo  choreo.Choreo
+	choreo  choreoserver.Choreo
 	runner  recrunner.Runner
 	flags   *genericclioptions.ConfigFlags
 }
@@ -99,6 +101,10 @@ func (r *GRPCServer) Run(ctx context.Context) error {
 
 	// Register the reflection service
 	reflection.Register(r.server)
+
+	// Register the resource service
+	choreoServer := choreo.New(r.choreo)
+	choreopb.RegisterChoreoServer(r.server, choreoServer)
 
 	// Register the resource service
 	resourceServer := resource.New(r.choreo)

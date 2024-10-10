@@ -22,8 +22,10 @@ import (
 	"time"
 
 	"github.com/henderiw/logger/log"
-	"github.com/kform-dev/choreo/pkg/builder"
 	"github.com/kform-dev/choreo/pkg/cli/genericclioptions"
+	"github.com/kform-dev/choreo/pkg/proto/choreopb"
+	"github.com/kform-dev/choreo/pkg/server/choreo"
+	"github.com/kform-dev/choreo/pkg/server/grpcserver"
 	"github.com/kform-dev/choreo/pkg/server/health"
 	"github.com/kform-dev/kform/pkg/fsys"
 	"github.com/spf13/cobra"
@@ -40,8 +42,8 @@ func NewRunner(flags *genericclioptions.ConfigFlags) *Runner {
 		ConfigFlags: flags,
 	}
 	cmd := &cobra.Command{
-		Use:  "start DIRECTORY [flags]",
-		Args: cobra.ExactArgs(1),
+		Use: "start [DIRECTORY] [flags]",
+		//Args: cobra.ExactArgs(1),
 		//Short:   docs.InitShort,
 		//Long:    docs.InitShort + "\n" + docs.InitLong,
 		//Example: docs.InitExamples,
@@ -61,14 +63,17 @@ func (r *Runner) runE(cmd *cobra.Command, args []string) error {
 	ctx := cmd.Context()
 	log := log.FromContext(ctx)
 
-	path, err := fsys.NormalizeDir(args[0])
-	if err != nil {
-		return err
-	}
+	choreo := choreo.New(r.ConfigFlags)
+	// build grpc server which hosts the apiserver storage
+	grpcserver := grpcserver.New(&grpcserver.Config{
+		Name:   "choreoServer",
+		Flags:  r.ConfigFlags,
+		Choreo: choreo,
+	})
 
 	go func() {
-		if err := builder.ChoreoServer.Execute(ctx, path, r.ConfigFlags); err != nil {
-			log.Info("cannot start choreo-server", "error", err)
+		err := grpcserver.Run(ctx)
+		if err != nil {
 			panic(err)
 		}
 	}()
@@ -77,7 +82,59 @@ func (r *Runner) runE(cmd *cobra.Command, args []string) error {
 	if !health.IsServerReady(ctx, r.ConfigFlags) {
 		return fmt.Errorf("server is not ready")
 	}
+
+	if len(args) > 0 {
+		path, err := fsys.NormalizeDir(args[0])
+		if err != nil {
+			return err
+		}
+
+		if _, err := choreo.Apply(ctx, &choreopb.Apply_Request{
+			ChoreoContext: &choreopb.ChoreoContext{Path: path},
+		}); err != nil {
+			return err
+		}
+	}
+
+	ctx, cancel := context.WithCancel(ctx)
+	go choreo.Start(ctx)
+	defer cancel()
+
 	<-ctx.Done()
 	log.Debug("context concelled")
 	return nil
 }
+
+/*
+
+choreo, err := choreo.New(ctx, r.path, r.flags)
+	if err != nil {
+		return err
+	}
+	// build grpc server which hosts the apiserver storage
+	grpcserver := grpcserver.New(&grpcserver.Config{
+		Name:   r.serverName,
+		Flags:  r.flags,
+		Choreo: choreo,
+	})
+	// start the server
+	go func() {
+		err := grpcserver.Run(ctx)
+		if err != nil {
+			log.Error("grpc server failed", "err", err)
+		}
+	}()
+	if !health.IsServerReady(ctx, r.flags) {
+		return fmt.Errorf("server is not ready")
+	}
+
+	//r.repo.AddResourceClient(client)
+	ctx, cancel := context.WithCancel(ctx)
+	go choreo.Start(ctx)
+	defer cancel()
+
+	<-ctx.Done()
+	log.Debug("context concelled")
+	return nil
+
+*/

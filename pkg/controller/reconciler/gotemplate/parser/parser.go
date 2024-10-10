@@ -18,6 +18,7 @@ package parser
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -28,15 +29,16 @@ import (
 
 func New(files map[string]string) (*Parser, error) {
 	tmpl := template.New("main").Funcs(templateHelperFunctions)
+	var errm error
 	for filename, data := range files {
-		_, err := tmpl.New(filename).Parse(data)
+		_, err := template.New(filename).Parse(data)
 		if err != nil {
-			return nil, fmt.Errorf("cannot parse template %s", err.Error())
+			errm = errors.Join(errm, fmt.Errorf("cannot parse template %s", err.Error()))
 		}
 	}
 	return &Parser{
 		tmpl: tmpl,
-	}, nil
+	}, errm
 }
 
 type Parser struct {

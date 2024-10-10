@@ -30,11 +30,11 @@ import (
 	"github.com/kform-dev/choreo/pkg/server/api"
 )
 
-func NewBranchStore(choreo *choreo) (*BranchStore, error) {
+func NewBranchStore(choreo *choreo) *BranchStore {
 	return &BranchStore{
 		choreo: choreo,
 		store:  memory.NewStore[*BranchCtx](newBranchCtx),
-	}, nil
+	}
 }
 
 func newBranchCtx() *BranchCtx { return &BranchCtx{} }
@@ -63,7 +63,7 @@ func (r *BranchStore) Update(ctx context.Context, branches []*branchpb.BranchObj
 		}
 
 		if !branchObj.CheckedOut {
-			commit, err := r.choreo.mainChoreoInstance.GetRepo().GetBranchCommit(branchObj.Name)
+			commit, err := r.choreo.status.Get().MainChoreoInstance.GetRepo().GetBranchCommit(branchObj.Name)
 			if err != nil {
 				errm = errors.Join(errm, err)
 				continue
@@ -98,7 +98,7 @@ func (r *BranchStore) update(ctx context.Context, branch string, newState State)
 
 	// import the internal apis for storage purpose
 	apiStore := api.NewAPIStore()
-	apiStore.Import(r.choreo.mainChoreoInstance.GetAPIStore())
+	apiStore.Import(r.choreo.status.Get().MainChoreoInstance.GetAPIStore())
 
 	newBranchCtx := &BranchCtx{
 		State:    newState,
@@ -161,6 +161,19 @@ func (r *BranchStore) handleTransition(ctx context.Context, branchCtx *BranchCtx
 
 func (r *BranchStore) GetStore() store.Storer[*BranchCtx] {
 	return r.store
+}
+
+func (r *BranchStore) GetCheckedOut() (string, error) {
+	var branch string
+	r.store.List(func(k store.Key, bc *BranchCtx) {
+		if bc.State.String() == "CheckedOut" {
+			branch = k.Name
+		}
+	})
+	if branch == "" {
+		return branch, fmt.Errorf("no checkedou branch found")
+	}
+	return branch, nil
 }
 
 func (r *BranchStore) LoadData(ctx context.Context, branch string) error {

@@ -42,11 +42,32 @@ type srv struct {
 	choreo choreo.Choreo
 }
 
-func (r *srv) Get(ctx context.Context, req *discoverypb.Get_Request) (*discoverypb.Get_Response, error) {
-	bctx, err := r.choreo.GetBranchStore().GetStore().Get(store.ToKey(req.Branch))
-	if err != nil {
-		return &discoverypb.Get_Response{}, status.Errorf(codes.NotFound, "err: %s", err.Error())
+func (r *srv) getBranchContext(branch string) (*choreo.BranchCtx, error) {
+	if branch == "" {
+		var bctx *choreo.BranchCtx
+		r.choreo.GetBranchStore().GetStore().List(func(k store.Key, bc *choreo.BranchCtx) {
+			if bc.State.String() == "CheckedOut" {
+				bctx = bc
+			}
+		})
+		if bctx == nil {
+			return nil, status.Errorf(codes.NotFound, "no checkedout branch found")
+		}
+		return bctx, nil
 	}
+	bctx, err := r.choreo.GetBranchStore().GetStore().Get(store.ToKey(branch))
+	if err != nil {
+		return nil, status.Errorf(codes.NotFound, "err: %s", err.Error())
+	}
+	return bctx, nil
+}
+
+func (r *srv) Get(ctx context.Context, req *discoverypb.Get_Request) (*discoverypb.Get_Response, error) {
+	bctx, err := r.getBranchContext(req.Branch)
+	if err != nil {
+		return &discoverypb.Get_Response{}, err
+	}
+
 	return &discoverypb.Get_Response{Apiresources: bctx.APIStore.GetAPIResources()}, nil
 }
 

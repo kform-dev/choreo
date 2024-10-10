@@ -89,7 +89,6 @@ func (r *UpstreamLoader) Load(ctx context.Context) error {
 			return
 		}
 
-		// TODO maybe we need a flag to avoid reloading the repo if it exists
 		url := upstreamRef.Spec.URL
 		replace := strings.NewReplacer("/", "-", ":", "-")
 		childRepoPath := filepath.Join(r.TempDir, replace.Replace(url))

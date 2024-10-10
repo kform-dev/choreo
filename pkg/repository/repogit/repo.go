@@ -205,6 +205,10 @@ func (r *repo) DeleteBranch(branchName string) error {
 		return nil
 	}
 
+	if err := r.Checkout(lgit.MainBranch.BranchInLocal().Short()); err != nil {
+		return err
+	}
+
 	branchRef := lgit.BranchName(branchName).BranchInLocal()
 
 	// Deleting the branch
@@ -299,6 +303,54 @@ func (r *repo) MergeBranch(branchName1, branchName2 string) error {
 }
 
 func (r *repo) StashBranch(branchName string) error {
+	w, err := r.repo.Worktree()
+	if err != nil {
+		return fmt.Errorf("failed to get workTree %v", err.Error())
+	}
+	err = w.Reset(&git.ResetOptions{Mode: git.HardReset})
+	if err != nil {
+		return fmt.Errorf("failed to reset worktree: %v", err)
+	}
+	return nil
+}
+
+func (r *repo) CheckoutCommit(commit *object.Commit, branch string) error {
+	if r.branchExists(branch) {
+		if err := r.StashBranch(branch); err != nil {
+			return err
+		}
+		if err := r.DeleteBranch(branch); err != nil {
+			return err
+		}
+	}
+
+	w, err := r.repo.Worktree()
+	if err != nil {
+		return fmt.Errorf("failed to get workTree %v", err.Error())
+	}
+
+	// Checkout the specific commit
+	err = w.Checkout(&git.CheckoutOptions{
+		Hash: commit.Hash,
+	})
+	if err != nil {
+		return fmt.Errorf("failed to checkout commit %s %v", commit.Hash.String(), err.Error())
+	}
+	err = w.Checkout(&git.CheckoutOptions{
+		Branch: lgit.BranchName(branch).BranchInLocal(),
+		Create: true,
+		Force:  false,
+	})
+	if err != nil {
+		return fmt.Errorf("failed to create and checkout new branch %s %v", branch, err.Error())
+	}
+	branchRef := plumbing.NewHashReference(lgit.BranchName(branch).BranchInLocal(), commit.Hash)
+
+	err = r.repo.Storer.SetReference(branchRef)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 

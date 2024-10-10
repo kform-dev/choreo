@@ -40,30 +40,40 @@ type srv struct {
 	runner recrunner.Runner
 }
 
-func (r *srv) validatebranch(branch string) error {
+func (r *srv) getBranchContext(branch string) (*choreo.BranchCtx, error) {
+	if branch == "" {
+		var bctx *choreo.BranchCtx
+		r.choreo.GetBranchStore().GetStore().List(func(k store.Key, bc *choreo.BranchCtx) {
+			if bc.State.String() == "CheckedOut" {
+				bctx = bc
+			}
+		})
+		if bctx == nil {
+			return nil, status.Errorf(codes.NotFound, "no checkedout branch found")
+		}
+		return bctx, nil
+	}
 	bctx, err := r.choreo.GetBranchStore().GetStore().Get(store.ToKey(branch))
 	if err != nil {
-		return status.Errorf(codes.NotFound, "branch %s does not exist", branch)
+		return nil, status.Errorf(codes.NotFound, "err: %s", err.Error())
 	}
-	if bctx.State.String() != "CheckedOut" {
-		return status.Errorf(codes.InvalidArgument, "cannot apply to a branch %s which is not checkedout", branch)
-	}
-	return nil
+	return bctx, nil
 }
 
 func (r *srv) Start(ctx context.Context, req *runnerpb.Start_Request) (*runnerpb.Start_Response, error) {
-	if err := r.validatebranch(req.Branch); err != nil {
+	bctx, err := r.getBranchContext(req.Branch)
+	if err != nil {
 		return nil, err
 	}
 
-	if err := r.runner.Start(ctx, req.Branch); err != nil {
+	if err := r.runner.Start(ctx, bctx.Branch); err != nil {
 		return &runnerpb.Start_Response{}, status.Errorf(codes.InvalidArgument, "cannot start runner on a branch %s err: %s", req.Branch, err.Error())
 	}
 	return &runnerpb.Start_Response{}, nil
 }
 
 func (r *srv) Stop(ctx context.Context, req *runnerpb.Stop_Request) (*runnerpb.Stop_Response, error) {
-	if err := r.validatebranch(req.Branch); err != nil {
+	if _, err := r.getBranchContext(req.Branch); err != nil {
 		return nil, err
 	}
 	r.runner.Stop()
@@ -71,11 +81,12 @@ func (r *srv) Stop(ctx context.Context, req *runnerpb.Stop_Request) (*runnerpb.S
 }
 
 func (r *srv) Once(ctx context.Context, req *runnerpb.Once_Request) (*runnerpb.Once_Response, error) {
-	if err := r.validatebranch(req.Branch); err != nil {
+	bctx, err := r.getBranchContext(req.Branch)
+	if err != nil {
 		return nil, err
 	}
 
-	rsp, err := r.runner.RunOnce(ctx, req.Branch)
+	rsp, err := r.runner.RunOnce(ctx, bctx.Branch)
 	if err != nil {
 		return &runnerpb.Once_Response{}, status.Errorf(codes.InvalidArgument, "cannot start runner on a branch %s err: %s", req.Branch, err.Error())
 	}
@@ -83,10 +94,11 @@ func (r *srv) Once(ctx context.Context, req *runnerpb.Once_Request) (*runnerpb.O
 }
 
 func (r *srv) Load(ctx context.Context, req *runnerpb.Load_Request) (*runnerpb.Load_Response, error) {
-	if err := r.validatebranch(req.Branch); err != nil {
+	bctx, err := r.getBranchContext(req.Branch)
+	if err != nil {
 		return nil, err
 	}
-	if err := r.choreo.GetBranchStore().LoadData(ctx, req.Branch); err != nil {
+	if err := r.choreo.GetBranchStore().LoadData(ctx, bctx.Branch); err != nil {
 		return &runnerpb.Load_Response{}, err
 	}
 	return &runnerpb.Load_Response{}, nil

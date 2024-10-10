@@ -19,6 +19,8 @@ package servercmd
 import (
 	"context"
 
+	"github.com/kform-dev/choreo/cmd/choreoctl/commands/servercmd/applycmd"
+	"github.com/kform-dev/choreo/cmd/choreoctl/commands/servercmd/getcmd"
 	"github.com/kform-dev/choreo/cmd/choreoctl/commands/servercmd/startcmd"
 	"github.com/kform-dev/choreo/pkg/cli/genericclioptions"
 	"github.com/spf13/cobra"
@@ -45,6 +47,8 @@ func GetCommand(ctx context.Context, flags *genericclioptions.ConfigFlags) *cobr
 
 	cmd.AddCommand(
 		startcmd.GetCommand(ctx, flags),
+		getcmd.GetCommand(ctx, flags),
+		applycmd.GetCommand(ctx, flags),
 	)
 	return cmd
 }

@@ -64,7 +64,7 @@ func Open(ctx context.Context, path string, url, refName string) (*git.Repositor
 
 	repo, err := git.PlainOpen(path)
 	if err == git.ErrRepositoryNotExists {
-		// Repository does not exist, perform a clone of a specific commit
+		// Repository does not exist, perform a clone
 		repo, err := cloneAll(ctx, path, url)
 		if err != nil {
 			return nil, nil, err
@@ -94,16 +94,18 @@ func Open(ctx context.Context, path string, url, refName string) (*git.Repositor
 		cleanup = ""
 		return repo, commit, nil
 	}
+
 	if err := resetToRemoteHead(ctx, repo, MainBranch.BranchInRemote()); err != nil {
 		return nil, nil, err
 	}
+
 	// Commit is already present
 	return repo, commit, nil
 }
 
 func cloneAll(ctx context.Context, path, url string) (*git.Repository, error) {
 	log := log.FromContext(ctx)
-	// Cloning the repository, initially only specifying a branch or tag
+	// Cloning the repository
 	co := &git.CloneOptions{
 		URL:          url,
 		Depth:        0,
@@ -165,7 +167,7 @@ func resetToRemoteHead(ctx context.Context, repo *git.Repository, branch plumbin
 		Commit: ref.Hash(),
 	})
 	if err != nil {
-		log.Error("Failed to reset worktree", "error", err)
+		log.Error("Failed to reset worktree", "ref", ref.Hash(), "error", err)
 		return fmt.Errorf("cannot reset worktree: %v", err)
 	}
 	return nil

@@ -46,7 +46,7 @@ type srv struct {
 func (r *srv) Get(ctx context.Context, req *resourcepb.Get_Request) (*resourcepb.Get_Response, error) {
 	log := log.FromContext(ctx)
 
-	commit, err := r.getCommit(req.Options.Branch)
+	bctx, err := r.getBranchContext(req.Options.Branch)
 	if err != nil {
 		return &resourcepb.Get_Response{}, err
 	}
@@ -58,7 +58,7 @@ func (r *srv) Get(ctx context.Context, req *resourcepb.Get_Request) (*resourcepb
 
 	log.Debug("get", "apiVersion", u.GetAPIVersion(), "kind", u.GetKind(), "name", u.GetName())
 
-	storage, err := r.getStorage(req.Options.Branch, u)
+	storage, err := r.getStorage(bctx, u)
 	if err != nil {
 		return &resourcepb.Get_Response{}, err
 	}
@@ -67,7 +67,7 @@ func (r *srv) Get(ctx context.Context, req *resourcepb.Get_Request) (*resourcepb
 		ShowManagedFields: req.Options.ShowManagedField,
 		Trace:             req.Options.Trace,
 		Origin:            req.Options.Origin,
-		Commit:            commit,
+		Commit:            bctx.State.GetCommit(),
 	})
 	if err != nil {
 		return &resourcepb.Get_Response{}, err
@@ -84,7 +84,7 @@ func (r *srv) Get(ctx context.Context, req *resourcepb.Get_Request) (*resourcepb
 func (r *srv) List(ctx context.Context, req *resourcepb.List_Request) (*resourcepb.List_Response, error) {
 	log := log.FromContext(ctx)
 
-	commit, err := r.getCommit(req.Options.Branch)
+	bctx, err := r.getBranchContext(req.Options.Branch)
 	if err != nil {
 		return &resourcepb.List_Response{}, err
 	}
@@ -101,7 +101,7 @@ func (r *srv) List(ctx context.Context, req *resourcepb.List_Request) (*resource
 
 	log.Debug("list", "apiVersion", u.GetAPIVersion(), "kind", u.GetKind(), "name", u.GetName(), "options", req.Options)
 
-	storage, err := r.getStorage(req.Options.Branch, u)
+	storage, err := r.getStorage(bctx, u)
 	if err != nil {
 		return &resourcepb.List_Response{}, err
 	}
@@ -112,7 +112,7 @@ func (r *srv) List(ctx context.Context, req *resourcepb.List_Request) (*resource
 		ShowManagedFields: req.Options.ShowManagedField,
 		Trace:             req.Options.Trace,
 		Origin:            req.Options.Origin,
-		Commit:            commit,
+		Commit:            bctx.State.GetCommit(),
 	})
 	if err != nil {
 		return &resourcepb.List_Response{}, err
@@ -129,7 +129,8 @@ func (r *srv) List(ctx context.Context, req *resourcepb.List_Request) (*resource
 func (r *srv) Apply(ctx context.Context, req *resourcepb.Apply_Request) (*resourcepb.Apply_Response, error) {
 	log := log.FromContext(ctx)
 
-	if err := r.validatebranch(req.Options.Branch); err != nil {
+	bctx, err := r.getBranchContext(req.Options.Branch)
+	if err != nil {
 		return &resourcepb.Apply_Response{}, err
 	}
 
@@ -140,7 +141,7 @@ func (r *srv) Apply(ctx context.Context, req *resourcepb.Apply_Request) (*resour
 
 	log.Debug("apply", "apiVersion", u.GetAPIVersion(), "kind", u.GetKind(), "name", u.GetName(), "fieldmanager", req.Options.FieldManager, "force", req.Options.Force)
 
-	storage, err := r.getStorage(req.Options.Branch, u)
+	storage, err := r.getStorage(bctx, u)
 	if err != nil {
 		return &resourcepb.Apply_Response{}, err
 	}
@@ -165,7 +166,8 @@ func (r *srv) Apply(ctx context.Context, req *resourcepb.Apply_Request) (*resour
 func (r *srv) Create(ctx context.Context, req *resourcepb.Create_Request) (*resourcepb.Create_Response, error) {
 	log := log.FromContext(ctx)
 
-	if err := r.validatebranch(req.Options.Branch); err != nil {
+	bctx, err := r.getBranchContext(req.Options.Branch)
+	if err != nil {
 		return &resourcepb.Create_Response{}, err
 	}
 
@@ -176,7 +178,7 @@ func (r *srv) Create(ctx context.Context, req *resourcepb.Create_Request) (*reso
 
 	log.Debug("create", "apiVersion", u.GetAPIVersion(), "kind", u.GetKind(), "name", u.GetName())
 
-	storage, err := r.getStorage(req.Options.Branch, u)
+	storage, err := r.getStorage(bctx, u)
 	if err != nil {
 		return &resourcepb.Create_Response{}, err
 	}
@@ -199,7 +201,8 @@ func (r *srv) Create(ctx context.Context, req *resourcepb.Create_Request) (*reso
 func (r *srv) Update(ctx context.Context, req *resourcepb.Update_Request) (*resourcepb.Update_Response, error) {
 	log := log.FromContext(ctx)
 
-	if err := r.validatebranch(req.Options.Branch); err != nil {
+	bctx, err := r.getBranchContext(req.Options.Branch)
+	if err != nil {
 		return &resourcepb.Update_Response{}, err
 	}
 
@@ -210,7 +213,7 @@ func (r *srv) Update(ctx context.Context, req *resourcepb.Update_Request) (*reso
 
 	log.Debug("update", "apiVersion", u.GetAPIVersion(), "kind", u.GetKind(), "name", u.GetName())
 
-	storage, err := r.getStorage(req.Options.Branch, u)
+	storage, err := r.getStorage(bctx, u)
 	if err != nil {
 		return &resourcepb.Update_Response{}, err
 	}
@@ -233,7 +236,8 @@ func (r *srv) Update(ctx context.Context, req *resourcepb.Update_Request) (*reso
 func (r *srv) Delete(ctx context.Context, req *resourcepb.Delete_Request) (*resourcepb.Delete_Response, error) {
 	log := log.FromContext(ctx)
 
-	if err := r.validatebranch(req.Options.Branch); err != nil {
+	bctx, err := r.getBranchContext(req.Options.Branch)
+	if err != nil {
 		return &resourcepb.Delete_Response{}, err
 	}
 
@@ -244,7 +248,7 @@ func (r *srv) Delete(ctx context.Context, req *resourcepb.Delete_Request) (*reso
 
 	log.Debug("delete", "apiVersion", u.GetAPIVersion(), "kind", u.GetKind(), "name", u.GetName())
 
-	storage, err := r.getStorage(req.Options.Branch, u)
+	storage, err := r.getStorage(bctx, u)
 	if err != nil {
 		return &resourcepb.Delete_Response{}, err
 	}
@@ -267,6 +271,10 @@ func (r *srv) Watch(req *resourcepb.Watch_Request, stream resourcepb.Resource_Wa
 			return err
 		}
 	*/
+	bctx, err := r.getBranchContext(req.Options.Branch)
+	if err != nil {
+		return err
+	}
 
 	u, err := object.GetUnstructured(req.Object)
 	if err != nil {
@@ -280,7 +288,7 @@ func (r *srv) Watch(req *resourcepb.Watch_Request, stream resourcepb.Resource_Wa
 
 	log.Debug("watch", "apiVersion", u.GetAPIVersion(), "kind", u.GetKind(), "options", req.Options)
 
-	storage, err := r.getStorage(req.Options.Branch, u)
+	storage, err := r.getStorage(bctx, u)
 	if err != nil {
 		return status.Errorf(codes.Internal, "err: %s", err.Error())
 	}

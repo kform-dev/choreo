@@ -80,6 +80,10 @@ func (r *repo) StreamFiles(branchName string, w *repository.FileWriter) error {
 }
 func (r *repo) Checkout(branchName string) error { return fmt.Errorf("not supported on file repo") }
 
-func (r *repo) GetRefCommit(refName string) (*object.Commit, error) {
+func (r *repo) GetRefCommit(_ string) (*object.Commit, error) {
 	return nil, fmt.Errorf("GetRefCommit not supported in filerepo")
+}
+
+func (r *repo) CheckoutCommit(_ *object.Commit, _ string) error {
+	return fmt.Errorf("CheckoutCommit not supported in filerepo")
 }

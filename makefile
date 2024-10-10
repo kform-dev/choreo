@@ -1,3 +1,15 @@
+# Copyright 2024 Nokia
+# Licensed under the Apache License 2.0
+# SPDX-License-Identifier: Apache-2.0
+
+VERSION ?= latest
+REGISTRY ?= europe-docker.pkg.dev/srlinux/eu.gcr.io
+PROJECT ?= choreoctl
+IMG ?= $(REGISTRY)/${PROJECT}:$(VERSION)
+
+REPO = github.com/kform-dev/config-server
+USERID := 10000
+
 
 ## Tool Binaries
 CONTROLLER_GEN ?= $(LOCALBIN)/controller-gen
@@ -23,7 +35,7 @@ generate: controller-gen
 	GOBIN=$(LOCALBIN) go generate ./...
 
 .PHONY: manifests
-manifests: controller-gen ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
+manifests: controller-gen generate ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
 	$(CONTROLLER_GEN) rbac:roleName=manager-role crd webhook paths="./apis/..." output:crd:artifacts:config=artifacts
 
 
@@ -35,9 +47,20 @@ fmt: ## Run go fmt against code.
 vet: ## Run go vet against code.
 	go vet ./...
 
+.PHONY:
+docker-build: ## Build docker image with the manager.
+	ssh-add ./keys/id_rsa 2>/dev/null; true
+	docker build --build-arg USERID="$(USERID)" . -t ${IMG} --ssh default="$(SSH_AUTH_SOCK)"
+
+.PHONY: docker-push
+docker-push: docker-build ## Push docker image with the manager.
+	docker push ${IMG}
+
 .PHONY: all
-all: fmt vet ## Build manager binary.
+all: fmt vet manifests ## Build manager binary.
 	go build -ldflags "-X github.com/kform-dev/choreo/cmd/choreoctl/commands.version=${GIT_COMMIT}" -o $(LOCALBIN)/choreoctl -v cmd/choreoctl/main.go
+
+
 
 ##@ Build Dependencies
 

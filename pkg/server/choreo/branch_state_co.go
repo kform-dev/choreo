@@ -57,15 +57,16 @@ func (r *CheckedOut) Activate(ctx context.Context, branchCtx *BranchCtx) error {
 
 func (r *CheckedOut) loadAPIs(ctx context.Context, branchCtx *BranchCtx) error {
 	// load api files to apistore and apiserver
+	mainChoreoInstance := r.Choreo.status.Get().MainChoreoInstance
 	loader := &loader.APILoaderFile2APIStoreAndAPI{
 		Flags:        r.Choreo.flags,
 		Client:       r.Client,
 		APIStore:     branchCtx.APIStore,
 		Branch:       branchCtx.Branch,
-		InternalGVKs: r.Choreo.mainChoreoInstance.GetAPIStore().GetGVKSet(),
-		RepoPath:     r.Choreo.mainChoreoInstance.GetRepoPath(),
-		PathInRepo:   r.Choreo.mainChoreoInstance.GetPathInRepo(),
-		DBPath:       r.Choreo.mainChoreoInstance.GetDBPath(),
+		InternalGVKs: mainChoreoInstance.GetAPIStore().GetGVKSet(),
+		RepoPath:     mainChoreoInstance.GetRepoPath(),
+		PathInRepo:   mainChoreoInstance.GetPathInRepo(),
+		DBPath:       mainChoreoInstance.GetDBPath(),
 	}
 	if err := loader.Load(ctx); err != nil {
 		return err
@@ -74,13 +75,14 @@ func (r *CheckedOut) loadAPIs(ctx context.Context, branchCtx *BranchCtx) error {
 }
 
 func (r *CheckedOut) loadAPIFromUpstreamRefs(ctx context.Context, branchCtx *BranchCtx) error {
+	mainChoreoInstance := r.Choreo.status.Get().MainChoreoInstance
 	upstreamloader := loader.UpstreamLoader{
 		Flags:      r.Choreo.flags,
 		Client:     r.Client, // used to upload the upstream ref
 		Branch:     branchCtx.Branch,
-		RepoPath:   r.Choreo.mainChoreoInstance.GetRepoPath(),
-		PathInRepo: r.Choreo.mainChoreoInstance.GetPathInRepo(),
-		TempDir:    r.Choreo.mainChoreoInstance.GetTempPath(),
+		RepoPath:   mainChoreoInstance.GetRepoPath(),
+		PathInRepo: mainChoreoInstance.GetPathInRepo(),
+		TempDir:    mainChoreoInstance.GetTempPath(),
 		CallbackFn: r.addChildChoreoInstance,
 	}
 	if err := upstreamloader.Load(ctx); err != nil {
@@ -95,8 +97,8 @@ func (r *CheckedOut) loadAPIFromUpstreamRefs(ctx context.Context, branchCtx *Bra
 			Client:       childChoreoInstance.GetAPIClient(),
 			APIStore:     apiStore,
 			InternalGVKs: childChoreoInstance.GetAPIStore().GetGVKSet(),
-			PathInRepo:   r.Choreo.mainChoreoInstance.GetPathInRepo(), // required for the commit read
-			DBPath:       r.Choreo.mainChoreoInstance.GetDBPath(),
+			PathInRepo:   mainChoreoInstance.GetPathInRepo(), // required for the commit read
+			DBPath:       mainChoreoInstance.GetDBPath(),
 		}
 		if err := loader.Load(ctx, childChoreoInstance.GetCommit()); err != nil {
 			return err
@@ -123,15 +125,16 @@ func (r *CheckedOut) GetCommit() *object.Commit {
 }
 
 func (r *CheckedOut) LoadData(ctx context.Context, branchCtx *BranchCtx) error {
+	mainChoreoInstance := r.Choreo.status.Get().MainChoreoInstance
 	dataloader := &loader.DataLoader{
 		Flags:          r.Choreo.flags,
 		Client:         r.Client,
 		Branch:         branchCtx.Branch,
 		GVKs:           branchCtx.APIStore.GetGVKSet().UnsortedList(),
-		RepoPth:        r.Choreo.mainChoreoInstance.GetRepoPath(),
-		PathInRepo:     r.Choreo.mainChoreoInstance.GetPathInRepo(),
+		RepoPth:        mainChoreoInstance.GetRepoPath(),
+		PathInRepo:     mainChoreoInstance.GetPathInRepo(),
 		APIStore:       branchCtx.APIStore,
-		InternalAPISet: r.Choreo.mainChoreoInstance.GetAPIStore().GetGVKSet(),
+		InternalAPISet: mainChoreoInstance.GetAPIStore().GetGVKSet(),
 	}
 	if err := dataloader.Load(ctx); err != nil {
 		return err

@@ -16,6 +16,8 @@ limitations under the License.
 
 package options
 
+/*
+
 import (
 	"context"
 	"errors"
@@ -33,21 +35,22 @@ const ChoreoServer = "choreoServer"
 
 type ChoreoOptions struct {
 	serverName string
-	path       string
-	flags      *genericclioptions.ConfigFlags
+	address    string
+	//path       string
+	//flags *genericclioptions.ConfigFlags
 }
 
-func NewOptions(path string, flags *genericclioptions.ConfigFlags) *ChoreoOptions {
+func NewOptions() *ChoreoOptions {
 	return &ChoreoOptions{
 		serverName: ChoreoServer,
-		path:       path,
-		flags:      flags,
+		//path:       path,
+		//flags:      flags,
 	}
 }
 
-func (r *ChoreoOptions) Flags() *genericclioptions.ConfigFlags {
-	return r.flags
-}
+//func (r *ChoreoOptions) Flags() *genericclioptions.ConfigFlags {
+//	return r.flags
+//}
 
 func (r *ChoreoOptions) Complete() error {
 	return nil
@@ -103,3 +106,4 @@ func (r *ChoreoOptions) Run(ctx context.Context) error {
 	log.Debug("context concelled")
 	return nil
 }
+*/

@@ -19,49 +19,118 @@ package choreo
 import (
 	"context"
 	"fmt"
-	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/henderiw/logger/log"
 	"github.com/kform-dev/choreo/pkg/cli/genericclioptions"
 	"github.com/kform-dev/choreo/pkg/client/go/resourceclient"
+	"github.com/kform-dev/choreo/pkg/proto/choreopb"
+	"github.com/kform-dev/choreo/pkg/repository/repogit"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 type Choreo interface {
+	Get(ctx context.Context, req *choreopb.Get_Request) (*choreopb.Get_Response, error)
+	Apply(ctx context.Context, req *choreopb.Apply_Request) (*choreopb.Apply_Response, error)
 	Start(ctx context.Context)
 	GetMainChoreoInstance() ChoreoInstance
 	GetBranchStore() *BranchStore
 }
 
-func New(ctx context.Context, path string, flags *genericclioptions.ConfigFlags) (Choreo, error) {
-	mainChoreoInstance, err := NewMainChoreoInstance(ctx, path, flags)
-	if err != nil {
-		return nil, err
-	}
+func New(flags *genericclioptions.ConfigFlags) Choreo {
+	//mainChoreoInstance, err := NewMainChoreoInstance(ctx, path, flags)
+	//if err != nil {
+	//	return nil, err
+	//}
 	r := &choreo{
-		flags:              flags,
-		name:               filepath.Base(path),
-		gitrepo:            false,
-		path:               path,
-		mainChoreoInstance: mainChoreoInstance,
+		status: &Status{},
+		flags:  flags,
+		//name:               filepath.Base(path),
+		//path:               path,
+		//mainChoreoInstance: mainChoreoInstance,
 	}
-	r.branchStore, err = NewBranchStore(r)
-	if err != nil {
-		return r, err
-	}
-	return r, nil
+	r.status.Set(Initializing())
+	r.branchStore = NewBranchStore(r)
+	return r
 }
 
 type choreo struct {
-	flags              *genericclioptions.ConfigFlags
-	gitrepo            bool
-	name               string
-	path               string
-	mainChoreoInstance ChoreoInstance
-
-	client      resourceclient.Client
+	status      *Status
 	branchStore *BranchStore
+	flags       *genericclioptions.ConfigFlags
+
+	// dynamic
+	//name               string
+	//path               string
+	//m                  sync.RWMutex
+	//mainChoreoInstance ChoreoInstance
+
+	client resourceclient.Client
+}
+
+func (r *choreo) Get(ctx context.Context, req *choreopb.Get_Request) (*choreopb.Get_Response, error) {
+	status := r.status.Get()
+	return &choreopb.Get_Response{
+		ChoreoContext: status.ChoreoCtx,
+		Status:        status.Status,
+		Reason:        status.Reason,
+	}, nil
+
+}
+
+func (r *choreo) Apply(ctx context.Context, req *choreopb.Apply_Request) (*choreopb.Apply_Response, error) {
+	if req.ChoreoContext.Path != "" {
+		// we dont deal with change in this case
+		mainChoreoInstance, err := NewMainChoreoInstance(ctx, &Config{Path: *r.flags.ReconcilerPath, Flags: r.flags})
+		if err != nil {
+			r.status.Set(Failed(err.Error()))
+			return &choreopb.Apply_Response{}, status.Errorf(codes.InvalidArgument, "err: %s", err.Error())
+		}
+		r.status.Set(Success(mainChoreoInstance, req.ChoreoContext))
+		return &choreopb.Apply_Response{}, nil
+
+	} else {
+		// dynamic
+		if !r.status.Changed(req.ChoreoContext) {
+			return &choreopb.Apply_Response{}, nil
+		}
+
+		mainChoreoInstance := r.status.Get().MainChoreoInstance
+		if mainChoreoInstance != nil {
+			if err := mainChoreoInstance.Destroy(); err != nil {
+				fmt.Println("destroy failed", err)
+			}
+		}
+		r.status.Set(Failed("reinitializing"))
+
+		url := req.ChoreoContext.Url
+		replace := strings.NewReplacer("/", "-", ":", "-")
+		childRepoPath := filepath.Join(".", replace.Replace(url))
+
+		repo, commit, err := repogit.NewUpstreamRepo(ctx, childRepoPath, url, req.ChoreoContext.Ref)
+		if err != nil {
+			r.status.Set(Failed(err.Error()))
+			return &choreopb.Apply_Response{}, status.Errorf(codes.InvalidArgument, "err: %s", err.Error())
+		}
+
+		mainChoreoInstance, err = NewMainChoreoInstance(ctx, &Config{
+			Flags:      r.flags,
+			Path:       childRepoPath,
+			Repo:       repo,
+			Commit:     commit,
+			PathInRepo: req.ChoreoContext.Directory,
+		})
+		if err != nil {
+			r.status.Set(Failed(err.Error()))
+			return &choreopb.Apply_Response{}, status.Errorf(codes.InvalidArgument, "err: %s", err.Error())
+		}
+
+		r.status.Set(Success(mainChoreoInstance, req.ChoreoContext))
+		return &choreopb.Apply_Response{}, nil
+	}
 }
 
 func (r *choreo) GetBranchStore() *BranchStore {
@@ -69,7 +138,7 @@ func (r *choreo) GetBranchStore() *BranchStore {
 }
 
 func (r *choreo) GetMainChoreoInstance() ChoreoInstance {
-	return r.mainChoreoInstance
+	return r.status.Get().MainChoreoInstance
 }
 
 func (r *choreo) Start(ctx context.Context) {
@@ -86,7 +155,7 @@ func (r *choreo) Start(ctx context.Context) {
 	ticker := time.NewTicker(1 * time.Second)
 	defer ticker.Stop()
 
-	defer os.RemoveAll(r.mainChoreoInstance.GetTempPath())
+	//defer os.RemoveAll(r.mainChoreoInstance.GetTempPath())
 
 	if err := r.updateBranches(ctx); err != nil {
 		log.Error("update branches failed", "err", err)
@@ -108,10 +177,14 @@ func (r *choreo) Start(ctx context.Context) {
 }
 
 func (r *choreo) updateBranches(ctx context.Context) error {
-	if err := r.branchStore.Delete(ctx, r.mainChoreoInstance.GetRepo().GetBranchSet()); err != nil {
+	mainChoreoInstance := r.status.Get().MainChoreoInstance
+	if mainChoreoInstance == nil {
+		return nil
+	}
+	if err := r.branchStore.Delete(ctx, mainChoreoInstance.GetRepo().GetBranchSet()); err != nil {
 		return err
 	}
-	if err := r.branchStore.Update(ctx, r.mainChoreoInstance.GetRepo().GetBranches()); err != nil {
+	if err := r.branchStore.Update(ctx, mainChoreoInstance.GetRepo().GetBranches()); err != nil {
 		return err
 	}
 	return nil

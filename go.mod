@@ -1,6 +1,8 @@
 module github.com/kform-dev/choreo
 
-go 1.22.7
+go 1.23.0
+
+toolchain go1.23.2
 
 replace github.com/henderiw/apiserver-builder => github.com/henderiw/apiserver-builder v0.0.1
 
@@ -19,6 +21,7 @@ require (
 	github.com/henderiw/store v0.0.1
 	github.com/kform-dev/kform v0.0.15
 	github.com/kuidio/kuid v0.0.7
+	github.com/nephio-project/api v1.0.0
 	github.com/pkg/errors v0.9.1
 	github.com/rivo/tview v0.0.0-20240818110301-fd649dbf1223
 	github.com/spf13/cobra v1.8.1
@@ -29,12 +32,12 @@ require (
 	golang.org/x/sync v0.8.0
 	google.golang.org/grpc v1.67.1
 	google.golang.org/protobuf v1.34.2
-	k8s.io/api v0.32.0-alpha.0
+	k8s.io/api v0.32.0-alpha.1
 	k8s.io/apiextensions-apiserver v0.31.1
-	k8s.io/apimachinery v0.32.0-alpha.0
+	k8s.io/apimachinery v0.32.0-alpha.1
 	k8s.io/apiserver v0.31.1
-	k8s.io/client-go v0.32.0-alpha.0
-	k8s.io/kube-openapi v0.0.0-20240620174524-b456828f718b
+	k8s.io/client-go v0.32.0-alpha.1
+	k8s.io/kube-openapi v0.0.0-20240827152857-f7e401e7b4c2
 	k8s.io/utils v0.0.0-20240711033017-18e509b52bc8
 	sigs.k8s.io/controller-runtime v0.19.0
 	sigs.k8s.io/kustomize/kyaml v0.18.0
@@ -69,9 +72,9 @@ require (
 	github.com/go-git/go-billy/v5 v5.5.0 // indirect
 	github.com/go-logr/logr v1.4.2 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
-	github.com/go-openapi/jsonpointer v0.20.2 // indirect
+	github.com/go-openapi/jsonpointer v0.21.0 // indirect
 	github.com/go-openapi/jsonreference v0.20.4 // indirect
-	github.com/go-openapi/swag v0.22.9 // indirect
+	github.com/go-openapi/swag v0.23.0 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	github.com/golang/protobuf v1.5.4 // indirect
@@ -82,7 +85,6 @@ require (
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.20.0 // indirect
 	github.com/hashicorp/hcl v1.0.0 // indirect
 	github.com/henderiw/apiserver-builder v0.0.3 // indirect
-	github.com/imdario/mergo v0.3.16 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/jbenet/go-context v0.0.0-20150711004518-d14ea06fba99 // indirect
 	github.com/josharian/intern v1.0.0 // indirect
@@ -98,6 +100,7 @@ require (
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
+	github.com/nokia/k8s-ipam v0.0.4-0.20230608184434-0c910788bac7 // indirect
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/opencontainers/image-spec v1.1.0 // indirect
 	github.com/oras-project/oras-credentials-go v0.4.0 // indirect
@@ -133,7 +136,7 @@ require (
 	go.uber.org/multierr v1.11.0 // indirect
 	golang.org/x/crypto v0.26.0 // indirect
 	golang.org/x/exp v0.0.0-20231127185646-65229373498e // indirect
-	golang.org/x/mod v0.19.0 // indirect
+	golang.org/x/mod v0.20.0 // indirect
 	golang.org/x/net v0.28.0 // indirect
 	golang.org/x/oauth2 v0.22.0 // indirect
 	golang.org/x/sys v0.25.0 // indirect
