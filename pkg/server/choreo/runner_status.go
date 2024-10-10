@@ -14,6 +14,25 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-//go:generate protoc -I . ./runner.proto --go_out=./ --go_opt=paths=source_relative --go-grpc_out=. --go-grpc_opt=paths=source_relative
+package choreo
 
-package runnerpb
+type RunnerStatus int
+
+const (
+	RunnerStatus_Stopped RunnerStatus = iota
+	RunnerStatus_Running
+	RunnerStatus_Once
+)
+
+func (rs RunnerStatus) String() string {
+	switch rs {
+	case RunnerStatus_Stopped:
+		return "Stopped"
+	case RunnerStatus_Running:
+		return "Running"
+	case RunnerStatus_Once:
+		return "Once"
+	default:
+		return "Unknown"
+	}
+}

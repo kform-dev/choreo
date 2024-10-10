@@ -161,8 +161,9 @@ func (r *Resource) StartStream(ctx context.Context) {
 		Kind:    r.apiGroup.Kind,
 	})
 	rspch := r.app.factory.GetResourceClient().Watch(ctx, u, &resourceclient.ListOptions{
-		Branch:       "main",
-		ExprSelector: &resourcepb.ExpressionSelector{},
+		//Branch:       "main",
+		ShowManagedFields: false,
+		ExprSelector:      &resourcepb.ExpressionSelector{},
 	})
 	r.DataTable.Clear()
 	idset := NewIdentifierSet()

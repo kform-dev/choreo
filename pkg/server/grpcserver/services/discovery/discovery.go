@@ -44,14 +44,9 @@ type srv struct {
 
 func (r *srv) getBranchContext(branch string) (*choreo.BranchCtx, error) {
 	if branch == "" {
-		var bctx *choreo.BranchCtx
-		r.choreo.GetBranchStore().GetStore().List(func(k store.Key, bc *choreo.BranchCtx) {
-			if bc.State.String() == "CheckedOut" {
-				bctx = bc
-			}
-		})
+		bctx, err := r.choreo.GetBranchStore().GetCheckedOut()
 		if bctx == nil {
-			return nil, status.Errorf(codes.NotFound, "no checkedout branch found")
+			return nil, status.Errorf(codes.NotFound, "no checkedout branch found %v", err)
 		}
 		return bctx, nil
 	}
@@ -78,8 +73,13 @@ func (r *srv) Watch(req *discoverypb.Watch_Request, stream discoverypb.Discovery
 	ctx, cancel := context.WithCancel(stream.Context())
 	defer cancel()
 
+	bctx, err := r.getBranchContext(req.Branch)
+	if err != nil {
+		return err
+	}
+
 	wi, err := r.choreo.GetBranchStore().WatchAPIResources(ctx, &resourceclient.ListOptions{
-		Branch: req.Branch,
+		Branch: bctx.Branch,
 		Watch:  req.Options.Watch,
 	})
 	if err != nil {

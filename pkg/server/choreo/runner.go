@@ -14,9 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package recrunner
+package choreo
 
-/*
 import (
 	"context"
 	"errors"
@@ -24,17 +23,17 @@ import (
 	"sync"
 
 	choreov1alpha1 "github.com/kform-dev/choreo/apis/choreo/v1alpha1"
-	"github.com/kform-dev/choreo/pkg/cli/genericclioptions"
-	"github.com/kform-dev/choreo/pkg/client/go/discovery"
 	"github.com/kform-dev/choreo/pkg/client/go/resourceclient"
 	"github.com/kform-dev/choreo/pkg/controller/collector"
 	"github.com/kform-dev/choreo/pkg/controller/collector/result"
 	"github.com/kform-dev/choreo/pkg/controller/informers"
 	"github.com/kform-dev/choreo/pkg/controller/reconciler"
+	"github.com/kform-dev/choreo/pkg/proto/choreopb"
+	"github.com/kform-dev/choreo/pkg/proto/discoverypb"
 	"github.com/kform-dev/choreo/pkg/proto/resourcepb"
-	"github.com/kform-dev/choreo/pkg/proto/runnerpb"
-	"github.com/kform-dev/choreo/pkg/server/choreo"
 	"github.com/kform-dev/choreo/pkg/util/inventory"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/sets"
@@ -42,58 +41,53 @@ import (
 )
 
 type Runner interface {
-	Start(ctx context.Context, branch string) error
+	AddResourceClientAndContext(ctx context.Context, client resourceclient.Client)
+	Start(ctx context.Context, bctx *BranchCtx) (*choreopb.Start_Response, error)
 	Stop()
-	RunOnce(ctx context.Context, branch string) (*runnerpb.Once_Response, error)
-	AddDiscoveryClient(discovery.CachedDiscoveryInterface)
-	AddResourceClient(resourceclient.Client)
-	AddContext(ctx context.Context)
+	RunOnce(ctx context.Context, bctx *BranchCtx) (*choreopb.Once_Response, error)
 }
 
-func New(flags *genericclioptions.ConfigFlags, choreo choreo.Choreo) Runner {
-	return &runner{
-		//flags:  flags,
+func NewRunner(choreo Choreo) Runner {
+	return &run{
 		choreo: choreo,
 	}
 }
 
-type runner struct {
+type run struct {
 	m      sync.RWMutex
 	status RunnerStatus
-	// added on new
-	//flags  *genericclioptions.ConfigFlags
-	choreo choreo.Choreo
+	//
+	choreo Choreo
 	// added dynamically before start
-	ctx             context.Context
-	discoveryClient discovery.CachedDiscoveryInterface
-	client          resourceclient.Client
+	ctx    context.Context
+	client resourceclient.Client
+	//discoveryClient discovery.CachedDiscoveryInterface
 	// dynamic data
 	cancel             context.CancelFunc
 	reconcilerConfigs  []*choreov1alpha1.Reconciler
 	libs               *unstructured.UnstructuredList
 	reconcilerResultCh chan result.Result
-	runResultCh        chan *runnerpb.Once_Response
+	runResultCh        chan *choreopb.Once_Response
 	collector          collector.Collector
 	informerfactory    informers.InformerFactory
 }
 
-func (r *runner) AddDiscoveryClient(discoveryClient discovery.CachedDiscoveryInterface) {
-	r.discoveryClient = discoveryClient
-}
-func (r *runner) AddResourceClient(client resourceclient.Client) {
+func (r *run) AddResourceClientAndContext(ctx context.Context, client resourceclient.Client) {
 	r.client = client
-}
-
-func (r *runner) AddContext(ctx context.Context) {
 	r.ctx = ctx
 }
 
-func (r *runner) Start(ctx context.Context, branch string) error {
-	if r.getStatus() != RunnerStatus_Stopped {
-		return fmt.Errorf("runner is already running, status %s", r.status.String())
+func (r *run) Start(ctx context.Context, bctx *BranchCtx) (*choreopb.Start_Response, error) {
+	if r.getStatus() == RunnerStatus_Running {
+		return &choreopb.Start_Response{}, nil
 	}
-	if err := r.runValidate(ctx, branch); err != nil {
-		return err
+	if r.getStatus() == RunnerStatus_Once {
+		return &choreopb.Start_Response{},
+			status.Errorf(codes.InvalidArgument, "runner is already running, status %s", r.status.String())
+	}
+
+	if err := r.load(ctx, bctx); err != nil {
+		return &choreopb.Start_Response{}, err
 	}
 
 	// we use the server context to cancel/handle the status of the server
@@ -108,18 +102,27 @@ func (r *runner) Start(ctx context.Context, branch string) error {
 			return
 		default:
 			// use runctx since the ctx is from the cmd and it will be cancelled upon completion
-			r.runReconciler(runctx, branch, false) // false -> run continuously, not once
+			r.runReconciler(runctx, bctx, false) // false -> run continuously, not once
 		}
 	}()
-	return nil
+	return &choreopb.Start_Response{}, nil
 }
 
-func (r *runner) RunOnce(ctx context.Context, branch string) (*runnerpb.Once_Response, error) {
+func (r *run) Stop() {
+	if r.getCancel() != nil {
+		r.cancel() // Cancel the context, which triggers stopping in the StartContinuous loop
+	}
+	r.setStatusAndCancel(RunnerStatus_Stopped, nil)
+	// don't nilify the other resources, since they will be reinitialized
+}
+
+func (r *run) RunOnce(ctx context.Context, bctx *BranchCtx) (*choreopb.Once_Response, error) {
 	if r.getStatus() != RunnerStatus_Stopped {
-		return nil, fmt.Errorf("runner is already running, status %s", r.status.String())
+		return &choreopb.Once_Response{},
+			status.Errorf(codes.InvalidArgument, "runner is already running, status %s", r.status.String())
 	}
 
-	if err := r.runValidate(ctx, branch); err != nil {
+	if err := r.load(ctx, bctx); err != nil {
 		return nil, err
 	}
 
@@ -130,32 +133,24 @@ func (r *runner) RunOnce(ctx context.Context, branch string) (*runnerpb.Once_Res
 
 	defer r.Stop()
 
-	return r.runReconciler(ctx, branch, true) // run once
+	return r.runReconciler(ctx, bctx, true) // run once
 }
 
-func (r *runner) Stop() {
-	if r.getCancel() != nil {
-		r.cancel() // Cancel the context, which triggers stopping in the StartContinuous loop
-	}
-	r.setStatusAndCancel(RunnerStatus_Stopped, nil)
-	// don't nilify the other resources, since they will be reinitialized
-}
+func (r *run) load(ctx context.Context, bctx *BranchCtx) error {
+	// we only work with checkout branch
+	apiResources := bctx.APIStore.GetAPIResources()
 
-func (r *runner) runValidate(ctx context.Context, branch string) error {
-	apiResources, err := r.discoveryClient.APIResources(ctx, branch)
-	if err != nil {
-		return err
-	}
-	var errm error
-	if err := r.choreo.GetBranchStore().LoadData(ctx, branch); err != nil {
-		errm = errors.Join(errm, err)
+	//PrintAPIResource(apiResources)
+	if err := r.choreo.GetBranchStore().LoadData(ctx, bctx.Branch); err != nil {
+		return status.Errorf(codes.Internal, "err: %s", err.Error())
 	}
 
 	// we use this to garbagecollect - root object they might have gotten deleted
 	inv := inventory.Inventory{}
-	if err := inv.Build(ctx, r.client, r.discoveryClient, branch); err != nil {
-		errm = errors.Join(errm, err)
+	if err := inv.Build(ctx, r.client, apiResources, bctx.Branch); err != nil {
+		return status.Errorf(codes.Internal, "err: %s", err.Error())
 	}
+	var errm error
 	garbageSet := inv.CollectGarbage()
 	for _, ref := range garbageSet.UnsortedList() {
 		u := &unstructured.Unstructured{}
@@ -164,7 +159,7 @@ func (r *runner) runValidate(ctx context.Context, branch string) error {
 		u.SetNamespace(ref.Namespace)
 
 		if err := r.client.Delete(ctx, u, &resourceclient.DeleteOptions{
-			Branch: branch,
+			Branch: bctx.Branch,
 		}); err != nil {
 			errm = errors.Join(errm, err)
 		}
@@ -177,13 +172,13 @@ func (r *runner) runValidate(ctx context.Context, branch string) error {
 	reconcilerConfigs.SetGroupVersionKind(choreov1alpha1.SchemeGroupVersion.WithKind(choreov1alpha1.ReconcilerKind))
 	r.client.List(ctx, reconcilerConfigs, &resourceclient.ListOptions{
 		ExprSelector: &resourcepb.ExpressionSelector{},
-		Branch:       branch,
+		Branch:       bctx.Branch,
 	})
 
 	r.reconcilerConfigs = []*choreov1alpha1.Reconciler{}
 	reconcilerGVKs := sets.New[schema.GroupVersionKind]()
-	for _, recu := range reconcilerConfigs.Items {
-		b, err := yaml.Marshal(recu.Object)
+	for _, reconcilerConfig := range reconcilerConfigs.Items {
+		b, err := yaml.Marshal(reconcilerConfig.Object)
 		if err != nil {
 			errm = errors.Join(errm, err)
 			continue
@@ -195,8 +190,8 @@ func (r *runner) runValidate(ctx context.Context, branch string) error {
 		}
 		r.reconcilerConfigs = append(r.reconcilerConfigs, &reconciler)
 		for _, gvk := range reconciler.GetGVKs().UnsortedList() {
-			if !apiResources.Has(gvk) {
-				errm = errors.Join(errm, fmt.Errorf("reconciler %s api %s of reconciler not available in apigroup", recu.GetName(), gvk.String()))
+			if !HasAPIResource(apiResources, gvk) {
+				errm = errors.Join(errm, fmt.Errorf("reconciler %s api %s of reconciler not available in apigroup", reconcilerConfig.GetName(), gvk.String()))
 			}
 		}
 		reconcilerGVKs.Insert(reconciler.GetGVKs().UnsortedList()...)
@@ -206,7 +201,7 @@ func (r *runner) runValidate(ctx context.Context, branch string) error {
 	libs.SetGroupVersionKind(choreov1alpha1.SchemeGroupVersion.WithKind(choreov1alpha1.LibraryKind))
 	if err := r.client.List(ctx, libs, &resourceclient.ListOptions{
 		ExprSelector: &resourcepb.ExpressionSelector{},
-		Branch:       branch,
+		Branch:       bctx.Branch,
 	}); err != nil {
 		errm = errors.Join(errm, err)
 	}
@@ -217,16 +212,38 @@ func (r *runner) runValidate(ctx context.Context, branch string) error {
 	}
 
 	r.reconcilerResultCh = make(chan result.Result)
-	r.runResultCh = make(chan *runnerpb.Once_Response)
+	r.runResultCh = make(chan *choreopb.Once_Response)
 	r.collector = collector.New(r.reconcilerResultCh, r.runResultCh)
-	r.informerfactory = informers.NewInformerFactory(r.client, reconcilerGVKs, branch)
+	r.informerfactory = informers.NewInformerFactory(r.client, reconcilerGVKs, bctx.Branch)
 
 	return errm
+
 }
 
-func (r *runner) runReconciler(ctx context.Context, branch string, once bool) (*runnerpb.Once_Response, error) {
+func PrintAPIResource(apiResources []*discoverypb.APIResource) bool {
+	for _, apiResource := range apiResources {
+		gvk := schema.GroupVersionKind{
+			Group:   apiResource.Group,
+			Version: apiResource.Version,
+			Kind:    apiResource.Kind,
+		}
+		fmt.Println("print apiresources", gvk.String())
+	}
+	return false
+}
+
+func HasAPIResource(apiResources []*discoverypb.APIResource, gvk schema.GroupVersionKind) bool {
+	for _, apiResource := range apiResources {
+		if apiResource.Group == gvk.Group && apiResource.Version == gvk.Version && apiResource.Kind == gvk.Kind {
+			return true
+		}
+	}
+	return false
+}
+
+func (r *run) runReconciler(ctx context.Context, bctx *BranchCtx, once bool) (*choreopb.Once_Response, error) {
 	reconcilerfactory, err := reconciler.NewReconcilerFactory(
-		ctx, r.client, r.informerfactory, r.reconcilerConfigs, r.libs, r.reconcilerResultCh, branch)
+		ctx, r.client, r.informerfactory, r.reconcilerConfigs, r.libs, r.reconcilerResultCh, bctx.Branch)
 
 	if err != nil {
 		return nil, err
@@ -266,22 +283,21 @@ func (r *runner) runReconciler(ctx context.Context, branch string, once bool) (*
 	}
 }
 
-func (r *runner) getStatus() RunnerStatus {
+func (r *run) getStatus() RunnerStatus {
 	r.m.RLock()
 	defer r.m.RUnlock()
 	return r.status
 }
 
-func (r *runner) setStatusAndCancel(status RunnerStatus, cancel func()) {
+func (r *run) setStatusAndCancel(status RunnerStatus, cancel func()) {
 	r.m.Lock()
 	defer r.m.Unlock()
 	r.status = status
 	r.cancel = cancel
 }
 
-func (r *runner) getCancel() func() {
+func (r *run) getCancel() func() {
 	r.m.RLock()
 	defer r.m.RUnlock()
 	return r.cancel
 }
-*/

@@ -16,6 +16,8 @@ limitations under the License.
 
 package runnerclient
 
+/*
+
 import (
 	"context"
 
@@ -93,3 +95,4 @@ func (r *client) Load(ctx context.Context, branch string) error {
 	}
 	return nil
 }
+*/

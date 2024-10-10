@@ -72,6 +72,8 @@ func TestRender(t *testing.T) {
 
 			fmt.Println("input\n", u)
 
+			fmt.Println("templateFiles", templateFiles)
+
 			p, err := New(templateFiles)
 			if err != nil {
 				t.Errorf("creating parser failed: %v", err)

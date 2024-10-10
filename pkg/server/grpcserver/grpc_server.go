@@ -24,18 +24,15 @@ import (
 
 	"github.com/henderiw/logger/log"
 	"github.com/kform-dev/choreo/pkg/cli/genericclioptions"
-	recrunner "github.com/kform-dev/choreo/pkg/controller/runner"
 	"github.com/kform-dev/choreo/pkg/proto/branchpb"
 	"github.com/kform-dev/choreo/pkg/proto/choreopb"
 	"github.com/kform-dev/choreo/pkg/proto/discoverypb"
 	"github.com/kform-dev/choreo/pkg/proto/resourcepb"
-	"github.com/kform-dev/choreo/pkg/proto/runnerpb"
 	choreoserver "github.com/kform-dev/choreo/pkg/server/choreo"
 	"github.com/kform-dev/choreo/pkg/server/grpcserver/services/branch"
 	"github.com/kform-dev/choreo/pkg/server/grpcserver/services/choreo"
 	"github.com/kform-dev/choreo/pkg/server/grpcserver/services/discovery"
 	"github.com/kform-dev/choreo/pkg/server/grpcserver/services/resource"
-	"github.com/kform-dev/choreo/pkg/server/grpcserver/services/runner"
 	choreohealth "github.com/kform-dev/choreo/pkg/server/health"
 	"github.com/pkg/errors"
 	"google.golang.org/grpc"
@@ -64,7 +61,6 @@ func New(cfg *Config) *GRPCServer {
 		server:  grpcServer([]grpc.ServerOption{}),
 		choreo:  cfg.Choreo,
 		flags:   cfg.Flags,
-		runner:  recrunner.New(cfg.Flags, cfg.Choreo),
 	}
 }
 
@@ -74,7 +70,6 @@ type GRPCServer struct {
 	cancel  context.CancelFunc
 	server  *grpc.Server
 	choreo  choreoserver.Choreo
-	runner  recrunner.Runner
 	flags   *genericclioptions.ConfigFlags
 }
 
@@ -119,8 +114,8 @@ func (r *GRPCServer) Run(ctx context.Context) error {
 	branchpb.RegisterBranchServer(r.server, branchServer)
 
 	// Register the branch service
-	runnerServer := runner.New(r.choreo, r.runner)
-	runnerpb.RegisterRunnerServer(r.server, runnerServer)
+	//runnerServer := runner.New(r.choreo, r.runner)
+	//runnerpb.RegisterRunnerServer(r.server, runnerServer)
 
 	go func() {
 		if err := r.server.Serve(l); err != nil {
@@ -133,18 +128,6 @@ func (r *GRPCServer) Run(ctx context.Context) error {
 	if !choreohealth.IsServerReady(ctx, r.flags) {
 		return fmt.Errorf("server is not ready")
 	}
-
-	discoveryClient, err := r.flags.ToDiscoveryClient()
-	if err != nil {
-		return err
-	}
-	client, err := r.flags.ToResourceClient()
-	if err != nil {
-		return err
-	}
-	r.runner.AddDiscoveryClient(discoveryClient)
-	r.runner.AddResourceClient(client)
-	r.runner.AddContext(ctx)
 
 	for range ctx.Done() {
 		log.Info("server stopped...")

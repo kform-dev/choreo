@@ -30,7 +30,6 @@ import (
 	"github.com/kform-dev/choreo/pkg/client/go/discovery/cached/disk"
 	"github.com/kform-dev/choreo/pkg/client/go/resourceclient"
 	"github.com/kform-dev/choreo/pkg/client/go/resourcemapper"
-	"github.com/kform-dev/choreo/pkg/client/go/runnerclient"
 	"k8s.io/utils/ptr"
 )
 
@@ -74,8 +73,6 @@ type ClientGetter interface {
 	ToResourceClient() (resourceclient.Client, error)
 	// ToBranchClient returns branch client
 	ToBranchClient() (branchclient.Client, error)
-	// ToRunnerClient returns runner client
-	ToRunnerClient() (runnerclient.Client, error)
 	// Branch()
 	ToBranch() string
 }
@@ -201,9 +198,4 @@ func (r *ConfigFlags) ToBranchClient() (branchclient.Client, error) {
 
 func (r *ConfigFlags) ToBranch() string {
 	return *r.Branch
-}
-
-func (r *ConfigFlags) ToRunnerClient() (runnerclient.Client, error) {
-	config := r.toConfig()
-	return runnerclient.NewClient(config)
 }

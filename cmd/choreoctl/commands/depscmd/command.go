@@ -65,8 +65,13 @@ func (r *Runner) runE(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
+	apiresource, err := r.factory.GetDiscoveryClient().APIResources(ctx, branch)
+	if err != nil {
+		return err
+	}
+
 	inv := inventory.Inventory{}
-	if err := inv.Build(ctx, r.factory.GetResourceClient(), r.factory.GetDiscoveryClient(), branch); err != nil {
+	if err := inv.Build(ctx, r.factory.GetResourceClient(), apiresource, branch); err != nil {
 		return err
 	}
 	inv.Print()
@@ -98,7 +103,7 @@ func (r *Options) Run(ctx context.Context) error {
 	w := r.Streams.Out
 
 	var errm error
-	for _, apiResource := range apiresources.Spec.Groups {
+	for _, apiResource := range apiresources {
 		switch r.Output {
 		case "name":
 			name := fmt.Sprintf("%s.%s", apiResource.Resource, apiResource.Group)

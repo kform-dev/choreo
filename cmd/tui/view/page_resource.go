@@ -8,11 +8,12 @@ import (
 	"time"
 
 	"github.com/gdamore/tcell/v2"
-	choreov1alpha1 "github.com/kform-dev/choreo/apis/choreo/v1alpha1"
 	"github.com/kform-dev/choreo/pkg/client/go/resourceclient"
+	"github.com/kform-dev/choreo/pkg/proto/discoverypb"
 	"github.com/kform-dev/choreo/pkg/proto/resourcepb"
 	"github.com/rivo/tview"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
 type Resource struct {
@@ -22,11 +23,11 @@ type Resource struct {
 	app      *App
 	name     string
 	title    string
-	apiGroup *choreov1alpha1.APIResourceGroup
+	apiGroup *discoverypb.APIResource
 	view     *tview.Flex
 }
 
-func NewResource(ctx context.Context, parent Page, apiGroup *choreov1alpha1.APIResourceGroup) {
+func NewResource(ctx context.Context, parent Page, apiGroup *discoverypb.APIResource) {
 	app, err := extractApp(ctx)
 	if err != nil {
 		panic(err)
@@ -106,7 +107,7 @@ func (r *Resource) Activate(ctx context.Context) {
 
 func (r *Resource) Update(ctx context.Context) error {
 	ul := &unstructured.UnstructuredList{}
-	ul.SetGroupVersionKind(r.apiGroup.GVK())
+	ul.SetGroupVersionKind(schema.GroupVersionKind{Group: r.apiGroup.Group, Version: r.apiGroup.Version, Kind: r.apiGroup.Kind})
 	err := r.app.factory.GetResourceClient().List(ctx, ul, &resourceclient.ListOptions{
 		ExprSelector: &resourcepb.ExpressionSelector{},
 		Branch:       "main",

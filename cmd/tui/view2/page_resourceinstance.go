@@ -140,8 +140,8 @@ func (r *ResourceInstance) Update(ctx context.Context) error {
 	u := &unstructured.Unstructured{}
 	u.SetGroupVersionKind(schema.FromAPIVersionAndKind(r.u.GetAPIVersion(), r.u.GetKind()))
 	err := r.app.factory.GetResourceClient().Get(ctx, types.NamespacedName{Namespace: r.u.GetNamespace(), Name: r.u.GetName()}, u, &resourceclient.GetOptions{
-		Branch:            "main",
-		ShowManagedFields: true,
+		//Branch:            "main",
+		ShowManagedFields: false,
 	})
 	if err != nil {
 		// todo log error

@@ -163,17 +163,17 @@ func (r *BranchStore) GetStore() store.Storer[*BranchCtx] {
 	return r.store
 }
 
-func (r *BranchStore) GetCheckedOut() (string, error) {
-	var branch string
+func (r *BranchStore) GetCheckedOut() (*BranchCtx, error) {
+	var bctx *BranchCtx
 	r.store.List(func(k store.Key, bc *BranchCtx) {
 		if bc.State.String() == "CheckedOut" {
-			branch = k.Name
+			bctx = bc
 		}
 	})
-	if branch == "" {
-		return branch, fmt.Errorf("no checkedou branch found")
+	if bctx == nil {
+		return nil, fmt.Errorf("no checkedout branch found")
 	}
-	return branch, nil
+	return bctx, nil
 }
 
 func (r *BranchStore) LoadData(ctx context.Context, branch string) error {

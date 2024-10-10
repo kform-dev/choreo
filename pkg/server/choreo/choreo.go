@@ -38,6 +38,7 @@ type Choreo interface {
 	Start(ctx context.Context)
 	GetMainChoreoInstance() ChoreoInstance
 	GetBranchStore() *BranchStore
+	Runner() Runner
 }
 
 func New(flags *genericclioptions.ConfigFlags) Choreo {
@@ -54,12 +55,14 @@ func New(flags *genericclioptions.ConfigFlags) Choreo {
 	}
 	r.status.Set(Initializing())
 	r.branchStore = NewBranchStore(r)
+	r.runner = NewRunner(r)
 	return r
 }
 
 type choreo struct {
 	status      *Status
 	branchStore *BranchStore
+	runner      Runner
 	flags       *genericclioptions.ConfigFlags
 
 	// dynamic
@@ -84,7 +87,7 @@ func (r *choreo) Get(ctx context.Context, req *choreopb.Get_Request) (*choreopb.
 func (r *choreo) Apply(ctx context.Context, req *choreopb.Apply_Request) (*choreopb.Apply_Response, error) {
 	if req.ChoreoContext.Path != "" {
 		// we dont deal with change in this case
-		mainChoreoInstance, err := NewMainChoreoInstance(ctx, &Config{Path: *r.flags.ReconcilerPath, Flags: r.flags})
+		mainChoreoInstance, err := NewMainChoreoInstance(ctx, &Config{Path: req.ChoreoContext.Path, Flags: r.flags})
 		if err != nil {
 			r.status.Set(Failed(err.Error()))
 			return &choreopb.Apply_Response{}, status.Errorf(codes.InvalidArgument, "err: %s", err.Error())
@@ -98,6 +101,9 @@ func (r *choreo) Apply(ctx context.Context, req *choreopb.Apply_Request) (*chore
 			return &choreopb.Apply_Response{}, nil
 		}
 
+		// stop the runner if it was active - safe call
+		r.Runner().Stop()
+		// ...
 		mainChoreoInstance := r.status.Get().MainChoreoInstance
 		if mainChoreoInstance != nil {
 			if err := mainChoreoInstance.Destroy(); err != nil {
@@ -115,7 +121,6 @@ func (r *choreo) Apply(ctx context.Context, req *choreopb.Apply_Request) (*chore
 			r.status.Set(Failed(err.Error()))
 			return &choreopb.Apply_Response{}, status.Errorf(codes.InvalidArgument, "err: %s", err.Error())
 		}
-
 		mainChoreoInstance, err = NewMainChoreoInstance(ctx, &Config{
 			Flags:      r.flags,
 			Path:       childRepoPath,
@@ -127,7 +132,7 @@ func (r *choreo) Apply(ctx context.Context, req *choreopb.Apply_Request) (*chore
 			r.status.Set(Failed(err.Error()))
 			return &choreopb.Apply_Response{}, status.Errorf(codes.InvalidArgument, "err: %s", err.Error())
 		}
-
+		r.branchStore = NewBranchStore(r)
 		r.status.Set(Success(mainChoreoInstance, req.ChoreoContext))
 		return &choreopb.Apply_Response{}, nil
 	}
@@ -141,6 +146,10 @@ func (r *choreo) GetMainChoreoInstance() ChoreoInstance {
 	return r.status.Get().MainChoreoInstance
 }
 
+func (r *choreo) Runner() Runner {
+	return r.runner
+}
+
 func (r *choreo) Start(ctx context.Context) {
 	log := log.FromContext(ctx)
 	var err error
@@ -148,6 +157,7 @@ func (r *choreo) Start(ctx context.Context) {
 	if err != nil {
 		panic(err)
 	}
+	r.runner.AddResourceClientAndContext(ctx, r.client)
 	r.branchStore.store.Start(ctx)
 	defer r.branchStore.store.Stop()
 
@@ -177,7 +187,9 @@ func (r *choreo) Start(ctx context.Context) {
 }
 
 func (r *choreo) updateBranches(ctx context.Context) error {
-	mainChoreoInstance := r.status.Get().MainChoreoInstance
+	status := r.status.Get()
+	mainChoreoInstance := status.MainChoreoInstance
+
 	if mainChoreoInstance == nil {
 		return nil
 	}
@@ -186,6 +198,14 @@ func (r *choreo) updateBranches(ctx context.Context) error {
 	}
 	if err := r.branchStore.Update(ctx, mainChoreoInstance.GetRepo().GetBranches()); err != nil {
 		return err
+	}
+
+	if status.ChoreoCtx.Continuous {
+		bctx, err := r.branchStore.GetCheckedOut()
+		if err != nil {
+			return err
+		}
+		r.Runner().Start(ctx, bctx)
 	}
 	return nil
 }

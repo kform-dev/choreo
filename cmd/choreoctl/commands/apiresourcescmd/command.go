@@ -107,7 +107,7 @@ func (r *Options) Run(ctx context.Context) error {
 	w := r.Streams.Out
 
 	var errm error
-	for _, apiResource := range apiresources.Spec.Groups {
+	for _, apiResource := range apiresources {
 		switch r.Output {
 		case "name":
 			// used for autocompletion

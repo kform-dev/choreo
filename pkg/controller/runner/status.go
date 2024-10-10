@@ -16,6 +16,8 @@ limitations under the License.
 
 package recrunner
 
+/*
+
 type RunnerStatus int
 
 const (
@@ -36,3 +38,4 @@ func (rs RunnerStatus) String() string {
 		return "Unknown"
 	}
 }
+*/

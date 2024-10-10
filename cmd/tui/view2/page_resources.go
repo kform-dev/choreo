@@ -155,7 +155,7 @@ func (r *Resources) StartStream(parentCtx context.Context) {
 		r.cancel = cancel
 
 		rspch := r.app.factory.GetDiscoveryClient().Watch(ctx, &discoverypb.Watch_Request{
-			Branch:  "main",
+			//Branch:  "",
 			Options: &discoverypb.Watch_Options{},
 		})
 

@@ -16,8 +16,11 @@ limitations under the License.
 
 package runner
 
+/*
+
 import (
 	"context"
+	"fmt"
 
 	"github.com/henderiw/store"
 	recrunner "github.com/kform-dev/choreo/pkg/controller/runner"
@@ -41,7 +44,9 @@ type srv struct {
 }
 
 func (r *srv) getBranchContext(branch string) (*choreo.BranchCtx, error) {
+	fmt.Println("getBranchContext", branch)
 	if branch == "" {
+		fmt.Println()
 		var bctx *choreo.BranchCtx
 		r.choreo.GetBranchStore().GetStore().List(func(k store.Key, bc *choreo.BranchCtx) {
 			if bc.State.String() == "CheckedOut" {
@@ -66,7 +71,7 @@ func (r *srv) Start(ctx context.Context, req *runnerpb.Start_Request) (*runnerpb
 		return nil, err
 	}
 
-	if err := r.runner.Start(ctx, bctx.Branch); err != nil {
+	if err := r.runner.Start(ctx, bctx); err != nil {
 		return &runnerpb.Start_Response{}, status.Errorf(codes.InvalidArgument, "cannot start runner on a branch %s err: %s", req.Branch, err.Error())
 	}
 	return &runnerpb.Start_Response{}, nil
@@ -85,7 +90,7 @@ func (r *srv) Once(ctx context.Context, req *runnerpb.Once_Request) (*runnerpb.O
 	if err != nil {
 		return nil, err
 	}
-
+	fmt.Println("run once", bctx.Branch)
 	rsp, err := r.runner.RunOnce(ctx, bctx.Branch)
 	if err != nil {
 		return &runnerpb.Once_Response{}, status.Errorf(codes.InvalidArgument, "cannot start runner on a branch %s err: %s", req.Branch, err.Error())
@@ -103,3 +108,4 @@ func (r *srv) Load(ctx context.Context, req *runnerpb.Load_Request) (*runnerpb.L
 	}
 	return &runnerpb.Load_Response{}, nil
 }
+*/

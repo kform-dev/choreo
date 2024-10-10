@@ -24,7 +24,7 @@ import (
 
 	"github.com/kform-dev/choreo/pkg/cli/genericclioptions"
 	"github.com/kform-dev/choreo/pkg/client/go/util"
-	"github.com/kform-dev/choreo/pkg/proto/runnerpb"
+	"github.com/kform-dev/choreo/pkg/proto/choreopb"
 	"github.com/spf13/cobra"
 	//docs "github.com/kform-dev/kform/internal/docs/generated/applydocs"
 )
@@ -61,13 +61,8 @@ type Runner struct {
 func (r *Runner) runE(cmd *cobra.Command, args []string) error {
 	ctx := cmd.Context()
 
-	branch, err := cmd.Flags().GetString("branch")
-	if err != nil {
-		return err
-	}
-
-	runnerClient := r.factory.GetRunnerClient()
-	rsp, err := runnerClient.Once(ctx, branch)
+	choreoClient := r.factory.GetChoreoClient()
+	rsp, err := choreoClient.Once(ctx)
 	if err != nil {
 		return err
 	}
@@ -77,7 +72,7 @@ func (r *Runner) runE(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func printResult(rsp *runnerpb.Once_Response) {
+func printResult(rsp *choreopb.Once_Response) {
 	if !rsp.Success {
 		// failed
 		fmt.Println("execution failed", rsp.ReconcileRef, rsp.Message)
@@ -104,10 +99,10 @@ func printResult(rsp *runnerpb.Once_Response) {
 	// Calculate maximum lengths
 	for name, operations := range rsp.Results {
 		maxNameLen = max(maxNameLen, len(name))
-		maxStartLen = max(maxStartLen, digitCount(int(operations.OperationCounts[runnerpb.Operation_START.String()])))
-		maxStopLen = max(maxStopLen, digitCount(int(operations.OperationCounts[runnerpb.Operation_STOP.String()])))
-		maxRequeueLen = max(maxRequeueLen, digitCount(int(operations.OperationCounts[runnerpb.Operation_REQUEUE.String()])))
-		maxErrorLen = max(maxErrorLen, digitCount(int(operations.OperationCounts[runnerpb.Operation_ERROR.String()])))
+		maxStartLen = max(maxStartLen, digitCount(int(operations.OperationCounts[choreopb.Operation_START.String()])))
+		maxStopLen = max(maxStopLen, digitCount(int(operations.OperationCounts[choreopb.Operation_STOP.String()])))
+		maxRequeueLen = max(maxRequeueLen, digitCount(int(operations.OperationCounts[choreopb.Operation_REQUEUE.String()])))
+		maxErrorLen = max(maxErrorLen, digitCount(int(operations.OperationCounts[choreopb.Operation_ERROR.String()])))
 	}
 
 	// Print header
@@ -123,10 +118,10 @@ func printResult(rsp *runnerpb.Once_Response) {
 		op := rsp.Results[name]
 		fmt.Printf(rowFormat,
 			name,
-			op.OperationCounts[runnerpb.Operation_START.String()],
-			op.OperationCounts[runnerpb.Operation_STOP.String()],
-			op.OperationCounts[runnerpb.Operation_REQUEUE.String()],
-			op.OperationCounts[runnerpb.Operation_ERROR.String()],
+			op.OperationCounts[choreopb.Operation_START.String()],
+			op.OperationCounts[choreopb.Operation_STOP.String()],
+			op.OperationCounts[choreopb.Operation_REQUEUE.String()],
+			op.OperationCounts[choreopb.Operation_ERROR.String()],
 		)
 	}
 }

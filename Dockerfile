@@ -46,6 +46,9 @@ RUN --mount=type=cache,target=/root/.cache/go-build \
 #FROM gcr.io/distroless/static:nonroot
 FROM alpine:latest
 #FROM scratch
+
+RUN apk update && apk add --no-cache git
+
 ARG USERID=10000
 # add-in our timezone data file
 COPY --from=builder /usr/share/zoneinfo /usr/share/zoneinfo

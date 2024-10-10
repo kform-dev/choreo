@@ -16,6 +16,8 @@ limitations under the License.
 
 package configgenerator
 
+/*
+
 import (
 	"bytes"
 	"context"
@@ -370,3 +372,4 @@ func String2GroupResource(s string) (schema.GroupResource, error) {
 func GroupResource2String(gr schema.GroupResource) string {
 	return fmt.Sprintf("%s_%s", gr.Group, gr.Resource)
 }
+*/

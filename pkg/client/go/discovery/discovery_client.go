@@ -19,12 +19,11 @@ package discovery
 import (
 	"context"
 
-	choreov1alpha1 "github.com/kform-dev/choreo/apis/choreo/v1alpha1"
 	"github.com/kform-dev/choreo/pkg/proto/discoverypb"
 )
 
 type DiscoveryInterface interface {
-	APIResources(ctx context.Context, branch string) (*choreov1alpha1.APIResources, error)
+	APIResources(ctx context.Context, branch string) ([]*discoverypb.APIResource, error)
 	Close() error
 	Watch(context.Context, *discoverypb.Watch_Request) chan *discoverypb.Watch_Response
 }

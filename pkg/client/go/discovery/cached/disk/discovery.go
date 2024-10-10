@@ -89,7 +89,7 @@ func (r *CachedDiscoveryClient) Invalidate() {
 	}
 }
 
-func (r *CachedDiscoveryClient) APIResources(ctx context.Context, branchName string) (*choreov1alpha1.APIResources, error) {
+func (r *CachedDiscoveryClient) APIResources(ctx context.Context, branchName string) ([]*discoverypb.APIResource, error) {
 	log := log.FromContext(ctx)
 	// REMOVED FOR NOW TO AVOID DISK CACHING
 	/*
@@ -108,7 +108,7 @@ func (r *CachedDiscoveryClient) APIResources(ctx context.Context, branchName str
 		return nil, err
 	}
 
-	if apiResources == nil || len(apiResources.Spec.Groups) == 0 {
+	if apiResources == nil || len(apiResources) == 0 {
 		// skip writing to cache
 		log.Error("no apiresource retrieved from server")
 		return apiResources, nil

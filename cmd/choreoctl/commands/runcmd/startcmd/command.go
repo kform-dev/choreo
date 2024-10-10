@@ -57,13 +57,8 @@ type Runner struct {
 func (r *Runner) runE(cmd *cobra.Command, args []string) error {
 	ctx := cmd.Context()
 
-	branch, err := cmd.Flags().GetString("branch")
-	if err != nil {
-		return err
-	}
-
-	runnerClient := r.factory.GetRunnerClient()
-	if err := runnerClient.Start(ctx, branch); err != nil {
+	choreoClient := r.factory.GetChoreoClient()
+	if err := choreoClient.Start(ctx); err != nil {
 		return err
 	}
 	return nil

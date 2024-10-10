@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/gdamore/tcell/v2"
-	choreov1alpha1 "github.com/kform-dev/choreo/apis/choreo/v1alpha1"
+	"github.com/kform-dev/choreo/pkg/proto/discoverypb"
 	"github.com/rivo/tview"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
@@ -112,16 +112,16 @@ func (r *Resources) Update(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	r.view.SetTitle(fmt.Sprintf("  %s [%d]  ", r.title, len(resources.Spec.Groups)))
+	r.view.SetTitle(fmt.Sprintf("  %s [%d]  ", r.title, len(resources)))
 	// header
 	//columnWidth := SetTableHeader(r.HeaderTable, "GroupResource", "Version", "Kind", "ListKind", "Namespaced", "Categories")
 	// data
-	sort.Slice(resources.Spec.Groups, func(i, j int) bool {
-		return getResourceID(resources.Spec.Groups[i]) < getResourceID(resources.Spec.Groups[j])
+	sort.Slice(resources, func(i, j int) bool {
+		return getResourceID(resources[i]) < getResourceID(resources[j])
 	})
 
 	resourceIDs := []string{}
-	for _, resource := range resources.Spec.Groups {
+	for _, resource := range resources {
 		resourceID := getResourceID(resource)
 		resourceIDs = append(resourceIDs, resourceID)
 		row := r.FindResourcesRow(resourceID)
@@ -142,11 +142,11 @@ func (r *Resources) Update(ctx context.Context) error {
 	return nil
 }
 
-func getResourceID(resource *choreov1alpha1.APIResourceGroup) string {
+func getResourceID(resource *discoverypb.APIResource) string {
 	return schema.GroupResource{Group: resource.Group, Resource: resource.Resource}.String()
 }
 
-func (r *Resources) SetResourcesRow(row int, resource *choreov1alpha1.APIResourceGroup) {
+func (r *Resources) SetResourcesRow(row int, resource *discoverypb.APIResource) {
 	style := tcell.StyleDefault.
 		Foreground(tcell.ColorLightSkyBlue).
 		Background(tcell.ColorBlack)
@@ -160,7 +160,7 @@ func (r *Resources) SetResourcesRow(row int, resource *choreov1alpha1.APIResourc
 }
 
 func (r *Resources) GetResourcesRow(row int) string {
-	resource := r.DataTable.GetCell(row, 0).GetReference().(*choreov1alpha1.APIResourceGroup)
+	resource := r.DataTable.GetCell(row, 0).GetReference().(*discoverypb.APIResource)
 	return getResourceID(resource)
 }
 
@@ -175,7 +175,7 @@ func (r *Resources) FindResourcesRow(resourceID string) int {
 }
 
 func (r *Resources) actvateChildPage(ctx context.Context, row, column int) error {
-	resource, ok := r.DataTable.GetCell(row, column).GetReference().(*choreov1alpha1.APIResourceGroup)
+	resource, ok := r.DataTable.GetCell(row, column).GetReference().(*discoverypb.APIResource)
 	if !ok {
 		return fmt.Errorf("%s addChildPage resource not available in row %d, column %d", r.name, row, column)
 	}

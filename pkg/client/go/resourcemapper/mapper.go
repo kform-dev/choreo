@@ -49,7 +49,7 @@ func (r *mapper) KindFor(ctx context.Context, resource schema.GroupResource, bra
 		return schema.GroupVersionKind{}, fmt.Errorf("no apiResource received")
 	}
 
-	for _, apiresource := range apiResources.Spec.Groups {
+	for _, apiresource := range apiResources {
 		if apiresource.Resource == resource.Resource && apiresource.Group == resource.Group {
 			return schema.GroupVersionKind{
 				Group:   apiresource.Group,

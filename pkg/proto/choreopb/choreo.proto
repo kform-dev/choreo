@@ -23,6 +23,10 @@ service Choreo {
     rpc Get (Get.Request) returns (Get.Response) {}
     rpc Apply (Apply.Request) returns (Apply.Response) {}
     //rpc Watch (Watch.Request) returns (stream Watch.Response) {}
+    rpc Start (Start.Request) returns (Start.Response) {}
+    rpc Stop (Stop.Request) returns (Stop.Response) {}
+    rpc Once (Once.Request) returns (Once.Response) {}
+    rpc Load (Load.Request) returns (Load.Response) {}
   }
 
 
@@ -32,6 +36,7 @@ message ChoreoContext {
     string ref = 3;
     string directory = 4;
     string secret = 5;
+    bool continuous = 6;
 }
 
 message Get {
@@ -85,4 +90,78 @@ message Watch {
     message Options {
         bool watch = 1 ; // indicate watch only, otherwise list and watch is used
     }
+}
+
+
+message Start {
+    message Request {
+        //string branch = 1; // removed since we only can run on checkedout all the rest are Read only
+        Options options = 1;
+        
+    }
+
+    message Response {
+    }
+
+    message Options {
+    }
+}
+
+message Stop {
+    message Request {
+        //string branch = 1; // removed since we only can run on checkedout all the rest are Read only
+        Options options = 2;
+    }
+
+    message Response {
+    }
+
+    message Options {
+    }
+}
+
+message Once {
+    message Request {
+        //string branch = 1; // removed since we only can run on checkedout all the rest are Read only
+        Options options = 2;
+    }
+
+    message Options {
+    }
+
+    message Response {
+        string executionTime = 1;
+        bool success = 2;
+        string reconcileRef = 3;
+        string message = 4;
+        map<string, Operations> results = 5;
+    }
+
+    message Operations {
+        // sting is the string of the operation
+        map<string, int32> operation_counts = 1;
+    }
+}
+
+message Load {
+    message Request {
+       // string branch = 1; // removed since we only can run on checkedout all the rest are Read only
+        Options options = 2;
+    }
+
+    message Response {
+        bytes object = 1;
+    }
+
+    message Options {
+    }
+}
+
+enum Operation {
+    UNKNOWN = 0;
+    START = 1;
+    STOP = 2;
+    ERROR = 3;
+    REQUEUE = 4;
+    // Add more operations as needed
 }

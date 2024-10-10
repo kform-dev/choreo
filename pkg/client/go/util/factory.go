@@ -26,7 +26,6 @@ import (
 	"github.com/kform-dev/choreo/pkg/client/go/discovery"
 	"github.com/kform-dev/choreo/pkg/client/go/resourceclient"
 	"github.com/kform-dev/choreo/pkg/client/go/resourcemapper"
-	"github.com/kform-dev/choreo/pkg/client/go/runnerclient"
 )
 
 type Factory interface {
@@ -36,7 +35,6 @@ type Factory interface {
 	GetResourceMapper() resourcemapper.Mapper
 	GetResourceClient() resourceclient.Client
 	GetBranchClient() branchclient.Client
-	GetRunnerClient() runnerclient.Client
 	Close() error
 }
 
@@ -67,11 +65,6 @@ func NewFactory(clientGetter genericclioptions.ClientGetter) (Factory, error) {
 		return nil, err
 	}
 
-	runnerClient, err := clientGetter.ToRunnerClient()
-	if err != nil {
-		return nil, err
-	}
-
 	resourceMapper := resourcemapper.NewMapper(discoveryCLient)
 
 	return &factory{
@@ -81,7 +74,6 @@ func NewFactory(clientGetter genericclioptions.ClientGetter) (Factory, error) {
 		resourceMapper:  resourceMapper,
 		resourceClient:  resourceClient,
 		branchClient:    branchClient,
-		runnerClient:    runnerClient,
 	}, nil
 }
 
@@ -92,7 +84,6 @@ type factory struct {
 	resourceMapper  resourcemapper.Mapper
 	resourceClient  resourceclient.Client
 	branchClient    branchclient.Client
-	runnerClient    runnerclient.Client
 }
 
 func (r *factory) Close() error {
@@ -137,8 +128,4 @@ func (r *factory) GetResourceClient() resourceclient.Client {
 
 func (r *factory) GetBranchClient() branchclient.Client {
 	return r.branchClient
-}
-
-func (r *factory) GetRunnerClient() runnerclient.Client {
-	return r.runnerClient
 }

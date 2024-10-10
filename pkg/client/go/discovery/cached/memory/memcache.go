@@ -20,7 +20,6 @@ import (
 	"context"
 	"sync"
 
-	choreov1alpha1 "github.com/kform-dev/choreo/apis/choreo/v1alpha1"
 	"github.com/kform-dev/choreo/pkg/client/go/discovery"
 	"github.com/kform-dev/choreo/pkg/proto/discoverypb"
 )
@@ -29,7 +28,7 @@ type memCacheClient struct {
 	delegate discovery.DiscoveryInterface
 
 	m            sync.RWMutex
-	apiResources *choreov1alpha1.APIResources
+	apiResources []*discoverypb.APIResource
 	cacheValid   bool
 }
 
@@ -58,7 +57,7 @@ func (r *memCacheClient) Invalidate() {
 	}
 }
 
-func (r *memCacheClient) APIResources(ctx context.Context, branch string) (*choreov1alpha1.APIResources, error) {
+func (r *memCacheClient) APIResources(ctx context.Context, branch string) ([]*discoverypb.APIResource, error) {
 	r.m.Lock()
 	defer r.m.Unlock()
 

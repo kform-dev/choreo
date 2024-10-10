@@ -28,6 +28,10 @@ import (
 type Client interface {
 	Get(ctx context.Context, opts ...GetOption) (*choreopb.Get_Response, error)
 	Apply(ctx context.Context, choreoCtx *choreopb.ChoreoContext, opts ...ApplyOption) error
+	Start(ctx context.Context) error
+	Stop(ctx context.Context) error
+	Once(ctx context.Context) (*choreopb.Once_Response, error)
+	Load(ctx context.Context) error
 	Close() error
 }
 
@@ -69,6 +73,32 @@ func (r *client) Apply(ctx context.Context, choreoCtx *choreopb.ChoreoContext, o
 		ChoreoContext: choreoCtx,
 	})
 	return err
+}
+
+func (r *client) Start(ctx context.Context) error {
+	if _, err := r.client.Start(ctx, &choreopb.Start_Request{}); err != nil {
+		return err
+	}
+	return nil
+}
+func (r *client) Stop(ctx context.Context) error {
+	if _, err := r.client.Stop(ctx, &choreopb.Stop_Request{}); err != nil {
+		return err
+	}
+	return nil
+}
+func (r *client) Once(ctx context.Context) (*choreopb.Once_Response, error) {
+	rsp, err := r.client.Once(ctx, &choreopb.Once_Request{})
+	if err != nil {
+		return nil, err
+	}
+	return rsp, nil
+}
+func (r *client) Load(ctx context.Context) error {
+	if _, err := r.client.Load(ctx, &choreopb.Load_Request{}); err != nil {
+		return err
+	}
+	return nil
 }
 
 type GetOption interface {

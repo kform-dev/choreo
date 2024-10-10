@@ -21,6 +21,8 @@ import (
 
 	"github.com/kform-dev/choreo/pkg/proto/choreopb"
 	"github.com/kform-dev/choreo/pkg/server/choreo"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 func New(choreo choreo.Choreo) choreopb.ChoreoServer {
@@ -40,4 +42,37 @@ func (r *srv) Get(ctx context.Context, req *choreopb.Get_Request) (*choreopb.Get
 
 func (r *srv) Apply(ctx context.Context, req *choreopb.Apply_Request) (*choreopb.Apply_Response, error) {
 	return r.choreo.Apply(ctx, req)
+}
+
+func (r *srv) Start(ctx context.Context, req *choreopb.Start_Request) (*choreopb.Start_Response, error) {
+	bctx, err := r.choreo.GetBranchStore().GetCheckedOut()
+	if bctx == nil {
+		return nil, status.Errorf(codes.NotFound, "no checkedout branch found %v", err)
+	}
+	return r.choreo.Runner().Start(ctx, bctx)
+}
+
+func (r *srv) Stop(ctx context.Context, req *choreopb.Stop_Request) (*choreopb.Stop_Response, error) {
+	r.choreo.Runner().Stop()
+	return &choreopb.Stop_Response{}, nil
+}
+
+func (r *srv) Once(ctx context.Context, req *choreopb.Once_Request) (*choreopb.Once_Response, error) {
+	bctx, err := r.choreo.GetBranchStore().GetCheckedOut()
+	if bctx == nil {
+		return nil, status.Errorf(codes.NotFound, "no checkedout branch found %v", err)
+	}
+
+	return r.choreo.Runner().RunOnce(ctx, bctx)
+}
+func (r *srv) Load(ctx context.Context, req *choreopb.Load_Request) (*choreopb.Load_Response, error) {
+	bctx, err := r.choreo.GetBranchStore().GetCheckedOut()
+	if bctx == nil {
+		return nil, status.Errorf(codes.NotFound, "no checkedout branch found %v", err)
+	}
+	if err := bctx.State.LoadData(ctx, bctx); err != nil {
+		return nil, status.Errorf(codes.Internal, "load data failed %v", err)
+	}
+
+	return &choreopb.Load_Response{}, nil
 }

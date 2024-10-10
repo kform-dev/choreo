@@ -22,8 +22,8 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/kform-dev/choreo/pkg/client/go/discovery"
 	"github.com/kform-dev/choreo/pkg/client/go/resourceclient"
+	"github.com/kform-dev/choreo/pkg/proto/discoverypb"
 	"github.com/kform-dev/choreo/pkg/proto/resourcepb"
 	"github.com/kform-dev/choreo/pkg/util/object"
 	corev1 "k8s.io/api/core/v1"
@@ -42,12 +42,8 @@ type treeNode struct {
 	Children   []*treeNode
 }
 
-func (inv Inventory) Build(ctx context.Context, client resourceclient.Client, discoveryClient discovery.CachedDiscoveryInterface, branch string) error {
-	apiresources, err := discoveryClient.APIResources(ctx, branch)
-	if err != nil {
-		return err
-	}
-	for _, apiResource := range apiresources.Spec.Groups {
+func (inv Inventory) Build(ctx context.Context, client resourceclient.Client, apiResources []*discoverypb.APIResource, branch string) error {
+	for _, apiResource := range apiResources {
 		ul := &unstructured.UnstructuredList{}
 		ul.SetAPIVersion(schema.GroupVersion{Group: apiResource.Group, Version: apiResource.Version}.String())
 		ul.SetKind(apiResource.Kind)
