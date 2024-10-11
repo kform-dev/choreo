@@ -41,3 +41,7 @@ directories:
 step1: choreoctl dev parse -> unifies reconciler/libraries in input directory
 step2: choreoctl server start <path> or choreoctl server start + choreoctl server apply <ctx (url + ref + etc)>
 step3: chorectl run once or run start/stop
+
+## todo
+
+hierarchical loading of upstreams

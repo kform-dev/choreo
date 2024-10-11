@@ -21,22 +21,25 @@ import (
 	"time"
 
 	"github.com/henderiw/logger/log"
-	"github.com/kform-dev/choreo/pkg/cli/genericclioptions"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/health/grpc_health_v1"
 )
 
-func IsServerReady(ctx context.Context, flags *genericclioptions.ConfigFlags) bool {
+type Config struct {
+	Address string
+}
+
+func IsServerReady(ctx context.Context, cfg *Config) bool {
 	log := log.FromContext(ctx)
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
-	conn, err := grpc.NewClient(*flags.Address,
+	conn, err := grpc.NewClient(cfg.Address,
 		grpc.WithTransportCredentials(
 			insecure.NewCredentials(),
 		),
-		grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(*flags.MaxRcvMsg)),
+		grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(25165824)),
 	)
 	if err != nil {
 		log.Error("failed to connect to server: ", "error", err)

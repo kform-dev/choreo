@@ -79,7 +79,7 @@ func (r *Runner) runE(cmd *cobra.Command, args []string) error {
 	}()
 
 	time.Sleep(1 * time.Second)
-	if !health.IsServerReady(ctx, r.ConfigFlags) {
+	if !health.IsServerReady(ctx, &health.Config{Address: *r.ConfigFlags.Address}) {
 		return fmt.Errorf("server is not ready")
 	}
 

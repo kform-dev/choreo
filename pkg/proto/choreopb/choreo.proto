@@ -41,7 +41,8 @@ message ChoreoContext {
 
 message Get {
     message Request {
-        Options options = 1;        
+        string choreo = 1;
+        Options options = 2;        
     }
 
     message Response {
@@ -57,8 +58,9 @@ message Get {
 
 message Apply {
     message Request {
-        ChoreoContext choreoContext = 1; 
-        Options options = 2;
+        string choreo = 1;
+        ChoreoContext choreoContext = 2; 
+        Options options = 3;
     }
 
     message Response {
@@ -70,7 +72,8 @@ message Apply {
 
 message Watch {
     message Request {
-        Options options = 1;
+        string choreo = 1;
+        Options options = 2;
     }
 
     message Response {
@@ -92,11 +95,12 @@ message Watch {
     }
 }
 
-
+// Start start choreo
+// Removed branch since we only allow checkedout -> RW, other branches are RO
 message Start {
     message Request {
-        //string branch = 1; // removed since we only can run on checkedout all the rest are Read only
-        Options options = 1;
+        string choreo = 1;
+        Options options = 2;
         
     }
 
@@ -107,9 +111,10 @@ message Start {
     }
 }
 
+// Removed branch since we only allow checkedout -> RW, other branches are RO
 message Stop {
     message Request {
-        //string branch = 1; // removed since we only can run on checkedout all the rest are Read only
+        string choreo = 1;
         Options options = 2;
     }
 
@@ -120,9 +125,10 @@ message Stop {
     }
 }
 
+// Removed branch since we only allow checkedout -> RW, other branches are RO
 message Once {
     message Request {
-        //string branch = 1; // removed since we only can run on checkedout all the rest are Read only
+        string choreo = 1;
         Options options = 2;
     }
 
@@ -143,9 +149,10 @@ message Once {
     }
 }
 
+
 message Load {
     message Request {
-       // string branch = 1; // removed since we only can run on checkedout all the rest are Read only
+        string choreo = 1;
         Options options = 2;
     }
 

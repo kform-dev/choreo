@@ -32,8 +32,9 @@ service Resource {
 
 message Get {
     message Request {
-        bytes object = 1; // the assumption is that a client generates the GVK, Name
-        Options options = 2;
+        string choreo = 1;
+        bytes object = 2; // the assumption is that a client generates the GVK, Name
+        Options options = 3;
         
     }
 
@@ -54,8 +55,9 @@ message Get {
 
 message List {
     message Request {
-        bytes object = 1; // the assumption is that a client generates the GVK, Name, Namespace and/or Index
-        Options options = 2; 
+        string choreo = 1;
+        bytes object = 2; // the assumption is that a client generates the GVK, Name, Namespace and/or Index
+        Options options = 3; 
     }
 
     message Response {
@@ -74,8 +76,9 @@ message List {
 
 message Create {
     message Request {
-        bytes object = 1;
-        Options options = 2;
+        string choreo = 1;
+        bytes object = 2;
+        Options options = 3;
     }
 
     message Response {
@@ -93,8 +96,9 @@ message Create {
 
 message Update {
     message Request {
-        bytes object = 1;
-        Options options = 2;
+        string choreo = 1;
+        bytes object = 2;
+        Options options = 3;
     }
 
     message Response {
@@ -112,8 +116,9 @@ message Update {
 
 message Apply {
     message Request {
-        bytes object = 1;
-        Options options = 2;
+        string choreo = 1;
+        bytes object = 2;
+        Options options = 3;
     }
 
     message Response {
@@ -132,8 +137,9 @@ message Apply {
 
 message Delete {
     message Request {
-        bytes object = 1; // assumption is the client generates the proper message
-        Options options = 2; // options make sense for bulk delete
+        string choreo = 1;
+        bytes object = 2; // assumption is the client generates the proper message
+        Options options = 3; // options make sense for bulk delete
     }
 
     message Response {
@@ -150,9 +156,10 @@ message Delete {
 
 message Watch {
     message Request {
-        string id = 1;
-        bytes object = 2; // assumption is the client generates the proper object with GVK, NS, Index, etc
-        Options options = 3;
+        string choreo = 1;
+        string id = 2;
+        bytes object = 3; // assumption is the client generates the proper object with GVK, NS, Index, etc
+        Options options = 4;
     }
 
     message Response {

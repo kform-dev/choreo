@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package grpcserver
+package proxyserver
 
 import (
 	"context"
@@ -23,17 +23,17 @@ import (
 	"time"
 
 	"github.com/henderiw/logger/log"
-	"github.com/kform-dev/choreo/pkg/cli/genericclioptions"
+	"github.com/henderiw/store"
 	"github.com/kform-dev/choreo/pkg/proto/branchpb"
 	"github.com/kform-dev/choreo/pkg/proto/choreopb"
 	"github.com/kform-dev/choreo/pkg/proto/discoverypb"
 	"github.com/kform-dev/choreo/pkg/proto/resourcepb"
-	choreoserver "github.com/kform-dev/choreo/pkg/server/choreo"
-	"github.com/kform-dev/choreo/pkg/server/grpcserver/services/branch"
-	"github.com/kform-dev/choreo/pkg/server/grpcserver/services/choreo"
-	"github.com/kform-dev/choreo/pkg/server/grpcserver/services/discovery"
-	"github.com/kform-dev/choreo/pkg/server/grpcserver/services/resource"
 	choreohealth "github.com/kform-dev/choreo/pkg/server/health"
+	"github.com/kform-dev/choreo/pkg/server/proxyserver/choreoctx"
+	"github.com/kform-dev/choreo/pkg/server/proxyserver/services/branch"
+	"github.com/kform-dev/choreo/pkg/server/proxyserver/services/choreo"
+	"github.com/kform-dev/choreo/pkg/server/proxyserver/services/discovery"
+	"github.com/kform-dev/choreo/pkg/server/proxyserver/services/resource"
 	"github.com/pkg/errors"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/health"
@@ -42,12 +42,12 @@ import (
 )
 
 type Config struct {
-	Name   string
-	Flags  *genericclioptions.ConfigFlags
-	Choreo choreoserver.Choreo
+	Name    string
+	Address string
+	Store   store.Storer[*choreoctx.ChoreoCtx]
 }
 
-func New(cfg *Config) *GRPCServer {
+func New(cfg *Config) *ProxyServer {
 	grpcServer := func(opts []grpc.ServerOption) *grpc.Server {
 		return grpc.NewServer(append(opts,
 			//grpc.KeepaliveParams(keepalive.ServerParameters{}), // server does not ping the client
@@ -55,31 +55,30 @@ func New(cfg *Config) *GRPCServer {
 			grpc.MaxRecvMsgSize(64<<20 /* 64MB */))...)
 	}
 
-	return &GRPCServer{
+	return &ProxyServer{
 		name:    cfg.Name,
-		address: *cfg.Flags.Address,
+		address: cfg.Address,
 		server:  grpcServer([]grpc.ServerOption{}),
-		choreo:  cfg.Choreo,
-		flags:   cfg.Flags,
+		store:   cfg.Store,
 	}
 }
 
-type GRPCServer struct {
+type ProxyServer struct {
 	name    string
 	address string
-	cancel  context.CancelFunc
 	server  *grpc.Server
-	choreo  choreoserver.Choreo
-	flags   *genericclioptions.ConfigFlags
+	store   store.Storer[*choreoctx.ChoreoCtx]
+	//
+	cancel context.CancelFunc
 }
 
-func (r *GRPCServer) Stop(ctx context.Context) {
+func (r *ProxyServer) Stop(ctx context.Context) {
 	if r.cancel != nil {
 		r.cancel()
 	}
 }
 
-func (r *GRPCServer) Run(ctx context.Context) error {
+func (r *ProxyServer) Run(ctx context.Context) error {
 	log := log.FromContext(ctx).With("name", r.name, "address", r.address)
 	ctx, cancel := context.WithCancel(ctx)
 	r.cancel = cancel
@@ -98,24 +97,20 @@ func (r *GRPCServer) Run(ctx context.Context) error {
 	reflection.Register(r.server)
 
 	// Register the resource service
-	choreoServer := choreo.New(r.choreo)
+	choreoServer := choreo.New(r.store)
 	choreopb.RegisterChoreoServer(r.server, choreoServer)
 
 	// Register the resource service
-	resourceServer := resource.New(r.choreo)
+	resourceServer := resource.New(r.store)
 	resourcepb.RegisterResourceServer(r.server, resourceServer)
 
 	// Register the discovery service
-	discoveryServer := discovery.New(r.choreo)
+	discoveryServer := discovery.New(r.store)
 	discoverypb.RegisterDiscoveryServer(r.server, discoveryServer)
 
 	// Register the branch service
-	branchServer := branch.New(r.choreo)
+	branchServer := branch.New(r.store)
 	branchpb.RegisterBranchServer(r.server, branchServer)
-
-	// Register the branch service
-	//runnerServer := runner.New(r.choreo, r.runner)
-	//runnerpb.RegisterRunnerServer(r.server, runnerServer)
 
 	go func() {
 		if err := r.server.Serve(l); err != nil {

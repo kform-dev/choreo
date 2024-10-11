@@ -36,8 +36,9 @@ message APIResource {
 
 message Get {
     message Request {
-        string branch = 1;
-        string ref = 2;
+        string choreo = 1;
+        string branch = 2;
+        string ref = 3;
     }
 
     message Response {
@@ -47,9 +48,10 @@ message Get {
 
 message Watch {
     message Request {
-        string branch = 1;
-        string ref = 2;
-        Options options = 3;
+        string choreo = 1;
+        string branch = 2;
+        string ref = 3;
+        Options options = 4;
     }
 
     message Response {
