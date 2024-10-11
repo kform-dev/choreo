@@ -29,6 +29,7 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/peer"
 	"google.golang.org/grpc/status"
+	"k8s.io/apimachinery/pkg/types"
 )
 
 func New(store store.Storer[*choreoctx.ChoreoCtx]) branchpb.BranchServer {
@@ -42,19 +43,19 @@ type proxy struct {
 	store store.Storer[*choreoctx.ChoreoCtx]
 }
 
-func (r *proxy) getChoreoCtx(choreo string) (*choreoctx.ChoreoCtx, error) {
-	choreoCtx, err := r.store.Get(store.ToKey(choreo))
+func (r *proxy) getChoreoCtx(nsn types.NamespacedName) (*choreoctx.ChoreoCtx, error) {
+	choreoCtx, err := r.store.Get(store.KeyFromNSN(nsn))
 	if err != nil {
-		return nil, status.Error(codes.NotFound, fmt.Sprintf("choreo %s not found, err: %v", choreo, err))
+		return nil, status.Error(codes.NotFound, fmt.Sprintf("choreo %s not found, err: %v", nsn.String(), err))
 	}
 	if !choreoCtx.Ready {
-		return nil, status.Error(codes.Unavailable, fmt.Sprintf("choreo %s not ready, err: %v", choreo, err))
+		return nil, status.Error(codes.Unavailable, fmt.Sprintf("choreo %s not ready, err: %v", nsn.String(), err))
 	}
 	return choreoCtx, nil
 }
 
 func (r *proxy) Get(ctx context.Context, req *branchpb.Get_Request) (*branchpb.Get_Response, error) {
-	choreoCtx, err := r.getChoreoCtx(req.Choreo)
+	choreoCtx, err := r.getChoreoCtx(types.NamespacedName{Name: req.Choreo, Namespace: "default"})
 	if err != nil {
 		return &branchpb.Get_Response{}, err
 	}
@@ -62,7 +63,7 @@ func (r *proxy) Get(ctx context.Context, req *branchpb.Get_Request) (*branchpb.G
 }
 
 func (r *proxy) List(ctx context.Context, req *branchpb.List_Request) (*branchpb.List_Response, error) {
-	choreoCtx, err := r.getChoreoCtx(req.Choreo)
+	choreoCtx, err := r.getChoreoCtx(types.NamespacedName{Name: req.Choreo, Namespace: "default"})
 	if err != nil {
 		return &branchpb.List_Response{}, err
 	}
@@ -70,7 +71,7 @@ func (r *proxy) List(ctx context.Context, req *branchpb.List_Request) (*branchpb
 }
 
 func (r *proxy) Create(ctx context.Context, req *branchpb.Create_Request) (*branchpb.Create_Response, error) {
-	choreoCtx, err := r.getChoreoCtx(req.Choreo)
+	choreoCtx, err := r.getChoreoCtx(types.NamespacedName{Name: req.Choreo, Namespace: "default"})
 	if err != nil {
 		return &branchpb.Create_Response{}, err
 	}
@@ -78,7 +79,7 @@ func (r *proxy) Create(ctx context.Context, req *branchpb.Create_Request) (*bran
 }
 
 func (r *proxy) Delete(ctx context.Context, req *branchpb.Delete_Request) (*branchpb.Delete_Response, error) {
-	choreoCtx, err := r.getChoreoCtx(req.Choreo)
+	choreoCtx, err := r.getChoreoCtx(types.NamespacedName{Name: req.Choreo, Namespace: "default"})
 	if err != nil {
 		return &branchpb.Delete_Response{}, err
 	}
@@ -86,7 +87,7 @@ func (r *proxy) Delete(ctx context.Context, req *branchpb.Delete_Request) (*bran
 }
 
 func (r *proxy) Diff(ctx context.Context, req *branchpb.Diff_Request) (*branchpb.Diff_Response, error) {
-	choreoCtx, err := r.getChoreoCtx(req.Choreo)
+	choreoCtx, err := r.getChoreoCtx(types.NamespacedName{Name: req.Choreo, Namespace: "default"})
 	if err != nil {
 		return &branchpb.Diff_Response{}, err
 	}
@@ -94,7 +95,7 @@ func (r *proxy) Diff(ctx context.Context, req *branchpb.Diff_Request) (*branchpb
 }
 
 func (r *proxy) Merge(ctx context.Context, req *branchpb.Merge_Request) (*branchpb.Merge_Response, error) {
-	choreoCtx, err := r.getChoreoCtx(req.Choreo)
+	choreoCtx, err := r.getChoreoCtx(types.NamespacedName{Name: req.Choreo, Namespace: "default"})
 	if err != nil {
 		return &branchpb.Merge_Response{}, err
 	}
@@ -102,7 +103,7 @@ func (r *proxy) Merge(ctx context.Context, req *branchpb.Merge_Request) (*branch
 }
 
 func (r *proxy) Stash(ctx context.Context, req *branchpb.Stash_Request) (*branchpb.Stash_Response, error) {
-	choreoCtx, err := r.getChoreoCtx(req.Choreo)
+	choreoCtx, err := r.getChoreoCtx(types.NamespacedName{Name: req.Choreo, Namespace: "default"})
 	if err != nil {
 		return &branchpb.Stash_Response{}, err
 	}
@@ -110,7 +111,7 @@ func (r *proxy) Stash(ctx context.Context, req *branchpb.Stash_Request) (*branch
 }
 
 func (r *proxy) Checkout(ctx context.Context, req *branchpb.Checkout_Request) (*branchpb.Checkout_Response, error) {
-	choreoCtx, err := r.getChoreoCtx(req.Choreo)
+	choreoCtx, err := r.getChoreoCtx(types.NamespacedName{Name: req.Choreo, Namespace: "default"})
 	if err != nil {
 		return &branchpb.Checkout_Response{}, err
 	}
@@ -121,7 +122,7 @@ func (r *proxy) StreamFiles(req *branchpb.Get_Request, stream branchpb.Branch_St
 	ctx := stream.Context()
 	log := log.FromContext(ctx)
 	log.Info("watch")
-	choreoCtx, err := r.getChoreoCtx(req.Choreo)
+	choreoCtx, err := r.getChoreoCtx(types.NamespacedName{Name: req.Choreo, Namespace: "default"})
 	if err != nil {
 		return err
 	}
@@ -168,7 +169,7 @@ func (r *proxy) Watch(req *branchpb.Watch_Request, stream branchpb.Branch_WatchS
 	ctx := stream.Context()
 	log := log.FromContext(ctx)
 	log.Info("watch")
-	choreoCtx, err := r.getChoreoCtx(req.Choreo)
+	choreoCtx, err := r.getChoreoCtx(types.NamespacedName{Name: req.Choreo, Namespace: "default"})
 	if err != nil {
 		return err
 	}
