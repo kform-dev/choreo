@@ -44,7 +44,10 @@ type Choreo interface {
 	GetMainChoreoInstance() ChoreoInstance
 	GetBranchStore() *BranchStore
 	Runner() Runner
+	// updates resource (yaml) in the input directory
 	Store(obj runtime.Unstructured) error
+	// remove resource (yaml) from the input directory
+	Destroy(obj runtime.Unstructured) error
 }
 
 func New(flags *genericclioptions.ConfigFlags) Choreo {
@@ -242,4 +245,27 @@ func (r *choreo) Store(obj runtime.Unstructured) error {
 		),
 	)
 	return os.WriteFile(path, b, 0644)
+}
+
+func (r *choreo) Destroy(obj runtime.Unstructured) error {
+	u := &unstructured.Unstructured{
+		Object: obj.UnstructuredContent(),
+	}
+	gv, err := schema.ParseGroupVersion(u.GetAPIVersion())
+	if err != nil {
+		return err
+	}
+
+	mainChoreoInstance := r.GetMainChoreoInstance()
+	fileName := filepath.Join(
+		mainChoreoInstance.GetRepoPath(),
+		mainChoreoInstance.GetPathInRepo(),
+		*mainChoreoInstance.GetFlags().InputPath,
+		fmt.Sprintf("%s.%s.%s.yaml",
+			gv.Group,
+			strings.ToLower(u.GetKind()),
+			u.GetName(),
+		))
+
+	return os.Remove(fileName)
 }

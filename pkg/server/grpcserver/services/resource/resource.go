@@ -266,11 +266,23 @@ func (r *srv) Delete(ctx context.Context, req *resourcepb.Delete_Request) (*reso
 	if err != nil {
 		return &resourcepb.Delete_Response{}, err
 	}
+
+	dryrun := req.Options.DryRun
+	if req.Options.Origin == "choreoctl" {
+		dryrun = true
+	}
 	if _, err := storage.Delete(ctx, u.GetName(), &rest.DeleteOptions{
+		DryRun: dryrun,
 		Trace:  req.Options.Trace,
 		Origin: req.Options.Origin,
 	}); err != nil {
 		return &resourcepb.Delete_Response{}, err
+	}
+
+	if req.Options.Origin == "choreoctl" {
+		if err := r.choreo.Destroy(u); err != nil {
+			return &resourcepb.Delete_Response{}, status.Errorf(codes.Internal, "err: %s", err.Error())
+		}
 	}
 
 	return &resourcepb.Delete_Response{}, nil
