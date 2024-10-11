@@ -56,6 +56,9 @@ type choreoclient struct {
 }
 
 func (r *choreoclient) Close() error {
+	if r.conn == nil {
+		return nil
+	}
 	return r.conn.Close()
 }
 

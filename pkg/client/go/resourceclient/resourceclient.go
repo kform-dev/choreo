@@ -68,6 +68,9 @@ type resourceclient struct {
 }
 
 func (r *resourceclient) Close() error {
+	if r.conn == nil {
+		return nil
+	}
 	return r.conn.Close()
 }
 

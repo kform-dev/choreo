@@ -88,6 +88,9 @@ type client struct {
 }
 
 func (r *client) Close() error {
+	if r.conn == nil {
+		return nil
+	}
 	return r.conn.Close()
 }
 

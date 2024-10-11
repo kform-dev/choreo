@@ -72,6 +72,9 @@ type branchclient struct {
 }
 
 func (r *branchclient) Close() error {
+	if r.conn == nil {
+		return nil
+	}
 	return r.conn.Close()
 }
 

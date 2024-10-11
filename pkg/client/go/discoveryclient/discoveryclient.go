@@ -63,6 +63,9 @@ type dicoveryclient struct {
 }
 
 func (r *dicoveryclient) Close() error {
+	if r.conn == nil {
+		return nil
+	}
 	return r.conn.Close()
 }
 
