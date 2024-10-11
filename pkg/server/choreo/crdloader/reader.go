@@ -19,6 +19,7 @@ package crdloader
 import (
 	"embed"
 
+	"github.com/go-git/go-git/v5/plumbing/object"
 	"github.com/kform-dev/kform/pkg/fsys"
 	"github.com/kform-dev/kform/pkg/pkgio"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
@@ -71,5 +72,17 @@ func GetFSYAMLReader(path string, matchgvks []schema.GroupVersionKind) pkgio.Rea
 		FsysPath:  path,
 		SkipDir:   true,
 		MatchGVKs: matchgvks,
+	}
+}
+
+func GetCommitFileAPICRDReader(crdPath string, commit *object.Commit) pkgio.Reader[*yaml.RNode] {
+	gvks := []schema.GroupVersionKind{
+		apiextensionsv1.SchemeGroupVersion.WithKind("CustomResourceDefinition"),
+	}
+	return &pkgio.CommitYAMLReader{
+		Commit:    commit,
+		Path:      crdPath,
+		SkipDir:   true,
+		MatchGVKs: gvks,
 	}
 }

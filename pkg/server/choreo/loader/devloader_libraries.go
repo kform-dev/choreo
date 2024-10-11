@@ -16,44 +16,24 @@ limitations under the License.
 
 package loader
 
-/*
-
 import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/henderiw/store"
 	choreov1alpha1 "github.com/kform-dev/choreo/apis/choreo/v1alpha1"
-	"github.com/kform-dev/choreo/pkg/cli/genericclioptions"
-	"github.com/kform-dev/choreo/pkg/client/go/resourceclient"
-	"github.com/kform-dev/choreo/pkg/proto/resourcepb"
-	"github.com/kform-dev/choreo/pkg/util/object"
 	"github.com/kform-dev/kform/pkg/fsys"
 	"github.com/kform-dev/kform/pkg/pkgio"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/util/sets"
+	"sigs.k8s.io/yaml"
 )
 
-func (r *DataLoader) loadLibraries(ctx context.Context) error {
-	loader := &LibraryLoader{
-		Client:       r.Client,
-		Branch:       r.Branch,
-		NewLibraries: sets.New[string](),
-	}
-	if err := loader.Load(ctx, r.getLibraryReader(r.RepoPth, r.PathInRepo, r.Flags)); err != nil {
-		return err
-	}
-	if err := loader.Clean(ctx); err != nil {
-		return err
-	}
-	return nil
-}
-
-func (r *DataLoader) getLibraryReader(repoPath, pathInRepo string, flags *genericclioptions.ConfigFlags) pkgio.Reader[[]byte] {
-	abspath := filepath.Join(repoPath, pathInRepo, *flags.LibraryPath)
+func (r *DevLoader) getLibraryReader() pkgio.Reader[[]byte] {
+	abspath := filepath.Join(r.Path, *r.Flags.LibraryPath)
 
 	if !fsys.PathExists(abspath) {
 		return nil
@@ -61,13 +41,8 @@ func (r *DataLoader) getLibraryReader(repoPath, pathInRepo string, flags *generi
 	return GetFSReader(abspath)
 }
 
-type LibraryLoader struct {
-	Client       resourceclient.Client
-	Branch       string
-	NewLibraries sets.Set[string]
-}
-
-func (r *LibraryLoader) Load(ctx context.Context, reader pkgio.Reader[[]byte]) error {
+func (r *DevLoader) loadLibraries(ctx context.Context) error {
+	reader := r.getLibraryReader()
 	if reader == nil {
 		// reader nil, mean the path does not exist, whcich is ok
 		return nil
@@ -97,24 +72,31 @@ func (r *LibraryLoader) Load(ctx context.Context, reader pkgio.Reader[[]byte]) e
 			choreov1alpha1.ChoreoLoaderOriginKey: choreov1alpha1.FileLoaderAnnotation.String(),
 		})
 
-		r.NewLibraries.Insert(k.Name)
-		obj, err := object.GetUnstructructered(library)
+		// this is to see if we need to do cleanup
+		//r.NewLibraries.Insert(k.Name)
+
+		b, err := yaml.Marshal(library)
 		if err != nil {
-			errm = errors.Join(errm, fmt.Errorf("cannot unmarshal %s, err: %v", k.Name, err))
-			return
+			errm = errors.Join(errm, fmt.Errorf("cannot marshal library %s, err: %v", k.Name, err))
 		}
 
-		if err := r.Client.Apply(ctx, obj, &resourceclient.ApplyOptions{
-			Branch:       r.Branch,
-			FieldManager: ManagedFieldManagerInput,
-		}); err != nil {
-			errm = errors.Join(errm, fmt.Errorf("invalid library %s, err: %v", k.Name, err))
-			return
+		fileName := filepath.Join(
+			r.Path,
+			*r.Flags.InputPath,
+			fmt.Sprintf("%s.%s.%s.yaml",
+				choreov1alpha1.SchemeGroupVersion.Group,
+				strings.ToLower(choreov1alpha1.LibraryKind),
+				k.Name,
+			))
+		if err := os.WriteFile(fileName, b, 0644); err != nil {
+			errm = errors.Join(errm, fmt.Errorf("cannot marshal library %s, err: %v", k.Name, err))
 		}
 	})
 	return errm
 }
 
+// TBD if we need this
+/*
 func (r *LibraryLoader) Clean(ctx context.Context) error {
 	ul := &unstructured.UnstructuredList{}
 	ul.SetGroupVersionKind(choreov1alpha1.SchemeGroupVersion.WithKind(choreov1alpha1.LibraryKind))

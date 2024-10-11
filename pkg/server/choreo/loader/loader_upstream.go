@@ -37,6 +37,7 @@ import (
 	syaml "sigs.k8s.io/yaml"
 )
 
+// UpstreamLoader
 type UpstreamLoader struct {
 	Flags      *genericclioptions.ConfigFlags
 	Client     resourceclient.Client
@@ -101,25 +102,10 @@ func (r *UpstreamLoader) Load(ctx context.Context) error {
 			return
 		}
 
-		/*
-			refName := upstreamRef.Spec.Ref.Name
-			if upstreamRef.Spec.Ref.Type == choreov1alpha1.RefType_Tag {
-				refName = git.TagName(refName).TagInLocal().String()
-			}
-
-
-			commit, err := repo.GetRefCommit(refName)
-			if err != nil {
-				errm = errors.Join(errm, fmt.Errorf("cannot get commit %s from repo %s, err: %v", refName, url, err))
-				return
-			}
-		*/
-
 		if err := r.CallbackFn(ctx, repo, upstreamRef.GetPathInRepo(), r.Flags, commit, upstreamRef.LoaderAnnotation().String()); err != nil {
 			errm = errors.Join(errm, fmt.Errorf("callback failed for %s from repo %s, err: %v", refName, url, err))
 			return
 		}
-
 	})
 	return errm
 }

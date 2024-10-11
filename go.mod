@@ -5,6 +5,7 @@ go 1.23.0
 toolchain go1.23.2
 
 replace github.com/henderiw/apiserver-builder => github.com/henderiw/apiserver-builder v0.0.1
+replace github.com/kform-dev/kform => ../kform
 
 require (
 	github.com/adrg/xdg v0.5.0

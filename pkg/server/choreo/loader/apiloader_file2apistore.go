@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"path/filepath"
 
+	"github.com/go-git/go-git/v5/plumbing/object"
 	"github.com/henderiw/logger/log"
 	"github.com/henderiw/store"
 	choreov1alpha1 "github.com/kform-dev/choreo/apis/choreo/v1alpha1"
@@ -42,11 +43,22 @@ type APILoaderFile2APIStoreAndAPI struct {
 	Flags        *genericclioptions.ConfigFlags
 	Client       resourceclient.Client
 	APIStore     *api.APIStore
-	Branch       string
+	Branch       string // not relevant in commit case
 	InternalGVKs sets.Set[schema.GroupVersionKind]
-	RepoPath     string
+	RepoPath     string // not relevant in commit case
 	PathInRepo   string
 	DBPath       string
+}
+
+func (r *APILoaderFile2APIStoreAndAPI) LoadFromCommit(ctx context.Context, commit *object.Commit) error {
+	//log := log.FromContext(ctx)
+	var errm error
+	fmt.Println("load from commit", *r.Flags.CRDPath, commit.Hash.String())
+	if err := r.loadAPIs(ctx, crdloader.GetCommitFileAPICRDReader(
+		filepath.Join(r.PathInRepo, *r.Flags.CRDPath), commit)); err != nil {
+		errm = errors.Join(errm, fmt.Errorf("cannot load api file in repo, err: %v", err))
+	}
+	return errm
 }
 
 func (r *APILoaderFile2APIStoreAndAPI) Load(ctx context.Context) error {
@@ -87,19 +99,18 @@ func (r *APILoaderFile2APIStoreAndAPI) loadAPIs(ctx context.Context, reader pkgi
 		log.Error("cnanot read datastore", "err", err)
 		return err
 	}
+	apistoreloader := &APIStoreLoader{
+		APIStore:     r.APIStore,
+		InternalGVKs: r.InternalGVKs,
+		PathInRepo:   r.PathInRepo,
+		DBPath:       r.DBPath,
+	}
 	var errm error
 	datastore.List(func(k store.Key, rn *yaml.RNode) {
 		u, err := uobject.GetUnstructuredContent([]byte(rn.MustString()), uobject.ContentTypeYAML)
 		if err != nil {
 			errm = errors.Join(errm, err)
 			return
-		}
-
-		apistoreloader := &APIStoreLoader{
-			APIStore:     r.APIStore,
-			InternalGVKs: r.InternalGVKs,
-			PathInRepo:   r.PathInRepo,
-			DBPath:       r.DBPath,
 		}
 
 		if err := apistoreloader.Load(ctx, u); err != nil {

@@ -139,14 +139,22 @@ func (r *srv) Apply(ctx context.Context, req *resourcepb.Apply_Request) (*resour
 		return &resourcepb.Apply_Response{}, err
 	}
 
+	orig := u.DeepCopy()
+
 	log.Debug("apply", "apiVersion", u.GetAPIVersion(), "kind", u.GetKind(), "name", u.GetName(), "fieldmanager", req.Options.FieldManager, "force", req.Options.Force)
 
 	storage, err := r.getStorage(bctx, u)
 	if err != nil {
 		return &resourcepb.Apply_Response{}, err
 	}
+
+	dryrun := req.Options.DryRun
+	if req.Options.Origin == "choreoctl" {
+		dryrun = true
+	}
+
 	obj, err := storage.Apply(ctx, u, &rest.ApplyOptions{
-		DryRun:       req.Options.DryRun,
+		DryRun:       dryrun,
 		FieldManager: req.Options.FieldManager,
 		Force:        req.Options.Force,
 		Trace:        req.Options.Trace,
@@ -154,6 +162,12 @@ func (r *srv) Apply(ctx context.Context, req *resourcepb.Apply_Request) (*resour
 	})
 	if err != nil {
 		return &resourcepb.Apply_Response{}, err
+	}
+
+	if req.Options.Origin == "choreoctl" {
+		if err := r.choreo.Store(orig); err != nil {
+			return &resourcepb.Apply_Response{}, status.Errorf(codes.Internal, "err: %s", err.Error())
+		}
 	}
 
 	b, err := json.Marshal(obj.UnstructuredContent())

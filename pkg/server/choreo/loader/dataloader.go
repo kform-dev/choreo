@@ -46,12 +46,12 @@ type DataLoader struct {
 
 func (r *DataLoader) Load(ctx context.Context) error {
 	var errm error
-	if err := r.loadReconcilers(ctx); err != nil {
-		errm = errors.Join(errm, fmt.Errorf("cannot load reconcilers, err: %v", err))
-	}
-	if err := r.loadLibraries(ctx); err != nil {
-		errm = errors.Join(errm, fmt.Errorf("cannot load libraries, err: %v", err))
-	}
+	//if err := r.loadReconcilers(ctx); err != nil {
+	//	errm = errors.Join(errm, fmt.Errorf("cannot load reconcilers, err: %v", err))
+	//}
+	//if err := r.loadLibraries(ctx); err != nil {
+	//	errm = errors.Join(errm, fmt.Errorf("cannot load libraries, err: %v", err))
+	//}
 	if err := r.loadInput(ctx); err != nil {
 		errm = errors.Join(errm, fmt.Errorf("cannot load input, err: %v", err))
 	}

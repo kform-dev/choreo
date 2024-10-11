@@ -19,6 +19,7 @@ package choreo
 import (
 	"context"
 	"fmt"
+	"os"
 	"path/filepath"
 	"strings"
 	"time"
@@ -30,6 +31,10 @@ import (
 	"github.com/kform-dev/choreo/pkg/repository/repogit"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"sigs.k8s.io/yaml"
 )
 
 type Choreo interface {
@@ -39,6 +44,7 @@ type Choreo interface {
 	GetMainChoreoInstance() ChoreoInstance
 	GetBranchStore() *BranchStore
 	Runner() Runner
+	Store(obj runtime.Unstructured) error
 }
 
 func New(flags *genericclioptions.ConfigFlags) Choreo {
@@ -208,4 +214,32 @@ func (r *choreo) updateBranches(ctx context.Context) error {
 		r.Runner().Start(ctx, bctx)
 	}
 	return nil
+}
+
+func (r *choreo) Store(obj runtime.Unstructured) error {
+	u := &unstructured.Unstructured{
+		Object: obj.UnstructuredContent(),
+	}
+	gv, err := schema.ParseGroupVersion(u.GetAPIVersion())
+	if err != nil {
+		return err
+	}
+
+	b, err := yaml.Marshal(u.Object)
+	if err != nil {
+		return err
+	}
+
+	mainChoreoInstance := r.GetMainChoreoInstance()
+	path := filepath.Join(
+		mainChoreoInstance.GetRepoPath(),
+		mainChoreoInstance.GetPathInRepo(),
+		*mainChoreoInstance.GetFlags().InputPath,
+		fmt.Sprintf("%s.%s.%s.yaml",
+			gv.Group,
+			strings.ToLower(u.GetKind()),
+			u.GetName(),
+		),
+	)
+	return os.WriteFile(path, b, 0644)
 }

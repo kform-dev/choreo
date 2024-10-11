@@ -16,30 +16,26 @@ limitations under the License.
 
 package loader
 
+/*
 import (
 	"context"
 	"errors"
-	"path/filepath"
+	"fmt"
 
 	"github.com/go-git/go-git/v5/plumbing/object"
-	"github.com/henderiw/store"
+	"github.com/henderiw/logger/log"
 	choreov1alpha1 "github.com/kform-dev/choreo/apis/choreo/v1alpha1"
-	"github.com/kform-dev/choreo/pkg/cli/genericclioptions"
 	"github.com/kform-dev/choreo/pkg/client/go/resourceclient"
 	"github.com/kform-dev/choreo/pkg/proto/resourcepb"
 	uobject "github.com/kform-dev/choreo/pkg/util/object"
-	"github.com/kform-dev/kform/pkg/pkgio"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/sets"
-	"sigs.k8s.io/kustomize/kyaml/yaml"
 )
 
 type DataLoaderUpstream struct {
-	Flags      *genericclioptions.ConfigFlags
-	PathInRepo string
-	//UpstreamClient          resourceclient.Client // used to read data from commit from upstream repo
+	UpstreamClient          resourceclient.Client // used to read data from commit from upstream repo
 	Client                  resourceclient.Client
 	Branch                  string
 	ChildGVKSet             sets.Set[schema.GroupVersionKind]
@@ -60,43 +56,67 @@ func (r *DataLoaderUpstream) Load(ctx context.Context, commit *object.Commit) er
 }
 
 func (r *DataLoaderUpstream) load(ctx context.Context, commit *object.Commit) error {
-	//log := log.FromContext(ctx)
+	log := log.FromContext(ctx)
+	var errm error
+	for _, gvk := range r.ChildGVKSet.UnsortedList() {
+		ul := &unstructured.UnstructuredList{}
+		ul.SetAPIVersion(gvk.GroupVersion().String())
+		ul.SetKind(gvk.Kind)
+		if err := r.UpstreamClient.List(ctx, ul, &resourceclient.ListOptions{
+			Commit:            commit,
+			ShowManagedFields: false,
+			ExprSelector:      &resourcepb.ExpressionSelector{},
+		}); err != nil {
+			log.Error("upstream load failed", "gvk", gvk.String(), "error", err)
+			continue
+		}
 
-	reader := GetCommitFileReader(filepath.Join(r.PathInRepo, *r.Flags.InputPath), commit)
+		for _, u := range ul.Items {
+			setAnnotations(&u, map[string]string{
+				choreov1alpha1.ChoreoLoaderOriginKey: r.UpstreamAnnotationValue,
+			})
 
-	datastore, err := reader.Read(ctx)
-	if err != nil {
-		return err
+			r.NewUpstreamData.Insert(
+				corev1.ObjectReference{
+					APIVersion: u.GetAPIVersion(),
+					Kind:       u.GetKind(),
+					Namespace:  u.GetNamespace(),
+					Name:       u.GetName(),
+				},
+			)
+
+			if err := removeFields(&u); err != nil {
+				errm = errors.Join(errm, err)
+				continue
+			}
+			if err := r.Client.Apply(ctx, &u, &resourceclient.ApplyOptions{
+				Branch:       r.Branch,
+				FieldManager: ManagedFieldManagerInput,
+			}); err != nil {
+				errm = errors.Join(errm, err)
+				continue
+			}
+		}
+	}
+	return errm
+}
+
+func removeFields(u *unstructured.Unstructured) error {
+	// Access the metadata of the unstructured object.
+	metadata, found, err := unstructured.NestedMap(u.Object, "metadata")
+	if err != nil || !found {
+		return nil
+	}
+	// Delete the uid and creationTimestamp fields.
+	delete(metadata, "uid")
+	delete(metadata, "creationTimestamp")
+
+	// Set the modified metadata back to the unstructured object.
+	if err := unstructured.SetNestedMap(u.Object, metadata, "metadata"); err != nil {
+		return fmt.Errorf("error setting modified metadata: %v", err)
 	}
 
-	var errm error
-	datastore.List(func(k store.Key, rn *yaml.RNode) {
-		u, err := uobject.GetUnstructuredContent([]byte(rn.MustString()), uobject.ContentTypeYAML)
-		if err != nil {
-			errm = errors.Join(errm, err)
-			return
-		}
-
-		setAnnotations(u, map[string]string{
-			choreov1alpha1.ChoreoLoaderOriginKey: r.UpstreamAnnotationValue,
-		})
-		r.NewUpstreamData.Insert(
-			corev1.ObjectReference{
-				APIVersion: u.GetAPIVersion(),
-				Kind:       u.GetKind(),
-				Namespace:  u.GetNamespace(),
-				Name:       u.GetName(),
-			},
-		)
-		if err := r.Client.Apply(ctx, u, &resourceclient.ApplyOptions{
-			FieldManager: ManagedFieldManagerInput,
-			Branch:       r.Branch,
-		}); err != nil {
-			errm = errors.Join(errm, err)
-			return
-		}
-	})
-	return errm
+	return nil
 }
 
 func (r *DataLoaderUpstream) clean(ctx context.Context) error {
@@ -133,11 +153,4 @@ func (r *DataLoaderUpstream) clean(ctx context.Context) error {
 	}
 	return nil
 }
-
-func GetCommitFileReader(path string, commit *object.Commit) pkgio.Reader[*yaml.RNode] {
-	return &pkgio.CommitYAMLReader{
-		Commit:  commit,
-		Path:    path,
-		SkipDir: true,
-	}
-}
+*/

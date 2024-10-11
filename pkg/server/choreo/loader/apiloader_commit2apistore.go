@@ -16,20 +16,23 @@ limitations under the License.
 
 package loader
 
+/*
 import (
 	"context"
 	"errors"
 
 	"github.com/go-git/go-git/v5/plumbing/object"
 	"github.com/henderiw/logger/log"
+	"github.com/henderiw/store"
 	choreov1alpha1 "github.com/kform-dev/choreo/apis/choreo/v1alpha1"
 	"github.com/kform-dev/choreo/pkg/client/go/resourceclient"
-	"github.com/kform-dev/choreo/pkg/proto/resourcepb"
 	"github.com/kform-dev/choreo/pkg/server/api"
+	uobject "github.com/kform-dev/choreo/pkg/util/object"
+	"github.com/kform-dev/kform/pkg/pkgio"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/sets"
+	"sigs.k8s.io/kustomize/kyaml/yaml"
 )
 
 // This loader is reading committed apis from the commit
@@ -38,9 +41,12 @@ type APILoaderCommit2APIStore struct {
 	APIStore     *api.APIStore
 	InternalGVKs sets.Set[schema.GroupVersionKind]
 	PathInRepo   string
-	DBPath       string
+	//CRDPath      string
+	DBPath       string // this is the DB from the mainchoreoinstance
 }
+*/
 
+/*
 func (r *APILoaderCommit2APIStore) Load(ctx context.Context, commit *object.Commit) error {
 	log := log.FromContext(ctx)
 
@@ -79,3 +85,4 @@ func (r *APILoaderCommit2APIStore) Load(ctx context.Context, commit *object.Comm
 
 	return errm
 }
+*/

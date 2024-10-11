@@ -16,46 +16,24 @@ limitations under the License.
 
 package loader
 
-/*
-
 import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
 	"path/filepath"
 	"strings"
 
 	"github.com/henderiw/store"
 	choreov1alpha1 "github.com/kform-dev/choreo/apis/choreo/v1alpha1"
-	"github.com/kform-dev/choreo/pkg/cli/genericclioptions"
-	"github.com/kform-dev/choreo/pkg/client/go/resourceclient"
-	"github.com/kform-dev/choreo/pkg/proto/resourcepb"
-	"github.com/kform-dev/choreo/pkg/util/object"
 	"github.com/kform-dev/kform/pkg/fsys"
 	"github.com/kform-dev/kform/pkg/pkgio"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/yaml"
 )
 
-func (r *DataLoader) loadReconcilers(ctx context.Context) error {
-	loader := &ReconcilerLoader{
-		Client:         r.Client,
-		Branch:         r.Branch,
-		NewReconcilers: sets.New[string](),
-	}
-	if err := loader.Load(ctx, r.getReconcilerReader(r.RepoPth, r.PathInRepo, r.Flags)); err != nil {
-		return err
-	}
-	if err := loader.Clean(ctx); err != nil {
-		return err
-	}
-	return nil
-}
-
-func (r *DataLoader) getReconcilerReader(repoPath, pathInRepo string, flags *genericclioptions.ConfigFlags) pkgio.Reader[[]byte] {
-	abspath := filepath.Join(repoPath, pathInRepo, *flags.ReconcilerPath)
+func (r *DevLoader) getReconcilerReader() pkgio.Reader[[]byte] {
+	abspath := filepath.Join(r.Path, *r.Flags.ReconcilerPath)
 
 	if !fsys.PathExists(abspath) {
 		return nil
@@ -63,13 +41,8 @@ func (r *DataLoader) getReconcilerReader(repoPath, pathInRepo string, flags *gen
 	return GetFSReader(abspath)
 }
 
-type ReconcilerLoader struct {
-	Client         resourceclient.Client
-	Branch         string
-	NewReconcilers sets.Set[string]
-}
-
-func (r *ReconcilerLoader) Load(ctx context.Context, reader pkgio.Reader[[]byte]) error {
+func (r *DevLoader) loadReconcilers(ctx context.Context) error {
+	reader := r.getReconcilerReader()
 	if reader == nil {
 		// reader nil, mean the path does not exist, whcich is ok
 		return nil
@@ -78,7 +51,6 @@ func (r *ReconcilerLoader) Load(ctx context.Context, reader pkgio.Reader[[]byte]
 	if err != nil {
 		return err
 	}
-
 	// For starlark we have 2 files fro which the name before the extension match
 	// As such we keep a structure with the name, extension, byte
 	reconcilers := map[string]*choreov1alpha1.Reconciler{}
@@ -97,7 +69,6 @@ func (r *ReconcilerLoader) Load(ctx context.Context, reader pkgio.Reader[[]byte]
 			reconcilerConfig.SetAnnotations(map[string]string{
 				choreov1alpha1.ChoreoLoaderOriginKey: choreov1alpha1.FileLoaderAnnotation.String(),
 			})
-
 			reconcilers[reconcilerName] = reconcilerConfig
 		}
 	})
@@ -155,27 +126,26 @@ func (r *ReconcilerLoader) Load(ctx context.Context, reader pkgio.Reader[[]byte]
 
 	for _, reconcilerConfig := range reconcilers {
 		if reconcilerConfig.Spec.Type != nil {
-			r.NewReconcilers.Insert(reconcilerConfig.Name)
+			//r.NewReconcilers.Insert(reconcilerConfig.Name)
 
-			obj, err := object.GetUnstructructered(reconcilerConfig)
+			b, err := yaml.Marshal(reconcilerConfig)
 			if err != nil {
-				errm = errors.Join(errm, fmt.Errorf("cannot unmarshal %s, err: %v", reconcilerConfig.Name, err))
-				continue
+				errm = errors.Join(errm, fmt.Errorf("cannot marshal library %s, err: %v", reconcilerConfig.Name, err))
 			}
 
-			r.NewReconcilers.Insert(reconcilerConfig.Name)
-			if err := r.Client.Apply(ctx, obj, &resourceclient.ApplyOptions{
-				Branch:       r.Branch,
-				FieldManager: ManagedFieldManagerInput,
-				Origin:       ManagedFieldManagerInput,
-			}); err != nil {
-				errm = errors.Join(errm, fmt.Errorf("invalid reconciler %s, err: %v", reconcilerConfig.Name, err))
-				continue
+			fileName := filepath.Join(
+				r.Path,
+				*r.Flags.InputPath,
+				fmt.Sprintf("%s.%s.%s.yaml",
+					choreov1alpha1.SchemeGroupVersion.Group,
+					strings.ToLower(choreov1alpha1.ReconcilerKind),
+					reconcilerConfig.Name,
+				))
+			if err := os.WriteFile(fileName, b, 0644); err != nil {
+				errm = errors.Join(errm, fmt.Errorf("cannot marshal library %s, err: %v", reconcilerConfig.Name, err))
 			}
-
 		}
 	}
-
 	return errm
 }
 
@@ -188,31 +158,4 @@ func getReconcilerName(reconcilers map[string]*choreov1alpha1.Reconciler, filena
 	return "", fmt.Errorf("no reconciler config found for %s", filename)
 }
 
-func (r *ReconcilerLoader) Clean(ctx context.Context) error {
-	ul := &unstructured.UnstructuredList{}
-	ul.SetGroupVersionKind(choreov1alpha1.SchemeGroupVersion.WithKind(choreov1alpha1.ReconcilerKind))
-	if err := r.Client.List(ctx, ul, &resourceclient.ListOptions{
-		ExprSelector:      &resourcepb.ExpressionSelector{},
-		ShowManagedFields: true,
-		Branch:            r.Branch,
-	}); err != nil {
-		return err
-	}
-	var errm error
-	for _, u := range ul.Items {
-		if len(u.GetAnnotations()) != 0 &&
-			u.GetAnnotations()[choreov1alpha1.ChoreoLoaderOriginKey] == choreov1alpha1.FileLoaderAnnotation.String() &&
-			object.IsManagedBy(u.GetManagedFields(), ManagedFieldManagerInput) {
-
-			if !r.NewReconcilers.Has(u.GetName()) {
-				if err := r.Client.Delete(ctx, &u, &resourceclient.DeleteOptions{
-					Branch: r.Branch,
-				}); err != nil {
-					errm = errors.Join(errm, err)
-				}
-			}
-		}
-	}
-	return errm
-}
-*/
+// TBD if we need to do the clean

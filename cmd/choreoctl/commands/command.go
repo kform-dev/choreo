@@ -27,6 +27,7 @@ import (
 	"github.com/kform-dev/choreo/cmd/choreoctl/commands/branchcmd"
 	"github.com/kform-dev/choreo/cmd/choreoctl/commands/deletecmd.go"
 	"github.com/kform-dev/choreo/cmd/choreoctl/commands/depscmd"
+	"github.com/kform-dev/choreo/cmd/choreoctl/commands/devcmd"
 	"github.com/kform-dev/choreo/cmd/choreoctl/commands/getcmd"
 	"github.com/kform-dev/choreo/cmd/choreoctl/commands/runcmd"
 	"github.com/kform-dev/choreo/cmd/choreoctl/commands/servercmd"
@@ -103,6 +104,7 @@ func GetMain(ctx context.Context) (*cobra.Command, util.Factory) {
 		"run":          runcmd.GetCommand(ctx, f, streams),
 		"tui":          tuicmd.GetCommand(ctx, f),
 		"server":       servercmd.GetCommand(ctx, choreoFlags),
+		"dev":          devcmd.GetCommand(ctx, choreoFlags),
 	}
 
 	for cmdName, subCmd := range subCmds {
