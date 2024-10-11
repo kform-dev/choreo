@@ -30,7 +30,7 @@ type ChoreoClient interface {
 	Close() error
 }
 
-func NewChoreoClientClient(config *config.Config) (ChoreoClient, error) {
+func NewChoreoClient(config *config.Config) (ChoreoClient, error) {
 	client := &choreoclient{
 		config: config,
 	}

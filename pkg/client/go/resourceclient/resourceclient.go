@@ -42,7 +42,7 @@ type ResourceClient interface {
 	Close() error
 }
 
-func NewResourceClientClient(config *config.Config) (ResourceClient, error) {
+func NewResourceClient(config *config.Config) (ResourceClient, error) {
 	client := &resourceclient{
 		config: config,
 	}
