@@ -34,7 +34,9 @@ import (
 
 type GetOptions struct{}
 
-type ListOptions struct{}
+type ListOptions struct{
+	Choreo string
+}
 
 type CreateOptions struct{}
 

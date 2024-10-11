@@ -107,7 +107,9 @@ func (r *Runner) runE(cmd *cobra.Command, args []string) error {
 		return errm
 	}
 
-	branches, err := branchClient.List(ctx, branchclient.ListOptions{})
+	branches, err := branchClient.List(ctx, branchclient.ListOptions{
+		Choreo: "network",
+	})
 	if err != nil {
 		return err
 	}
