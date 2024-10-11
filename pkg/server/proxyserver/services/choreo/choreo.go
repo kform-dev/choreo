@@ -55,7 +55,7 @@ func (r *proxy) Get(ctx context.Context, req *choreopb.Get_Request) (*choreopb.G
 		return &choreopb.Get_Response{}, err
 	}
 
-	return choreoCtx.Choreoclient.Get(ctx, req)
+	return choreoCtx.ChoreoClient.Get(ctx, req)
 }
 
 func (r *proxy) Apply(ctx context.Context, req *choreopb.Apply_Request) (*choreopb.Apply_Response, error) {
@@ -64,7 +64,7 @@ func (r *proxy) Apply(ctx context.Context, req *choreopb.Apply_Request) (*choreo
 		return &choreopb.Apply_Response{}, err
 	}
 
-	return choreoCtx.Choreoclient.Apply(ctx, req)
+	return choreoCtx.ChoreoClient.Apply(ctx, req)
 }
 
 func (r *proxy) Start(ctx context.Context, req *choreopb.Start_Request) (*choreopb.Start_Response, error) {
@@ -72,7 +72,7 @@ func (r *proxy) Start(ctx context.Context, req *choreopb.Start_Request) (*choreo
 	if err != nil {
 		return &choreopb.Start_Response{}, err
 	}
-	return choreoCtx.Choreoclient.Start(ctx, req)
+	return choreoCtx.ChoreoClient.Start(ctx, req)
 }
 
 func (r *proxy) Stop(ctx context.Context, req *choreopb.Stop_Request) (*choreopb.Stop_Response, error) {
@@ -80,7 +80,7 @@ func (r *proxy) Stop(ctx context.Context, req *choreopb.Stop_Request) (*choreopb
 	if err != nil {
 		return &choreopb.Stop_Response{}, err
 	}
-	return choreoCtx.Choreoclient.Stop(ctx, req)
+	return choreoCtx.ChoreoClient.Stop(ctx, req)
 }
 
 func (r *proxy) Once(ctx context.Context, req *choreopb.Once_Request) (*choreopb.Once_Response, error) {
@@ -88,12 +88,12 @@ func (r *proxy) Once(ctx context.Context, req *choreopb.Once_Request) (*choreopb
 	if err != nil {
 		return &choreopb.Once_Response{}, err
 	}
-	return choreoCtx.Choreoclient.Once(ctx, req)
+	return choreoCtx.ChoreoClient.Once(ctx, req)
 }
 func (r *proxy) Load(ctx context.Context, req *choreopb.Load_Request) (*choreopb.Load_Response, error) {
 	choreoCtx, err := r.getChoreoCtx(req.Choreo)
 	if err != nil {
 		return &choreopb.Load_Response{}, err
 	}
-	return choreoCtx.Choreoclient.Load(ctx, req)
+	return choreoCtx.ChoreoClient.Load(ctx, req)
 }
