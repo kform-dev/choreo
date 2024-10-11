@@ -28,5 +28,5 @@ type ChoreoCtx struct {
 	BranchClient    branchclient.BranchClient
 	DiscoveryClient discoveryclient.DiscoveryClient
 	ResourceClient  resourceclient.ResourceClient
-	Choreoclient    choreoclient.ChoreoClient
+	ChoreoClient    choreoclient.ChoreoClient
 }
