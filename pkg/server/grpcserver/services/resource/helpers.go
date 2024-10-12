@@ -26,7 +26,8 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
-func (r *srv) getBranchContext(branch string) (*choreo.BranchCtx, error) {
+func (r *srv) 
+getBranchContext(branch string) (*choreo.BranchCtx, error) {
 	if branch == "" {
 		bctx, err := r.choreo.GetBranchStore().GetCheckedOut()
 		if bctx == nil {

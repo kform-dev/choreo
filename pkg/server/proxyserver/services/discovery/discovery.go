@@ -54,7 +54,6 @@ func (r *proxy) getChoreoCtx(proxy types.NamespacedName) (*choreoctx.ChoreoCtx, 
 }
 
 func (r *proxy) Get(ctx context.Context, req *discoverypb.Get_Request) (*discoverypb.Get_Response, error) {
-	fmt.Println("proxy get", req.ProxyName, req.ProxyNamespace)
 	choreoCtx, err := r.getChoreoCtx(types.NamespacedName{Namespace: req.ProxyNamespace, Name: req.ProxyName})
 	if err != nil {
 		return &discoverypb.Get_Response{}, err
