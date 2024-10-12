@@ -140,14 +140,13 @@ func (r *run) load(ctx context.Context, bctx *BranchCtx) error {
 	// we only work with checkout branch
 	apiResources := bctx.APIStore.GetAPIResources()
 
-	//PrintAPIResource(apiResources)
 	if err := r.choreo.GetBranchStore().LoadData(ctx, bctx.Branch); err != nil {
 		return status.Errorf(codes.Internal, "err: %s", err.Error())
 	}
 
 	// we use this to garbagecollect - root object they might have gotten deleted
 	inv := inventory.Inventory{}
-	if err := inv.Build(ctx, r.client, apiResources, bctx.Branch); err != nil {
+	if err := inv.Build(ctx, r.client, apiResources, bctx.Branch, true); err != nil {
 		return status.Errorf(codes.Internal, "err: %s", err.Error())
 	}
 	var errm error

@@ -41,15 +41,18 @@ type APILoaderInternal struct {
 
 func (r *APILoaderInternal) Load(ctx context.Context) error {
 	var errm error
-	if err := r.loadAPIs(ctx, crdloader.GetAPIExtReader(), nil); err != nil {
+	// load internal choreo apis
+	if err := r.loadAPIs(ctx, crdloader.GetAPIExtReader(), nil, true); err != nil {
 		errm = errors.Join(errm, fmt.Errorf("cannot load api extension apis, err: %v", err))
 	}
-	if err := r.loadAPIs(ctx, crdloader.GetEmbeddedAPIReader(), nil); err != nil {
+	// load internal choreo apis
+	if err := r.loadAPIs(ctx, crdloader.GetEmbeddedAPIReader(), nil, true); err != nil {
 		errm = errors.Join(errm, fmt.Errorf("cannot load embedded apis, err: %v", err))
 	}
+	// load internal but not choreoAPIs
 	if r.Flags.InternalReconcilers != nil && *r.Flags.InternalReconcilers {
 		backends := crdloader.GetBackendConfig()
-		if err := r.loadAPIs(ctx, crdloader.GetInternalAPIReader(), backends); err != nil {
+		if err := r.loadAPIs(ctx, crdloader.GetInternalAPIReader(), backends, false); err != nil {
 			errm = errors.Join(errm, fmt.Errorf("cannot load internal apis, err: %v", err))
 		}
 		if err := crdloader.AddStorage(backends, r.APIStore); err != nil {
@@ -59,7 +62,7 @@ func (r *APILoaderInternal) Load(ctx context.Context) error {
 	return errm
 }
 
-func (r *APILoaderInternal) loadAPIs(ctx context.Context, reader pkgio.Reader[*yaml.RNode], backends map[schema.GroupVersion]*crdloader.BackendConfig) error {
+func (r *APILoaderInternal) loadAPIs(ctx context.Context, reader pkgio.Reader[*yaml.RNode], backends map[schema.GroupVersion]*crdloader.BackendConfig, choreoAPI bool) error {
 	log := log.FromContext(ctx)
 	if reader == nil {
 		// a nil reader means the path does not exist
@@ -80,7 +83,7 @@ func (r *APILoaderInternal) loadAPIs(ctx context.Context, reader pkgio.Reader[*y
 			}
 			// TODO handle internal apis
 
-			resctx, err := crdloader.LoadCRD(ctx, r.PathInRepo, r.DBPath, crd, backends)
+			resctx, err := crdloader.LoadCRD(ctx, r.PathInRepo, r.DBPath, crd, backends, choreoAPI)
 			if err != nil {
 				errm = errors.Join(errm, err)
 				return

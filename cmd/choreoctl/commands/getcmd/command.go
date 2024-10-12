@@ -115,11 +115,11 @@ func (r *Options) Run(ctx context.Context, args []string) error {
 		ul := &unstructured.UnstructuredList{}
 		ul.SetGroupVersionKind(gvk)
 		if err := r.Factory.GetResourceClient().List(ctx, ul, &resourceclient.ListOptions{
-			ExprSelector:      &resourcepb.ExpressionSelector{},
-			ShowManagedFields: true,
-			Origin:            "choreoctl",
-			Branch:            branch,
-			Proxy:             proxy,
+			ExprSelector: &resourcepb.ExpressionSelector{},
+			//ShowManagedFields: true,
+			Origin: "choreoctl",
+			Branch: branch,
+			Proxy:  proxy,
 		}); err != nil {
 			return err
 		}
@@ -132,10 +132,10 @@ func (r *Options) Run(ctx context.Context, args []string) error {
 		Namespace: "default",
 		Name:      args[1],
 	}, u, &resourceclient.GetOptions{
-		ShowManagedFields: true,
-		Origin:            "choreoctl",
-		Branch:            branch,
-		Proxy:             proxy,
+		//ShowManagedFields: true,
+		Origin: "choreoctl",
+		Branch: branch,
+		Proxy:  proxy,
 	}); err != nil {
 		return err
 	}

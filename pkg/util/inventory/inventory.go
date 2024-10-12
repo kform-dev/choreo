@@ -42,8 +42,12 @@ type treeNode struct {
 	Children   []*treeNode
 }
 
-func (inv Inventory) Build(ctx context.Context, client resourceclient.Client, apiResources []*discoverypb.APIResource, branch string) error {
+func (inv Inventory) Build(ctx context.Context, client resourceclient.Client, apiResources []*discoverypb.APIResource, branch string, showChoreo bool) error {
 	for _, apiResource := range apiResources {
+		// skip showing internal choreo resources: reconcilers, libraries
+		if !showChoreo && apiResource.Choreo {
+			continue
+		}
 		ul := &unstructured.UnstructuredList{}
 		ul.SetAPIVersion(schema.GroupVersion{Group: apiResource.Group, Version: apiResource.Version}.String())
 		ul.SetKind(apiResource.Kind)

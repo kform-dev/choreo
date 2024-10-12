@@ -18,8 +18,6 @@ package depscmd
 
 import (
 	"context"
-	"errors"
-	"fmt"
 
 	"github.com/kform-dev/choreo/pkg/cli/genericclioptions"
 	"github.com/kform-dev/choreo/pkg/client/go/util"
@@ -47,14 +45,18 @@ func NewRunner(ctx context.Context, f util.Factory, streams *genericclioptions.I
 		RunE: r.runE,
 	}
 
+	// Adding a boolean flag named "show-internal" with a default value of false and description
+	cmd.Flags().BoolVarP(&r.showChoreo, "show-choreo", "i", false, "Enable displaying internal choreo resources")
+
 	r.Command = cmd
 	return r
 }
 
 type Runner struct {
-	Command *cobra.Command
-	factory util.Factory
-	streams *genericclioptions.IOStreams
+	Command    *cobra.Command
+	factory    util.Factory
+	streams    *genericclioptions.IOStreams
+	showChoreo bool
 }
 
 func (r *Runner) runE(cmd *cobra.Command, args []string) error {
@@ -63,18 +65,20 @@ func (r *Runner) runE(cmd *cobra.Command, args []string) error {
 	branch := r.factory.GetBranch()
 	proxy := r.factory.GetProxy()
 
-	apiresource, err := r.factory.GetDiscoveryClient().APIResources(ctx, proxy, branch)
+	apiResources, err := r.factory.GetDiscoveryClient().APIResources(ctx, proxy, branch)
 	if err != nil {
 		return err
 	}
 
 	inv := inventory.Inventory{}
-	if err := inv.Build(ctx, r.factory.GetResourceClient(), apiresource, branch); err != nil {
+	if err := inv.Build(ctx, r.factory.GetResourceClient(), apiResources, branch, r.showChoreo); err != nil {
 		return err
 	}
 	inv.Print()
 	return nil
 }
+
+/*
 
 type Options struct {
 	Factory util.Factory
@@ -119,3 +123,4 @@ func (r *Options) Run(ctx context.Context) error {
 
 	return errm
 }
+*/

@@ -58,7 +58,7 @@ func (r *APIStoreLoader) Load(ctx context.Context, u *unstructured.Unstructured)
 		return err
 	}
 
-	resctx, err := crdloader.LoadCRD(ctx, r.PathInRepo, r.DBPath, crd, nil)
+	resctx, err := crdloader.LoadCRD(ctx, r.PathInRepo, r.DBPath, crd, nil, false)
 	if err != nil {
 		return err
 	}

@@ -16,6 +16,8 @@ limitations under the License.
 
 package crdloader
 
+/*
+
 import (
 	"context"
 
@@ -41,3 +43,4 @@ func GetResourceCtxAPIExt(ctx context.Context, pathInRepo, dbpath string) (*api.
 	}
 	return LoadCRD(ctx, pathInRepo, dbpath, crd, nil)
 }
+*/

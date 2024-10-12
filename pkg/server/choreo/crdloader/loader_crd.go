@@ -39,7 +39,7 @@ import (
 )
 
 // loadCRD loads the storage version of the CRD. if no storage version is supplied this call will fail
-func LoadCRD(ctx context.Context, pathInRepo, dbpath string, crd *apiextensionsv1.CustomResourceDefinition, internalAPIs map[schema.GroupVersion]*BackendConfig) (*api.ResourceContext, error) {
+func LoadCRD(ctx context.Context, pathInRepo, dbpath string, crd *apiextensionsv1.CustomResourceDefinition, internalAPIs map[schema.GroupVersion]*BackendConfig, choreoAPI bool) (*api.ResourceContext, error) {
 	if internalAPIs == nil {
 		internalAPIs = map[schema.GroupVersion]*BackendConfig{}
 	}
@@ -196,6 +196,7 @@ func LoadCRD(ctx context.Context, pathInRepo, dbpath string, crd *apiextensionsv
 					Resource:   crd.Spec.Names.Plural,
 					Namespaced: crd.Spec.Scope == apiextensionsv1.NamespaceScoped,
 					Categories: crd.Spec.Names.Categories,
+					Choreo:     choreoAPI,
 				},
 				Storage: storage,
 			}, nil
