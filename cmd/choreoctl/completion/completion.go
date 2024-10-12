@@ -43,16 +43,10 @@ func (r *Completion) compGetResourceList(cmd *cobra.Command, toComplete string) 
 	buf := new(bytes.Buffer)
 	streams := &genericclioptions.IOStreams{In: os.Stdin, Out: buf, ErrOut: io.Discard}
 
-	branch, err := cmd.Flags().GetString("branch")
-	if err != nil {
-		return []string{}
-	}
-
 	o := apiresourcescmd.Options{
 		Factory: r.Factory,
 		Streams: streams,
 		Output:  "name",
-		Branch:  branch,
 	}
 	if err := o.Complete(ctx); err != nil {
 		return []string{}

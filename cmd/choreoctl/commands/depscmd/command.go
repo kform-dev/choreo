@@ -60,12 +60,10 @@ type Runner struct {
 func (r *Runner) runE(cmd *cobra.Command, args []string) error {
 	ctx := cmd.Context()
 
-	branch, err := cmd.Flags().GetString("branch")
-	if err != nil {
-		return err
-	}
+	branch := r.factory.GetBranch()
+	proxy := r.factory.GetProxy()
 
-	apiresource, err := r.factory.GetDiscoveryClient().APIResources(ctx, branch)
+	apiresource, err := r.factory.GetDiscoveryClient().APIResources(ctx, proxy, branch)
 	if err != nil {
 		return err
 	}
@@ -83,7 +81,7 @@ type Options struct {
 	Streams *genericclioptions.IOStreams
 	Output  string
 	// derived parameters
-	branch string
+	//branch string
 }
 
 // Complete adapts from the command line args and validates them
@@ -96,7 +94,9 @@ func (r *Options) Validate(ctx context.Context) error {
 }
 
 func (r *Options) Run(ctx context.Context) error {
-	apiresources, err := r.Factory.GetDiscoveryClient().APIResources(ctx, r.branch)
+	branch := r.Factory.GetBranch()
+	proxy := r.Factory.GetProxy()
+	apiresources, err := r.Factory.GetDiscoveryClient().APIResources(ctx, proxy, branch)
 	if err != nil {
 		return err
 	}

@@ -154,9 +154,14 @@ func (r *Resources) StartStream(parentCtx context.Context) {
 		ctx, cancel := context.WithCancel(parentCtx)
 		r.cancel = cancel
 
+		branch := r.app.factory.GetBranch()
+		proxy := r.app.factory.GetProxy()
+
 		rspch := r.app.factory.GetDiscoveryClient().Watch(ctx, &discoverypb.Watch_Request{
-			//Branch:  "",
-			Options: &discoverypb.Watch_Options{},
+			ProxyName:      proxy.Name,
+			ProxyNamespace: proxy.Namespace,
+			Branch:         branch,
+			Options:        &discoverypb.Watch_Options{},
 		})
 
 		// Process the stream

@@ -22,10 +22,11 @@ import (
 
 	"github.com/kform-dev/choreo/pkg/client/go/discovery"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/types"
 )
 
 type Mapper interface {
-	KindFor(ctx context.Context, resource schema.GroupResource, branchName string) (schema.GroupVersionKind, error)
+	KindFor(ctx context.Context, resource schema.GroupResource, proxy types.NamespacedName, branch string) (schema.GroupVersionKind, error)
 }
 
 // NewDiscoveryRESTMapper returns a PriorityRESTMapper based on the discovered
@@ -40,8 +41,8 @@ type mapper struct {
 	d discovery.DiscoveryInterface
 }
 
-func (r *mapper) KindFor(ctx context.Context, resource schema.GroupResource, branchName string) (schema.GroupVersionKind, error) {
-	apiResources, err := r.d.APIResources(ctx, branchName)
+func (r *mapper) KindFor(ctx context.Context, resource schema.GroupResource, proxy types.NamespacedName, branch string) (schema.GroupVersionKind, error) {
+	apiResources, err := r.d.APIResources(ctx, proxy, branch)
 	if err != nil {
 		return schema.GroupVersionKind{}, err
 	}

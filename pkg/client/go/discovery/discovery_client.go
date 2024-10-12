@@ -20,10 +20,11 @@ import (
 	"context"
 
 	"github.com/kform-dev/choreo/pkg/proto/discoverypb"
+	"k8s.io/apimachinery/pkg/types"
 )
 
 type DiscoveryInterface interface {
-	APIResources(ctx context.Context, branch string) ([]*discoverypb.APIResource, error)
+	APIResources(ctx context.Context, proxy types.NamespacedName, branch string) ([]*discoverypb.APIResource, error)
 	Close() error
 	Watch(context.Context, *discoverypb.Watch_Request) chan *discoverypb.Watch_Response
 }

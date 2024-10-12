@@ -69,16 +69,11 @@ type Runner struct {
 
 func (r *Runner) runE(cmd *cobra.Command, args []string) error {
 	ctx := cmd.Context()
-	branch, err := cmd.Flags().GetString("branch")
-	if err != nil {
-		return err
-	}
 
 	o := &Options{
 		Factory: r.factory,
 		Streams: r.streams,
 		Output:  cmd.Flags().Lookup(genericclioptions.FlagOutputFormat).Value.String(),
-		Branch:  branch,
 	}
 	if err := o.Complete(ctx); err != nil {
 		return err
@@ -111,7 +106,9 @@ func (r *Options) Run(ctx context.Context, args []string) error {
 	if len(parts) != 2 {
 		return fmt.Errorf("expecting <resource>.<group>, got: %v", parts)
 	}
-	gvk, err := r.Factory.GetResourceMapper().KindFor(ctx, schema.GroupResource{Group: parts[1], Resource: parts[0]}, r.Branch)
+	proxy := r.Factory.GetProxy()
+	branch := r.Factory.GetBranch()
+	gvk, err := r.Factory.GetResourceMapper().KindFor(ctx, schema.GroupResource{Group: parts[1], Resource: parts[0]}, proxy, branch)
 	if err != nil {
 		return err
 	}

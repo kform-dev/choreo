@@ -26,6 +26,7 @@ import (
 	"github.com/kform-dev/choreo/pkg/client/go/discovery"
 	"github.com/kform-dev/choreo/pkg/client/go/resourceclient"
 	"github.com/kform-dev/choreo/pkg/client/go/resourcemapper"
+	"k8s.io/apimachinery/pkg/types"
 )
 
 type Factory interface {
@@ -36,6 +37,8 @@ type Factory interface {
 	GetResourceClient() resourceclient.Client
 	GetBranchClient() branchclient.Client
 	Close() error
+	GetBranch() string
+	GetProxy() types.NamespacedName
 }
 
 func NewFactory(clientGetter genericclioptions.ClientGetter) (Factory, error) {
@@ -74,6 +77,8 @@ func NewFactory(clientGetter genericclioptions.ClientGetter) (Factory, error) {
 		resourceMapper:  resourceMapper,
 		resourceClient:  resourceClient,
 		branchClient:    branchClient,
+		branch:          clientGetter.ToBranch(),
+		proxy:           clientGetter.ToProxy(),
 	}, nil
 }
 
@@ -84,6 +89,8 @@ type factory struct {
 	resourceMapper  resourcemapper.Mapper
 	resourceClient  resourceclient.Client
 	branchClient    branchclient.Client
+	branch          string
+	proxy           types.NamespacedName
 }
 
 func (r *factory) Close() error {
@@ -128,4 +135,11 @@ func (r *factory) GetResourceClient() resourceclient.Client {
 
 func (r *factory) GetBranchClient() branchclient.Client {
 	return r.branchClient
+}
+
+func (r *factory) GetBranch() string {
+	return r.branch
+}
+func (r *factory) GetProxy() types.NamespacedName {
+	return r.proxy
 }

@@ -22,6 +22,7 @@ import (
 	"github.com/kform-dev/choreo/pkg/client/go/config"
 	"github.com/kform-dev/choreo/pkg/client/go/discovery"
 	"github.com/kform-dev/choreo/pkg/proto/discoverypb"
+	"k8s.io/apimachinery/pkg/types"
 )
 
 type discoveryClient struct {
@@ -42,9 +43,11 @@ func (r *discoveryClient) Close() error {
 	return r.client.Close()
 }
 
-func (r *discoveryClient) APIResources(ctx context.Context, branchName string) ([]*discoverypb.APIResource, error) {
+func (r *discoveryClient) APIResources(ctx context.Context, proxy types.NamespacedName, branch string) ([]*discoverypb.APIResource, error) {
 	rsp, err := r.client.Get(ctx, &discoverypb.Get_Request{
-		Branch: branchName,
+		ProxyName:      proxy.Name,
+		ProxyNamespace: proxy.Namespace,
+		Branch:         branch,
 	})
 	if err != nil {
 		return nil, err

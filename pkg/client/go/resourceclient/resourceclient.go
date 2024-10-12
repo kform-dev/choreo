@@ -33,12 +33,12 @@ import (
 
 type ResourceClient interface {
 	Get(ctx context.Context, in *resourcepb.Get_Request, opts ...grpc.CallOption) (*resourcepb.Get_Response, error)
-    List(ctx context.Context, in *resourcepb.List_Request, opts ...grpc.CallOption) (*resourcepb.List_Response, error)
-    Create(ctx context.Context, in *resourcepb.Create_Request, opts ...grpc.CallOption) (*resourcepb.Create_Response, error)
-    Update(ctx context.Context, in *resourcepb.Update_Request, opts ...grpc.CallOption) (*resourcepb.Update_Response, error)
-    Apply(ctx context.Context, in *resourcepb.Apply_Request, opts ...grpc.CallOption) (*resourcepb.Apply_Response, error)
-    Delete(ctx context.Context, in *resourcepb.Delete_Request, opts ...grpc.CallOption) (*resourcepb.Delete_Response, error)
-    Watch(ctx context.Context, in *resourcepb.Watch_Request, opts ...grpc.CallOption) chan *resourcepb.Watch_Response
+	List(ctx context.Context, in *resourcepb.List_Request, opts ...grpc.CallOption) (*resourcepb.List_Response, error)
+	Create(ctx context.Context, in *resourcepb.Create_Request, opts ...grpc.CallOption) (*resourcepb.Create_Response, error)
+	Update(ctx context.Context, in *resourcepb.Update_Request, opts ...grpc.CallOption) (*resourcepb.Update_Response, error)
+	Apply(ctx context.Context, in *resourcepb.Apply_Request, opts ...grpc.CallOption) (*resourcepb.Apply_Response, error)
+	Delete(ctx context.Context, in *resourcepb.Delete_Request, opts ...grpc.CallOption) (*resourcepb.Delete_Response, error)
+	Watch(ctx context.Context, in *resourcepb.Watch_Request, opts ...grpc.CallOption) chan *resourcepb.Watch_Response
 	Close() error
 }
 

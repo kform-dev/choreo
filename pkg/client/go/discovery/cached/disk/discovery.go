@@ -34,6 +34,7 @@ import (
 	discoveryclient "github.com/kform-dev/choreo/pkg/client/go/discovery/client"
 	"github.com/kform-dev/choreo/pkg/proto/discoverypb"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
 )
 
@@ -89,7 +90,7 @@ func (r *CachedDiscoveryClient) Invalidate() {
 	}
 }
 
-func (r *CachedDiscoveryClient) APIResources(ctx context.Context, branchName string) ([]*discoverypb.APIResource, error) {
+func (r *CachedDiscoveryClient) APIResources(ctx context.Context, proxy types.NamespacedName, branch string) ([]*discoverypb.APIResource, error) {
 	log := log.FromContext(ctx)
 	// REMOVED FOR NOW TO AVOID DISK CACHING
 	/*
@@ -103,7 +104,7 @@ func (r *CachedDiscoveryClient) APIResources(ctx context.Context, branchName str
 			}
 		}
 	*/
-	apiResources, err := r.delegate.APIResources(ctx, branchName)
+	apiResources, err := r.delegate.APIResources(ctx, proxy, branch)
 	if err != nil {
 		return nil, err
 	}

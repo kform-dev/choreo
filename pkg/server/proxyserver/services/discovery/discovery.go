@@ -28,6 +28,7 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/peer"
 	"google.golang.org/grpc/status"
+	"k8s.io/apimachinery/pkg/types"
 )
 
 func New(store store.Storer[*choreoctx.ChoreoCtx]) discoverypb.DiscoveryServer {
@@ -41,19 +42,19 @@ type proxy struct {
 	store store.Storer[*choreoctx.ChoreoCtx]
 }
 
-func (r *proxy) getChoreoCtx(choreo string) (*choreoctx.ChoreoCtx, error) {
-	choreoCtx, err := r.store.Get(store.ToKey(choreo))
+func (r *proxy) getChoreoCtx(proxy types.NamespacedName) (*choreoctx.ChoreoCtx, error) {
+	choreoCtx, err := r.store.Get(store.KeyFromNSN(proxy))
 	if err != nil {
-		return nil, status.Error(codes.NotFound, fmt.Sprintf("choreo %s not found, err: %v", choreo, err))
+		return nil, status.Error(codes.NotFound, fmt.Sprintf("choreo %s not found, err: %v", proxy.String(), err))
 	}
 	if !choreoCtx.Ready {
-		return nil, status.Error(codes.Unavailable, fmt.Sprintf("choreo %s not ready, err: %v", choreo, err))
+		return nil, status.Error(codes.Unavailable, fmt.Sprintf("choreo %s not ready, err: %v", proxy.String(), err))
 	}
 	return choreoCtx, nil
 }
 
 func (r *proxy) Get(ctx context.Context, req *discoverypb.Get_Request) (*discoverypb.Get_Response, error) {
-	choreoCtx, err := r.getChoreoCtx(req.Choreo)
+	choreoCtx, err := r.getChoreoCtx(types.NamespacedName{Namespace: req.ProxyNamespace, Name: req.ProxyName})
 	if err != nil {
 		return &discoverypb.Get_Response{}, err
 	}
@@ -65,7 +66,7 @@ func (r *proxy) Watch(req *discoverypb.Watch_Request, stream discoverypb.Discove
 	ctx := stream.Context()
 	log := log.FromContext(ctx)
 	log.Info("watch")
-	choreoCtx, err := r.getChoreoCtx(req.Choreo)
+	choreoCtx, err := r.getChoreoCtx(types.NamespacedName{Namespace: req.ProxyNamespace, Name: req.ProxyName})
 	if err != nil {
 		return err
 	}

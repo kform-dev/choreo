@@ -60,15 +60,9 @@ type Runner struct {
 func (r *Runner) runE(cmd *cobra.Command, args []string) error {
 	ctx := cmd.Context()
 
-	branchName, err := cmd.Flags().GetString("branch")
-	if err != nil {
-		return err
-	}
-
 	o := &Options{
 		Factory: r.factory,
 		Streams: r.streams,
-		Branch:  branchName,
 	}
 	if err := o.Complete(ctx); err != nil {
 		return err
@@ -83,7 +77,6 @@ type Options struct {
 	Factory util.Factory
 	Streams *genericclioptions.IOStreams
 	Output  string
-	Branch  string
 	// derived parameters
 }
 
@@ -97,10 +90,18 @@ func (r *Options) Validate(ctx context.Context) error {
 }
 
 func (r *Options) Run(ctx context.Context) error {
-	apiresources, err := r.Factory.GetDiscoveryClient().APIResources(ctx, r.Branch)
+	branch := r.Factory.GetBranch()
+	proxy := r.Factory.GetProxy()
+	apiresources, err := r.Factory.GetDiscoveryClient().APIResources(ctx, proxy, branch)
 	if err != nil {
 		if grpcerrors.IsNotFound(err) {
-			return fmt.Errorf("cannot get apiresources, branchname %s not found", r.Branch)
+			if branch == "" {
+				return fmt.Errorf("cannot get apiresources (checkedout)")
+			}
+			if proxy.Name != "" && proxy.Namespace != "" {
+				return fmt.Errorf("cannot get apiresources through proxy %s, branch %s not found", proxy.String(), branch)
+			}
+			return fmt.Errorf("cannot get apiresources, branch %s not found", branch)
 		}
 		return err
 	}

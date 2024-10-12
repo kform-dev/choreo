@@ -30,6 +30,7 @@ import (
 	"github.com/kform-dev/choreo/pkg/client/go/discovery/cached/disk"
 	"github.com/kform-dev/choreo/pkg/client/go/resourceclient"
 	"github.com/kform-dev/choreo/pkg/client/go/resourcemapper"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/ptr"
 )
 
@@ -52,6 +53,7 @@ const (
 	flagCacheDir            = "cacheDir"
 	flagInternalReconcilers = "internalReconcilers"
 	flagBranch              = "branch"
+	flagProxy               = "proxy"
 )
 
 const (
@@ -75,6 +77,8 @@ type ClientGetter interface {
 	ToBranchClient() (branchclient.Client, error)
 	// Branch()
 	ToBranch() string
+	// Proxy()
+	ToProxy() types.NamespacedName
 }
 
 var _ ClientGetter = &ConfigFlags{}
@@ -98,6 +102,7 @@ type ConfigFlags struct {
 	ConfigEnvPrefix     *string
 	InternalReconcilers *bool
 	Branch              *string
+	Proxy               *string
 }
 
 // NewConfigFlags returns ConfigFlags with default values set
@@ -121,6 +126,7 @@ func NewConfigFlags() *ConfigFlags {
 		Config:              ptr.To(filepath.Join(configPath, defaultConfigFileName)),
 		InternalReconcilers: ptr.To(false),
 		Branch:              ptr.To(""),
+		Proxy:               ptr.To(""),
 	}
 }
 
@@ -197,5 +203,29 @@ func (r *ConfigFlags) ToBranchClient() (branchclient.Client, error) {
 }
 
 func (r *ConfigFlags) ToBranch() string {
+	if r.Branch == nil {
+		return ""
+	}
 	return *r.Branch
+}
+
+func (r *ConfigFlags) ToProxy() types.NamespacedName {
+	if r.Proxy == nil {
+		return types.NamespacedName{}
+	}
+	if *r.Proxy == "" {
+		return types.NamespacedName{}
+	}
+	parts := strings.SplitN(*r.Proxy, ".", 2)
+	if len(parts) == 1 {
+		return types.NamespacedName{
+			Name:      *r.Proxy,
+			Namespace: "default",
+		}
+	}
+	return types.NamespacedName{
+		Name:      parts[1],
+		Namespace: parts[0],
+	}
+
 }

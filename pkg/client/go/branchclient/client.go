@@ -34,7 +34,7 @@ import (
 
 type GetOptions struct{}
 
-type ListOptions struct{
+type ListOptions struct {
 	Choreo string
 }
 
@@ -109,6 +109,7 @@ func (r *client) Get(ctx context.Context, branch string, opt GetOptions) ([]*bra
 
 func (r *client) List(ctx context.Context, opt ListOptions) ([]*branchpb.BranchObject, error) {
 	rsp, err := r.client.List(ctx, &branchpb.List_Request{
+		Choreo:  opt.Choreo,
 		Options: &branchpb.List_Options{},
 	})
 	if err != nil {

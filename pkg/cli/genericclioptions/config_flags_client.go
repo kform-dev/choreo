@@ -61,6 +61,10 @@ func (r *ConfigFlags) AddClientFlags(fs *pflag.FlagSet) {
 		fs.StringVarP(r.Branch, flagBranch, "b", *r.Branch,
 			"branch from which the client wants to retrieve the info")
 	}
+	if r.Proxy != nil {
+		fs.StringVarP(r.Proxy, flagProxy, "p", *r.Proxy,
+			"proxy context from which the client wants to retrieve the info")
+	}
 }
 
 // InitConfig reads in config file and ENV variables if set.

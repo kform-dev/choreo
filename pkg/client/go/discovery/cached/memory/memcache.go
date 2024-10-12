@@ -22,6 +22,7 @@ import (
 
 	"github.com/kform-dev/choreo/pkg/client/go/discovery"
 	"github.com/kform-dev/choreo/pkg/proto/discoverypb"
+	"k8s.io/apimachinery/pkg/types"
 )
 
 type memCacheClient struct {
@@ -57,12 +58,12 @@ func (r *memCacheClient) Invalidate() {
 	}
 }
 
-func (r *memCacheClient) APIResources(ctx context.Context, branch string) ([]*discoverypb.APIResource, error) {
+func (r *memCacheClient) APIResources(ctx context.Context, proxy types.NamespacedName, branch string) ([]*discoverypb.APIResource, error) {
 	r.m.Lock()
 	defer r.m.Unlock()
 
 	if !r.cacheValid {
-		if err := r.refreshLocked(ctx, branch); err != nil {
+		if err := r.refreshLocked(ctx, proxy, branch); err != nil {
 			return nil, err
 		}
 	}
@@ -75,8 +76,8 @@ func (r *memCacheClient) Watch(ctx context.Context, req *discoverypb.Watch_Reque
 
 // refreshLocked refreshes the state of cache. The caller must hold d.lock for
 // writing.
-func (r *memCacheClient) refreshLocked(ctx context.Context, branch string) error {
-	apiresources, err := r.delegate.APIResources(ctx, branch)
+func (r *memCacheClient) refreshLocked(ctx context.Context, proxy types.NamespacedName, branch string) error {
+	apiresources, err := r.delegate.APIResources(ctx, proxy, branch)
 	if err != nil {
 		return err
 	}

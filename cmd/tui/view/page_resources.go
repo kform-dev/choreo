@@ -108,7 +108,9 @@ func (r *Resources) Activate(ctx context.Context) {
 }
 
 func (r *Resources) Update(ctx context.Context) error {
-	resources, err := r.app.factory.GetDiscoveryClient().APIResources(ctx, "main")
+	branch := r.app.factory.GetBranch()
+	proxy := r.app.factory.GetProxy()
+	resources, err := r.app.factory.GetDiscoveryClient().APIResources(ctx, proxy, branch)
 	if err != nil {
 		return err
 	}
