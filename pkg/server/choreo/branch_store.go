@@ -111,7 +111,7 @@ func (r *BranchStore) update(ctx context.Context, branch string, newState State)
 		return err
 	}
 
-	log.Info("branchstore update", "branch", branch, "state change", fmt.Sprintf("%s->%s", oldState.String(), newState.String()))
+	log.Info("branchstore update", "branch", branch, "state change", fmt.Sprintf("%s->%s", oldState, newState))
 	if err := r.handleTransition(ctx, newBranchCtx, oldState, newState); err != nil {
 		return err
 	}
