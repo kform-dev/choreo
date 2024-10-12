@@ -85,6 +85,8 @@ func (r *client) Get(ctx context.Context, key types.NamespacedName, u runtime.Un
 		Object: b,
 		Options: &resourcepb.Get_Options{
 			Branch:           o.Branch,
+			ProxyName:        o.Proxy.Name,
+			ProxyNamespace:   o.Proxy.Namespace,
 			Ref:              o.Ref,
 			ShowManagedField: o.ShowManagedFields,
 			Trace:            o.Trace,
@@ -119,6 +121,8 @@ func (r *client) List(ctx context.Context, u runtime.Unstructured, opts ...ListO
 			Trace:            o.Trace,
 			Origin:           o.Origin,
 			Branch:           o.Branch,
+			ProxyName:        o.Proxy.Name,
+			ProxyNamespace:   o.Proxy.Namespace,
 			Ref:              o.Ref,
 		},
 	})
@@ -146,12 +150,14 @@ func (r *client) Apply(ctx context.Context, u runtime.Unstructured, opts ...Appl
 	rsp, err := r.client.Apply(ctx, &resourcepb.Apply_Request{
 		Object: b,
 		Options: &resourcepb.Apply_Options{
-			Branch:       o.Branch,
-			DryRun:       o.DryRun,
-			FieldManager: o.FieldManager,
-			Force:        o.Force,
-			Trace:        o.Trace,
-			Origin:       o.Origin,
+			Branch:         o.Branch,
+			ProxyName:      o.Proxy.Name,
+			ProxyNamespace: o.Proxy.Namespace,
+			DryRun:         o.DryRun,
+			FieldManager:   o.FieldManager,
+			Force:          o.Force,
+			Trace:          o.Trace,
+			Origin:         o.Origin,
 		},
 	})
 	if err != nil {
@@ -178,10 +184,12 @@ func (r *client) Create(ctx context.Context, u runtime.Unstructured, opts ...Cre
 	rsp, err := r.client.Create(ctx, &resourcepb.Create_Request{
 		Object: b,
 		Options: &resourcepb.Create_Options{
-			DryRun: o.DryRun,
-			Branch: o.Branch,
-			Trace:  o.Trace,
-			Origin: o.Origin,
+			DryRun:         o.DryRun,
+			Branch:         o.Branch,
+			ProxyName:      o.Proxy.Name,
+			ProxyNamespace: o.Proxy.Namespace,
+			Trace:          o.Trace,
+			Origin:         o.Origin,
 		},
 	})
 	if err != nil {
@@ -208,10 +216,12 @@ func (r *client) Update(ctx context.Context, u runtime.Unstructured, opts ...Upd
 	rsp, err := r.client.Update(ctx, &resourcepb.Update_Request{
 		Object: b,
 		Options: &resourcepb.Update_Options{
-			DryRun: o.DryRun,
-			Branch: o.Branch,
-			Trace:  o.Trace,
-			Origin: o.Origin,
+			DryRun:         o.DryRun,
+			Branch:         o.Branch,
+			ProxyName:      o.Proxy.Name,
+			ProxyNamespace: o.Proxy.Namespace,
+			Trace:          o.Trace,
+			Origin:         o.Origin,
 		},
 	})
 	if err != nil {
@@ -238,10 +248,12 @@ func (r *client) Delete(ctx context.Context, u runtime.Unstructured, opts ...Del
 	_, err = r.client.Delete(ctx, &resourcepb.Delete_Request{
 		Object: b,
 		Options: &resourcepb.Delete_Options{
-			DryRun: o.DryRun,
-			Branch: o.Branch,
-			Trace:  o.Trace,
-			Origin: o.Origin,
+			DryRun:         o.DryRun,
+			Branch:         o.Branch,
+			ProxyName:      o.Proxy.Name,
+			ProxyNamespace: o.Proxy.Namespace,
+			Trace:          o.Trace,
+			Origin:         o.Origin,
 		},
 	})
 	if err != nil {
@@ -277,12 +289,14 @@ func (r *client) Watch(ctx context.Context, u runtime.Unstructured, opts ...List
 					if stream, err = r.client.Watch(ctx, &resourcepb.Watch_Request{
 						Object: b,
 						Options: &resourcepb.Watch_Options{
-							Branch:       o.Branch,
-							Ref:          o.Ref,
-							Watch:        o.Watch,
-							ExprSelector: o.ExprSelector,
-							Trace:        o.Trace,
-							Origin:       o.Origin,
+							Branch:         o.Branch,
+							ProxyName:      o.Proxy.Name,
+							ProxyNamespace: o.Proxy.Namespace,
+							Ref:            o.Ref,
+							Watch:          o.Watch,
+							ExprSelector:   o.ExprSelector,
+							Trace:          o.Trace,
+							Origin:         o.Origin,
 						},
 					}); err != nil && !errors.Is(err, context.Canceled) {
 						if statErr, ok := status.FromError(err); ok {

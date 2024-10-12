@@ -71,26 +71,26 @@ func NewFactory(clientGetter genericclioptions.ClientGetter) (Factory, error) {
 	resourceMapper := resourcemapper.NewMapper(discoveryCLient)
 
 	return &factory{
+		clientGetter:    clientGetter,
 		config:          config,
 		choreoClient:    choreoClient,
 		discoveryCLient: discoveryCLient,
 		resourceMapper:  resourceMapper,
 		resourceClient:  resourceClient,
 		branchClient:    branchClient,
-		branch:          clientGetter.ToBranch(),
-		proxy:           clientGetter.ToProxy(),
+		//branch:          clientGetter.ToBranch(),
+		//proxy:           clientGetter.ToProxy(),
 	}, nil
 }
 
 type factory struct {
+	clientGetter    genericclioptions.ClientGetter
 	config          *config.Config
 	choreoClient    choreoclient.Client
 	discoveryCLient discovery.CachedDiscoveryInterface
 	resourceMapper  resourcemapper.Mapper
 	resourceClient  resourceclient.Client
 	branchClient    branchclient.Client
-	branch          string
-	proxy           types.NamespacedName
 }
 
 func (r *factory) Close() error {
@@ -138,8 +138,8 @@ func (r *factory) GetBranchClient() branchclient.Client {
 }
 
 func (r *factory) GetBranch() string {
-	return r.branch
+	return r.clientGetter.ToBranch()
 }
 func (r *factory) GetProxy() types.NamespacedName {
-	return r.proxy
+	return r.clientGetter.ToProxy()
 }

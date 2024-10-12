@@ -88,7 +88,6 @@ type Options struct {
 	Factory util.Factory
 	Streams *genericclioptions.IOStreams
 	Output  string
-	Branch  string
 }
 
 // Complete adapts from the command line args and validates them
@@ -119,7 +118,8 @@ func (r *Options) Run(ctx context.Context, args []string) error {
 			ExprSelector:      &resourcepb.ExpressionSelector{},
 			ShowManagedFields: true,
 			Origin:            "choreoctl",
-			Branch:            r.Branch,
+			Branch:            branch,
+			Proxy:             proxy,
 		}); err != nil {
 			return err
 		}
@@ -134,7 +134,8 @@ func (r *Options) Run(ctx context.Context, args []string) error {
 	}, u, &resourceclient.GetOptions{
 		ShowManagedFields: true,
 		Origin:            "choreoctl",
-		Branch:            r.Branch,
+		Branch:            branch,
+		Proxy:             proxy,
 	}); err != nil {
 		return err
 	}

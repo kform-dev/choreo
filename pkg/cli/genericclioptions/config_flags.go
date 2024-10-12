@@ -206,6 +206,7 @@ func (r *ConfigFlags) ToBranch() string {
 	if r.Branch == nil {
 		return ""
 	}
+	fmt.Println("ToBranch", *r.Branch)
 	return *r.Branch
 }
 
@@ -213,6 +214,7 @@ func (r *ConfigFlags) ToProxy() types.NamespacedName {
 	if r.Proxy == nil {
 		return types.NamespacedName{}
 	}
+	fmt.Println("ToProxy", *r.Proxy)
 	if *r.Proxy == "" {
 		return types.NamespacedName{}
 	}
@@ -223,6 +225,7 @@ func (r *ConfigFlags) ToProxy() types.NamespacedName {
 			Namespace: "default",
 		}
 	}
+
 	return types.NamespacedName{
 		Name:      parts[1],
 		Namespace: parts[0],

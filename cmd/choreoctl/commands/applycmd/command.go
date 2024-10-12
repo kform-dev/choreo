@@ -59,10 +59,6 @@ type Runner struct {
 
 func (r *Runner) runE(cmd *cobra.Command, args []string) error {
 	ctx := cmd.Context()
-	branch, err := cmd.Flags().GetString("branch")
-	if err != nil {
-		return err
-	}
 
 	filename := args[0]
 	newu, err := object.GetUnstructuredFromFile(filename)
@@ -76,6 +72,7 @@ func (r *Runner) runE(cmd *cobra.Command, args []string) error {
 	return client.Apply(ctx, newu, &resourceclient.ApplyOptions{
 		Origin:       "choreoctl",
 		FieldManager: fieldManager,
-		Branch:       branch,
+		Branch:       r.factory.GetBranch(),
+		Proxy:        r.factory.GetProxy(),
 	})
 }

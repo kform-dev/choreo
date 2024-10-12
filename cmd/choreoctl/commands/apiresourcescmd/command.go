@@ -92,6 +92,9 @@ func (r *Options) Validate(ctx context.Context) error {
 func (r *Options) Run(ctx context.Context) error {
 	branch := r.Factory.GetBranch()
 	proxy := r.Factory.GetProxy()
+
+	fmt.Println("get apiresource", branch, proxy.String())
+
 	apiresources, err := r.Factory.GetDiscoveryClient().APIResources(ctx, proxy, branch)
 	if err != nil {
 		if grpcerrors.IsNotFound(err) {

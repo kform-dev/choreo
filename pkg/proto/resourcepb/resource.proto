@@ -32,9 +32,8 @@ service Resource {
 
 message Get {
     message Request {
-        string choreo = 1;
-        bytes object = 2; // the assumption is that a client generates the GVK, Name
-        Options options = 3;
+        bytes object = 1; // the assumption is that a client generates the GVK, Name
+        Options options = 2;
         
     }
 
@@ -43,11 +42,13 @@ message Get {
     }
 
     message Options {
-        string branch = 1;
-        string ref = 2;
-        bool showManagedField = 3;
-        string trace = 4;
-        string origin = 5; 
+        string proxyName = 1;
+        string proxyNamespace = 2;
+        string branch = 3;
+        string ref = 4;
+        bool showManagedField = 5;
+        string trace = 6;
+        string origin = 7; 
         //bool allowCreate = 1;
         // -> resourceVersion is not needed for this simplified server
     }
@@ -55,9 +56,8 @@ message Get {
 
 message List {
     message Request {
-        string choreo = 1;
-        bytes object = 2; // the assumption is that a client generates the GVK, Name, Namespace and/or Index
-        Options options = 3; 
+        bytes object = 1; // the assumption is that a client generates the GVK, Name, Namespace and/or Index
+        Options options = 2; 
     }
 
     message Response {
@@ -65,20 +65,21 @@ message List {
     }
 
     message Options {
-        string branch = 1;
-        string ref = 2;
-        ExpressionSelector exprSelector = 3;
-        bool showManagedField = 4;
-        string trace = 5;
-        string origin = 6; // name of the origin
+        string proxyName = 1;
+        string proxyNamespace = 2;
+        string branch = 3;
+        string ref = 4;
+        ExpressionSelector exprSelector = 5;
+        bool showManagedField = 6;
+        string trace = 7;
+        string origin = 8; // name of the origin
     }
 }
 
 message Create {
     message Request {
-        string choreo = 1;
-        bytes object = 2;
-        Options options = 3;
+        bytes object = 1;
+        Options options = 2;
     }
 
     message Response {
@@ -86,19 +87,20 @@ message Create {
     }
 
     message Options {
-        string branch = 1;
-        bool dryRun = 2;
-        string trace = 3;
-        string origin = 4; 
+        string proxyName = 1;
+        string proxyNamespace = 2;
+        string branch = 3;
+        bool dryRun = 4;
+        string trace = 5;
+        string origin = 6; 
         //bool allowCreate = 1;
     }
 }
 
 message Update {
     message Request {
-        string choreo = 1;
-        bytes object = 2;
-        Options options = 3;
+        bytes object = 1;
+        Options options = 2;
     }
 
     message Response {
@@ -106,19 +108,20 @@ message Update {
     }
 
     message Options {
-        string branch = 1;
-        bool dryRun = 2;
-        string trace = 3;
-        string origin = 4; 
+        string proxyName = 1;
+        string proxyNamespace = 2;
+        string branch = 3;
+        bool dryRun = 4;
+        string trace = 5;
+        string origin = 6; 
         //bool allowCreate = 1;
     }
 }
 
 message Apply {
     message Request {
-        string choreo = 1;
-        bytes object = 2;
-        Options options = 3;
+        bytes object = 1;
+        Options options = 2;
     }
 
     message Response {
@@ -126,40 +129,42 @@ message Apply {
     }
 
     message Options {
-        string branch = 1;
-        bool dryRun =2;
-        string fieldManager = 3;
-        bool force = 4;
-        string trace = 5;
-        string origin = 6; 
+        string proxyName = 1;
+        string proxyNamespace = 2;
+        string branch = 3;
+        bool dryRun =4;
+        string fieldManager = 5;
+        bool force = 6;
+        string trace = 7;
+        string origin = 8; 
     }
 }
 
 message Delete {
     message Request {
-        string choreo = 1;
-        bytes object = 2; // assumption is the client generates the proper message
-        Options options = 3; // options make sense for bulk delete
+        bytes object = 1;
+        Options options = 2; // options make sense for bulk delete
     }
 
     message Response {
     }
 
     message Options {
-        string branch = 1;
-        bool dryRun = 2;
-        ExpressionSelector exprSelector = 3;
-        string trace = 4;
-        string origin = 5; 
+        string proxyName = 1;
+        string proxyNamespace = 2;
+        string branch = 3;
+        bool dryRun = 4;
+        ExpressionSelector exprSelector = 5;
+        string trace = 6;
+        string origin = 7; 
     }
 }
 
 message Watch {
     message Request {
-        string choreo = 1;
-        string id = 2;
-        bytes object = 3; // assumption is the client generates the proper object with GVK, NS, Index, etc
-        Options options = 4;
+        string id = 1;
+        bytes object = 2; // assumption is the client generates the proper object with GVK, NS, Index, etc
+        Options options = 3;
     }
 
     message Response {
@@ -177,12 +182,14 @@ message Watch {
     }  
 
     message Options {
-        string branch = 1;
-        string ref = 2;
-        bool watch = 3 ; // indicate watch only, otherwise list and watch is used
-        ExpressionSelector exprSelector = 4;
-        string trace = 5;
-        string origin = 6; 
+        string proxyName = 1;
+        string proxyNamespace = 2;
+        string branch = 3;
+        string ref = 4;
+        bool watch = 5 ; // indicate watch only, otherwise list and watch is used
+        ExpressionSelector exprSelector = 6;
+        string trace = 7;
+        string origin = 8; 
     }
 }
 

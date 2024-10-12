@@ -44,6 +44,7 @@ type GetOption interface {
 var _ GetOption = &GetOptions{}
 
 type GetOptions struct {
+	Proxy             types.NamespacedName
 	Branch            string
 	Ref               string
 	Commit            *object.Commit
@@ -56,11 +57,13 @@ func (o *GetOptions) ApplyToGet(lo *GetOptions) {
 	if o.Commit != nil {
 		lo.Commit = o.Commit
 	}
+	lo.Proxy = o.Proxy
 	lo.Branch = o.Branch
 	lo.Ref = o.Ref
 	lo.ShowManagedFields = o.ShowManagedFields
 	lo.Trace = o.Trace
 	lo.Origin = o.Origin
+
 }
 
 // ApplyOptions applies the given get options on these options,
@@ -80,6 +83,7 @@ type ListOption interface {
 var _ ListOption = &ListOptions{}
 
 type ListOptions struct {
+	Proxy             types.NamespacedName
 	Branch            string
 	Ref               string
 	Commit            *object.Commit
@@ -98,11 +102,12 @@ func (o *ListOptions) ApplyToList(lo *ListOptions) {
 	if o.Commit != nil {
 		lo.Commit = o.Commit
 	}
+	lo.Branch = o.Branch
+	lo.Proxy = o.Proxy
 	lo.ShowManagedFields = o.ShowManagedFields
 	lo.Trace = o.Trace
 	lo.Origin = o.Origin
 	lo.Watch = o.Watch
-	lo.Branch = o.Branch
 	lo.Ref = o.Ref
 }
 
@@ -127,6 +132,7 @@ type CreateOptions struct {
 	Origin string
 	DryRun bool
 	Branch string
+	Proxy  types.NamespacedName
 }
 
 func (o *CreateOptions) ApplyToCreate(lo *CreateOptions) {
@@ -134,6 +140,8 @@ func (o *CreateOptions) ApplyToCreate(lo *CreateOptions) {
 	lo.Origin = o.Origin
 	lo.DryRun = o.DryRun
 	lo.Branch = o.Branch
+	lo.Branch = o.Branch
+	lo.Proxy = o.Proxy
 }
 
 // ApplyOptions applies the given get options on these options,
@@ -157,6 +165,7 @@ type UpdateOptions struct {
 	Origin string
 	DryRun bool
 	Branch string
+	Proxy  types.NamespacedName
 }
 
 func (o *UpdateOptions) ApplyToUpdate(lo *UpdateOptions) {
@@ -164,6 +173,7 @@ func (o *UpdateOptions) ApplyToUpdate(lo *UpdateOptions) {
 	lo.Origin = o.Origin
 	lo.DryRun = o.DryRun
 	lo.Branch = o.Branch
+	lo.Proxy = o.Proxy
 }
 
 // ApplyOptions applies the given get options on these options,
@@ -187,6 +197,7 @@ type DeleteOptions struct {
 	Origin string
 	DryRun bool
 	Branch string
+	Proxy  types.NamespacedName
 }
 
 func (o *DeleteOptions) ApplyToDelete(lo *DeleteOptions) {
@@ -194,6 +205,7 @@ func (o *DeleteOptions) ApplyToDelete(lo *DeleteOptions) {
 	lo.Origin = o.Origin
 	lo.DryRun = o.DryRun
 	lo.Branch = o.Branch
+	lo.Proxy = o.Proxy
 }
 
 // ApplyOptions applies the given get options on these options,
@@ -219,6 +231,7 @@ type ApplyOptions struct {
 	FieldManager string
 	Force        bool
 	Branch       string
+	Proxy        types.NamespacedName
 }
 
 func (o *ApplyOptions) ApplyToApply(lo *ApplyOptions) {
@@ -228,6 +241,7 @@ func (o *ApplyOptions) ApplyToApply(lo *ApplyOptions) {
 	lo.FieldManager = o.FieldManager
 	lo.Force = o.Force
 	lo.Branch = o.Branch
+	lo.Proxy = o.Proxy
 }
 
 // ApplyOptions applies the given get options on these options,

@@ -85,5 +85,6 @@ func (r *Runner) runE(cmd *cobra.Command, args []string) error {
 	return client.Delete(ctx, u, &resourceclient.DeleteOptions{
 		Origin: "choreoctl",
 		Branch: branch,
+		Proxy:  proxy,
 	})
 }

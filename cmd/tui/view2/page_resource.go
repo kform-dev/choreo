@@ -161,7 +161,8 @@ func (r *Resource) StartStream(ctx context.Context) {
 		Kind:    r.apiGroup.Kind,
 	})
 	rspch := r.app.factory.GetResourceClient().Watch(ctx, u, &resourceclient.ListOptions{
-		//Branch:       "main",
+		Proxy:             r.app.factory.GetProxy(),
+		Branch:            r.app.factory.GetBranch(),
 		ShowManagedFields: false,
 		ExprSelector:      &resourcepb.ExpressionSelector{},
 	})

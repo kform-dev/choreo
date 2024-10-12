@@ -28,6 +28,7 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/peer"
 	"google.golang.org/grpc/status"
+	"k8s.io/apimachinery/pkg/types"
 )
 
 func New(store store.Storer[*choreoctx.ChoreoCtx]) resourcepb.ResourceServer {
@@ -41,19 +42,19 @@ type proxy struct {
 	store store.Storer[*choreoctx.ChoreoCtx]
 }
 
-func (r *proxy) getChoreoCtx(choreo string) (*choreoctx.ChoreoCtx, error) {
-	choreoCtx, err := r.store.Get(store.ToKey(choreo))
+func (r *proxy) getChoreoCtx(proxy types.NamespacedName) (*choreoctx.ChoreoCtx, error) {
+	choreoCtx, err := r.store.Get(store.KeyFromNSN(proxy))
 	if err != nil {
-		return nil, status.Error(codes.NotFound, fmt.Sprintf("choreo %s not found, err: %v", choreo, err))
+		return nil, status.Error(codes.NotFound, fmt.Sprintf("choreo %s not found, err: %v", proxy.String(), err))
 	}
 	if !choreoCtx.Ready {
-		return nil, status.Error(codes.Unavailable, fmt.Sprintf("choreo %s not ready, err: %v", choreo, err))
+		return nil, status.Error(codes.Unavailable, fmt.Sprintf("choreo %s not ready, err: %v", proxy.String(), err))
 	}
 	return choreoCtx, nil
 }
 
 func (r *proxy) Get(ctx context.Context, req *resourcepb.Get_Request) (*resourcepb.Get_Response, error) {
-	choreoCtx, err := r.getChoreoCtx(req.Choreo)
+	choreoCtx, err := r.getChoreoCtx(types.NamespacedName{Namespace: req.Options.ProxyNamespace, Name: req.Options.ProxyName})
 	if err != nil {
 		return &resourcepb.Get_Response{}, err
 	}
@@ -61,7 +62,7 @@ func (r *proxy) Get(ctx context.Context, req *resourcepb.Get_Request) (*resource
 }
 
 func (r *proxy) List(ctx context.Context, req *resourcepb.List_Request) (*resourcepb.List_Response, error) {
-	choreoCtx, err := r.getChoreoCtx(req.Choreo)
+	choreoCtx, err := r.getChoreoCtx(types.NamespacedName{Namespace: req.Options.ProxyNamespace, Name: req.Options.ProxyName})
 	if err != nil {
 		return &resourcepb.List_Response{}, err
 	}
@@ -69,7 +70,7 @@ func (r *proxy) List(ctx context.Context, req *resourcepb.List_Request) (*resour
 }
 
 func (r *proxy) Apply(ctx context.Context, req *resourcepb.Apply_Request) (*resourcepb.Apply_Response, error) {
-	choreoCtx, err := r.getChoreoCtx(req.Choreo)
+	choreoCtx, err := r.getChoreoCtx(types.NamespacedName{Namespace: req.Options.ProxyNamespace, Name: req.Options.ProxyName})
 	if err != nil {
 		return &resourcepb.Apply_Response{}, err
 	}
@@ -77,7 +78,7 @@ func (r *proxy) Apply(ctx context.Context, req *resourcepb.Apply_Request) (*reso
 }
 
 func (r *proxy) Create(ctx context.Context, req *resourcepb.Create_Request) (*resourcepb.Create_Response, error) {
-	choreoCtx, err := r.getChoreoCtx(req.Choreo)
+	choreoCtx, err := r.getChoreoCtx(types.NamespacedName{Namespace: req.Options.ProxyNamespace, Name: req.Options.ProxyName})
 	if err != nil {
 		return &resourcepb.Create_Response{}, err
 	}
@@ -85,7 +86,7 @@ func (r *proxy) Create(ctx context.Context, req *resourcepb.Create_Request) (*re
 }
 
 func (r *proxy) Update(ctx context.Context, req *resourcepb.Update_Request) (*resourcepb.Update_Response, error) {
-	choreoCtx, err := r.getChoreoCtx(req.Choreo)
+	choreoCtx, err := r.getChoreoCtx(types.NamespacedName{Namespace: req.Options.ProxyNamespace, Name: req.Options.ProxyName})
 	if err != nil {
 		return &resourcepb.Update_Response{}, err
 	}
@@ -93,7 +94,7 @@ func (r *proxy) Update(ctx context.Context, req *resourcepb.Update_Request) (*re
 }
 
 func (r *proxy) Delete(ctx context.Context, req *resourcepb.Delete_Request) (*resourcepb.Delete_Response, error) {
-	choreoCtx, err := r.getChoreoCtx(req.Choreo)
+	choreoCtx, err := r.getChoreoCtx(types.NamespacedName{Namespace: req.Options.ProxyNamespace, Name: req.Options.ProxyName})
 	if err != nil {
 		return &resourcepb.Delete_Response{}, err
 	}
@@ -104,7 +105,7 @@ func (r *proxy) Watch(req *resourcepb.Watch_Request, stream resourcepb.Resource_
 	ctx := stream.Context()
 	log := log.FromContext(ctx)
 	log.Info("watch")
-	choreoCtx, err := r.getChoreoCtx(req.Choreo)
+	choreoCtx, err := r.getChoreoCtx(types.NamespacedName{Namespace: req.Options.ProxyNamespace, Name: req.Options.ProxyName})
 	if err != nil {
 		return err
 	}
