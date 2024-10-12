@@ -39,9 +39,8 @@ message BranchObject {
 
 message Get {
     message Request {
-        string choreo = 1;
-        string branch = 2; 
-        Options options = 3;
+        string branch = 1; 
+        Options options = 2;
     }
 
     message Response {
@@ -63,13 +62,14 @@ message Get {
     }
 
     message Options {
+        string proxyName = 1;
+        string proxyNamespace = 2;
     }
 }
 
 message List {
     message Request {
-        string choreo = 1;
-        Options options = 2; 
+        Options options = 1; 
     }
 
     message Response {
@@ -77,42 +77,45 @@ message List {
     }
 
     message Options {
+        string proxyName = 1;
+        string proxyNamespace = 2;
     }
 }
 
 message Create {
     message Request {
-        string choreo = 1;
-        string branch = 2;
-        Options options = 3;
+        string branch = 1;
+        Options options = 2;
     }
 
     message Response {
     }
 
     message Options {
+        string proxyName = 1;
+        string proxyNamespace = 2;
     }
 }
 
 message Delete {
     message Request {
-        string choreo = 1;
-        string branch = 2; 
-        Options options = 3; 
+        string branch = 1; 
+        Options options = 2; 
     }
 
     message Response {
     }
 
     message Options {
+        string proxyName = 1;
+        string proxyNamespace = 2;
     }
 }
 
 message Merge {
     message Request {
-        string choreo = 1;
-        string srcBranch = 2; 
-        string dstBranch = 3; 
+        string srcBranch = 1; 
+        string dstBranch = 2; 
         Options options = 4; 
     }
 
@@ -120,15 +123,16 @@ message Merge {
     }
 
     message Options {
+        string proxyName = 1;
+        string proxyNamespace = 2;
     }
 }
 
 message Diff {
     message Request {
-        string choreo = 1;
-        string srcBranch = 2; 
-        string dstBranch = 3; 
-        Options options = 4; 
+        string srcBranch = 1; 
+        string dstBranch = 2; 
+        Options options = 3; 
     }
 
     message Response {
@@ -148,42 +152,45 @@ message Diff {
     }
 
     message Options {
+        string proxyName = 1;
+        string proxyNamespace = 2;
     }
 }
 
 message Stash {
     message Request {
-        string choreo = 1;
-        string branch = 2; 
-        Options options = 3; 
+        string branch = 1; 
+        Options options = 2; 
     }
 
     message Response {
     }
 
     message Options {
+        string proxyName = 1;
+        string proxyNamespace = 2;
     }
 }
 
 message Checkout {
     message Request {
-        string choreo = 1;
-        string branch = 2; 
-        Options options = 3; 
+        string branch = 1; 
+        Options options = 2; 
     }
 
     message Response {
     }
 
     message Options {
+        string proxyName = 1;
+        string proxyNamespace = 2;
     }
 }
 
 message Watch {
     message Request {
-        string choreo = 1;
-        string id = 2;
-        Options options = 3;
+        string id = 1;
+        Options options = 2;
     }
 
     message Response {
@@ -200,9 +207,11 @@ message Watch {
     }  
 
     message Options {
-        bool watch = 1 ; // indicate watch only, otherwise list and watch is used
-        string trace = 2;
-        string origin = 3; 
+        string proxyName = 1;
+        string proxyNamespace = 2;
+        bool watch = 3 ; // indicate watch only, otherwise list and watch is used
+        string trace = 4;
+        string origin = 5; 
     }
 }
 

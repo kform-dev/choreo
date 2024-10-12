@@ -30,37 +30,20 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/status"
+	"k8s.io/apimachinery/pkg/types"
 )
 
-type GetOptions struct{}
-
-type ListOptions struct {
-	Choreo string
-}
-
-type CreateOptions struct{}
-
-type DeleteOptions struct{}
-
-type DiffOptions struct{}
-
-type MergeOptions struct{}
-
-type StashOptions struct{}
-
-type CheckoutOptions struct{}
-
 type Client interface {
-	Get(ctx context.Context, branch string, opt GetOptions) ([]*branchpb.Get_Log, error)
-	List(ctx context.Context, opt ListOptions) ([]*branchpb.BranchObject, error)
-	Create(ctx context.Context, branch string, opt CreateOptions) error
-	Delete(ctx context.Context, branch string, opt DeleteOptions) error
-	Diff(ctx context.Context, srcbranch, dstbranch string, opt DiffOptions) ([]*branchpb.Diff_Diff, error)
-	Merge(ctx context.Context, srcbranch, dstbranch string, opt MergeOptions) error
-	Stash(ctx context.Context, branch string, opt StashOptions) error
-	Checkout(ctx context.Context, branch string, opt CheckoutOptions) error
-	StreamFiles(ctx context.Context, branch string) chan *branchpb.Get_File
-	Watch(ctx context.Context, in *branchpb.Watch_Request, opts ...grpc.CallOption) chan *branchpb.Watch_Response
+	Get(ctx context.Context, branch string, opt ...GetOption) ([]*branchpb.Get_Log, error)
+	List(ctx context.Context, opt ...ListOption) ([]*branchpb.BranchObject, error)
+	Create(ctx context.Context, branch string, opt ...CreateOption) error
+	Delete(ctx context.Context, branch string, opt ...DeleteOption) error
+	Diff(ctx context.Context, srcbranch, dstbranch string, opt ...DiffOption) ([]*branchpb.Diff_Diff, error)
+	Merge(ctx context.Context, srcbranch, dstbranch string, opt ...MergeOption) error
+	Stash(ctx context.Context, branch string, opt ...StashOption) error
+	Checkout(ctx context.Context, branch string, opt ...CheckoutOption) error
+	StreamFiles(ctx context.Context, branch string, opts ...ListOption) chan *branchpb.Get_File
+	Watch(ctx context.Context, in *branchpb.Watch_Request, opts ...ListOption) chan *branchpb.Watch_Response
 	Close() error
 }
 
@@ -96,10 +79,16 @@ func (r *client) Close() error {
 	return r.conn.Close()
 }
 
-func (r *client) Get(ctx context.Context, branch string, opt GetOptions) ([]*branchpb.Get_Log, error) {
+func (r *client) Get(ctx context.Context, branch string, opts ...GetOption) ([]*branchpb.Get_Log, error) {
+	o := GetOptions{}
+	o.ApplyOptions(opts)
+
 	rsp, err := r.client.Get(ctx, &branchpb.Get_Request{
-		Branch:  branch,
-		Options: &branchpb.Get_Options{},
+		Branch: branch,
+		Options: &branchpb.Get_Options{
+			ProxyName:      o.Proxy.Name,
+			ProxyNamespace: o.Proxy.Namespace,
+		},
 	})
 	if err != nil {
 		return nil, err
@@ -107,10 +96,15 @@ func (r *client) Get(ctx context.Context, branch string, opt GetOptions) ([]*bra
 	return rsp.GetLogs(), nil
 }
 
-func (r *client) List(ctx context.Context, opt ListOptions) ([]*branchpb.BranchObject, error) {
+func (r *client) List(ctx context.Context, opts ...ListOption) ([]*branchpb.BranchObject, error) {
+	o := ListOptions{}
+	o.ApplyOptions(opts)
+
 	rsp, err := r.client.List(ctx, &branchpb.List_Request{
-		Choreo:  opt.Choreo,
-		Options: &branchpb.List_Options{},
+		Options: &branchpb.List_Options{
+			ProxyName:      o.Proxy.Name,
+			ProxyNamespace: o.Proxy.Namespace,
+		},
 	})
 	if err != nil {
 		return nil, err
@@ -118,10 +112,16 @@ func (r *client) List(ctx context.Context, opt ListOptions) ([]*branchpb.BranchO
 	return rsp.BranchObjects, nil
 }
 
-func (r *client) Create(ctx context.Context, branch string, opt CreateOptions) error {
+func (r *client) Create(ctx context.Context, branch string, opts ...CreateOption) error {
+	o := CreateOptions{}
+	o.ApplyOptions(opts)
+
 	_, err := r.client.Create(ctx, &branchpb.Create_Request{
-		Branch:  branch,
-		Options: &branchpb.Create_Options{},
+		Branch: branch,
+		Options: &branchpb.Create_Options{
+			ProxyName:      o.Proxy.Name,
+			ProxyNamespace: o.Proxy.Namespace,
+		},
 	})
 	if err != nil {
 		return err
@@ -129,10 +129,16 @@ func (r *client) Create(ctx context.Context, branch string, opt CreateOptions) e
 	return nil
 }
 
-func (r *client) Delete(ctx context.Context, branch string, opt DeleteOptions) error {
+func (r *client) Delete(ctx context.Context, branch string, opts ...DeleteOption) error {
+	o := DeleteOptions{}
+	o.ApplyOptions(opts)
+
 	_, err := r.client.Delete(ctx, &branchpb.Delete_Request{
-		Branch:  branch,
-		Options: &branchpb.Delete_Options{},
+		Branch: branch,
+		Options: &branchpb.Delete_Options{
+			ProxyName:      o.Proxy.Name,
+			ProxyNamespace: o.Proxy.Namespace,
+		},
 	})
 	if err != nil {
 		return err
@@ -140,11 +146,17 @@ func (r *client) Delete(ctx context.Context, branch string, opt DeleteOptions) e
 	return nil
 }
 
-func (r *client) Diff(ctx context.Context, srcbranch, dstbranch string, opt DiffOptions) ([]*branchpb.Diff_Diff, error) {
+func (r *client) Diff(ctx context.Context, srcbranch, dstbranch string, opts ...DiffOption) ([]*branchpb.Diff_Diff, error) {
+	o := DiffOptions{}
+	o.ApplyOptions(opts)
+
 	rsp, err := r.client.Diff(ctx, &branchpb.Diff_Request{
 		SrcBranch: srcbranch,
 		DstBranch: dstbranch,
-		Options:   &branchpb.Diff_Options{},
+		Options: &branchpb.Diff_Options{
+			ProxyName:      o.Proxy.Name,
+			ProxyNamespace: o.Proxy.Namespace,
+		},
 	})
 	if err != nil {
 		return nil, err
@@ -152,11 +164,17 @@ func (r *client) Diff(ctx context.Context, srcbranch, dstbranch string, opt Diff
 	return rsp.Diffs, nil
 }
 
-func (r *client) Merge(ctx context.Context, srcbranch, dstbranch string, opt MergeOptions) error {
+func (r *client) Merge(ctx context.Context, srcbranch, dstbranch string, opts ...MergeOption) error {
+	o := MergeOptions{}
+	o.ApplyOptions(opts)
+
 	_, err := r.client.Merge(ctx, &branchpb.Merge_Request{
 		SrcBranch: srcbranch,
 		DstBranch: dstbranch,
-		Options:   &branchpb.Merge_Options{},
+		Options: &branchpb.Merge_Options{
+			ProxyName:      o.Proxy.Name,
+			ProxyNamespace: o.Proxy.Namespace,
+		},
 	})
 	if err != nil {
 		return err
@@ -164,10 +182,16 @@ func (r *client) Merge(ctx context.Context, srcbranch, dstbranch string, opt Mer
 	return nil
 }
 
-func (r *client) Stash(ctx context.Context, branch string, opt StashOptions) error {
+func (r *client) Stash(ctx context.Context, branch string, opts ...StashOption) error {
+	o := StashOptions{}
+	o.ApplyOptions(opts)
+
 	_, err := r.client.Stash(ctx, &branchpb.Stash_Request{
-		Branch:  branch,
-		Options: &branchpb.Stash_Options{},
+		Branch: branch,
+		Options: &branchpb.Stash_Options{
+			ProxyName:      o.Proxy.Name,
+			ProxyNamespace: o.Proxy.Namespace,
+		},
 	})
 	if err != nil {
 		return err
@@ -175,10 +199,16 @@ func (r *client) Stash(ctx context.Context, branch string, opt StashOptions) err
 	return nil
 }
 
-func (r *client) Checkout(ctx context.Context, branch string, opt CheckoutOptions) error {
+func (r *client) Checkout(ctx context.Context, branch string, opts ...CheckoutOption) error {
+	o := CheckoutOptions{}
+	o.ApplyOptions(opts)
+
 	_, err := r.client.Checkout(ctx, &branchpb.Checkout_Request{
-		Branch:  branch,
-		Options: &branchpb.Checkout_Options{},
+		Branch: branch,
+		Options: &branchpb.Checkout_Options{
+			ProxyName:      o.Proxy.Name,
+			ProxyNamespace: o.Proxy.Namespace,
+		},
 	})
 	if err != nil {
 		return err
@@ -186,7 +216,10 @@ func (r *client) Checkout(ctx context.Context, branch string, opt CheckoutOption
 	return nil
 }
 
-func (r *client) StreamFiles(ctx context.Context, branch string) chan *branchpb.Get_File {
+func (r *client) StreamFiles(ctx context.Context, branch string, opts ...ListOption) chan *branchpb.Get_File {
+	o := ListOptions{}
+	o.ApplyOptions(opts)
+
 	log := log.FromContext(ctx)
 	var stream branchpb.Branch_StreamFilesClient
 	var err error
@@ -196,7 +229,13 @@ func (r *client) StreamFiles(ctx context.Context, branch string) chan *branchpb.
 		defer close(rspCh)
 		ctx, cancel := context.WithTimeout(ctx, r.config.Timeout)
 		defer cancel()
-		stream, err = r.client.StreamFiles(ctx, &branchpb.Get_Request{Branch: branch})
+		stream, err = r.client.StreamFiles(ctx, &branchpb.Get_Request{
+			Branch: branch,
+			Options: &branchpb.Get_Options{
+				ProxyName:      o.Proxy.Name,
+				ProxyNamespace: o.Proxy.Namespace,
+			},
+		})
 		if err != nil {
 			log.Error("failed to get stream", "error", err)
 			return
@@ -223,7 +262,10 @@ func (r *client) StreamFiles(ctx context.Context, branch string) chan *branchpb.
 	return rspCh
 }
 
-func (r *client) Watch(ctx context.Context, in *branchpb.Watch_Request, opts ...grpc.CallOption) chan *branchpb.Watch_Response {
+func (r *client) Watch(ctx context.Context, in *branchpb.Watch_Request, opts ...ListOption) chan *branchpb.Watch_Response {
+	o := ListOptions{}
+	o.ApplyOptions(opts)
+
 	log := log.FromContext(ctx)
 	var stream branchpb.Branch_WatchClient
 	var err error
@@ -287,4 +329,196 @@ func (r *client) Watch(ctx context.Context, in *branchpb.Watch_Request, opts ...
 		}
 	}()
 	return rspCh
+}
+
+type GetOption interface {
+	// ApplyToGet applies this configuration to the given get options.
+	ApplyToGet(*GetOptions)
+}
+
+var _ GetOption = &GetOptions{}
+
+type GetOptions struct {
+	Proxy types.NamespacedName
+}
+
+func (o *GetOptions) ApplyToGet(lo *GetOptions) {
+	lo.Proxy = o.Proxy
+}
+
+// ApplyOptions applies the given get options on these options,
+// and then returns itself (for convenient chaining).
+func (o *GetOptions) ApplyOptions(opts []GetOption) *GetOptions {
+	for _, opt := range opts {
+		opt.ApplyToGet(o)
+	}
+	return o
+}
+
+type ListOption interface {
+	// ApplyToGet applies this configuration to the given get options.
+	ApplyToList(*ListOptions)
+}
+
+var _ ListOption = &ListOptions{}
+
+type ListOptions struct {
+	Proxy types.NamespacedName
+}
+
+func (o *ListOptions) ApplyToList(lo *ListOptions) {
+	lo.Proxy = o.Proxy
+}
+
+// ApplyOptions applies the given get options on these options,
+// and then returns itself (for convenient chaining).
+func (o *ListOptions) ApplyOptions(opts []ListOption) *ListOptions {
+	for _, opt := range opts {
+		opt.ApplyToList(o)
+	}
+	return o
+}
+
+type CreateOption interface {
+	// ApplyToGet applies this configuration to the given get options.
+	ApplyToCreate(*CreateOptions)
+}
+
+var _ CreateOption = &CreateOptions{}
+
+type CreateOptions struct {
+	Proxy types.NamespacedName
+}
+
+func (o *CreateOptions) ApplyToCreate(lo *CreateOptions) {
+	lo.Proxy = o.Proxy
+}
+
+// ApplyOptions applies the given get options on these options,
+// and then returns itself (for convenient chaining).
+func (o *CreateOptions) ApplyOptions(opts []CreateOption) *CreateOptions {
+	for _, opt := range opts {
+		opt.ApplyToCreate(o)
+	}
+	return o
+}
+
+type DeleteOption interface {
+	// ApplyToGet applies this configuration to the given get options.
+	ApplyToDelete(*DeleteOptions)
+}
+
+var _ DeleteOption = &DeleteOptions{}
+
+type DeleteOptions struct {
+	Proxy types.NamespacedName
+}
+
+func (o *DeleteOptions) ApplyToDelete(lo *DeleteOptions) {
+	lo.Proxy = o.Proxy
+}
+
+// ApplyOptions applies the given get options on these options,
+// and then returns itself (for convenient chaining).
+func (o *DeleteOptions) ApplyOptions(opts []DeleteOption) *DeleteOptions {
+	for _, opt := range opts {
+		opt.ApplyToDelete(o)
+	}
+	return o
+}
+
+type DiffOption interface {
+	// ApplyToGet applies this configuration to the given get options.
+	ApplyToDiff(*DiffOptions)
+}
+
+var _ DiffOption = &DiffOptions{}
+
+type DiffOptions struct {
+	Proxy types.NamespacedName
+}
+
+func (o *DiffOptions) ApplyToDiff(lo *DiffOptions) {
+	lo.Proxy = o.Proxy
+}
+
+// ApplyOptions applies the given get options on these options,
+// and then returns itself (for convenient chaining).
+func (o *DiffOptions) ApplyOptions(opts []DiffOption) *DiffOptions {
+	for _, opt := range opts {
+		opt.ApplyToDiff(o)
+	}
+	return o
+}
+
+type MergeOption interface {
+	// ApplyToGet applies this configuration to the given get options.
+	ApplyToMerge(*MergeOptions)
+}
+
+var _ MergeOption = &MergeOptions{}
+
+type MergeOptions struct {
+	Proxy types.NamespacedName
+}
+
+func (o *MergeOptions) ApplyToMerge(lo *MergeOptions) {
+	lo.Proxy = o.Proxy
+}
+
+// ApplyOptions applies the given get options on these options,
+// and then returns itself (for convenient chaining).
+func (o *MergeOptions) ApplyOptions(opts []MergeOption) *MergeOptions {
+	for _, opt := range opts {
+		opt.ApplyToMerge(o)
+	}
+	return o
+}
+
+type StashOption interface {
+	// ApplyToGet applies this configuration to the given get options.
+	ApplyToStash(*StashOptions)
+}
+
+var _ StashOption = &StashOptions{}
+
+type StashOptions struct {
+	Proxy types.NamespacedName
+}
+
+func (o *StashOptions) ApplyToStash(lo *StashOptions) {
+	lo.Proxy = o.Proxy
+}
+
+// ApplyOptions applies the given get options on these options,
+// and then returns itself (for convenient chaining).
+func (o *StashOptions) ApplyOptions(opts []StashOption) *StashOptions {
+	for _, opt := range opts {
+		opt.ApplyToStash(o)
+	}
+	return o
+}
+
+type CheckoutOption interface {
+	// ApplyToGet applies this configuration to the given get options.
+	ApplyToCheckout(*CheckoutOptions)
+}
+
+var _ CheckoutOption = &CheckoutOptions{}
+
+type CheckoutOptions struct {
+	Proxy types.NamespacedName
+}
+
+func (o *CheckoutOptions) ApplyToCheckout(lo *CheckoutOptions) {
+	lo.Proxy = o.Proxy
+}
+
+// ApplyOptions applies the given get options on these options,
+// and then returns itself (for convenient chaining).
+func (o *CheckoutOptions) ApplyOptions(opts []CheckoutOption) *CheckoutOptions {
+	for _, opt := range opts {
+		opt.ApplyToCheckout(o)
+	}
+	return o
 }

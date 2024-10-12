@@ -25,6 +25,7 @@ import (
 	"github.com/kform-dev/choreo/pkg/server/proxyserver/choreoctx"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"k8s.io/apimachinery/pkg/types"
 )
 
 func New(store store.Storer[*choreoctx.ChoreoCtx]) choreopb.ChoreoServer {
@@ -38,19 +39,19 @@ type proxy struct {
 	store store.Storer[*choreoctx.ChoreoCtx]
 }
 
-func (r *proxy) getChoreoCtx(choreo string) (*choreoctx.ChoreoCtx, error) {
-	choreoCtx, err := r.store.Get(store.ToKey(choreo))
+func (r *proxy) getChoreoCtx(proxy types.NamespacedName) (*choreoctx.ChoreoCtx, error) {
+	choreoCtx, err := r.store.Get(store.KeyFromNSN(proxy))
 	if err != nil {
-		return nil, status.Error(codes.NotFound, fmt.Sprintf("choreo %s not found, err: %v", choreo, err))
+		return nil, status.Error(codes.NotFound, fmt.Sprintf("choreo %s not found, err: %v", proxy.String(), err))
 	}
 	if !choreoCtx.Ready {
-		return nil, status.Error(codes.Unavailable, fmt.Sprintf("choreo %s not ready, err: %v", choreo, err))
+		return nil, status.Error(codes.Unavailable, fmt.Sprintf("choreo %s not ready, err: %v", proxy.String(), err))
 	}
 	return choreoCtx, nil
 }
 
 func (r *proxy) Get(ctx context.Context, req *choreopb.Get_Request) (*choreopb.Get_Response, error) {
-	choreoCtx, err := r.getChoreoCtx(req.Choreo)
+	choreoCtx, err := r.getChoreoCtx(types.NamespacedName{Namespace: req.Options.ProxyNamespace, Name: req.Options.ProxyName})
 	if err != nil {
 		return &choreopb.Get_Response{}, err
 	}
@@ -59,7 +60,7 @@ func (r *proxy) Get(ctx context.Context, req *choreopb.Get_Request) (*choreopb.G
 }
 
 func (r *proxy) Apply(ctx context.Context, req *choreopb.Apply_Request) (*choreopb.Apply_Response, error) {
-	choreoCtx, err := r.getChoreoCtx(req.Choreo)
+	choreoCtx, err := r.getChoreoCtx(types.NamespacedName{Namespace: req.Options.ProxyNamespace, Name: req.Options.ProxyName})
 	if err != nil {
 		return &choreopb.Apply_Response{}, err
 	}
@@ -68,7 +69,7 @@ func (r *proxy) Apply(ctx context.Context, req *choreopb.Apply_Request) (*choreo
 }
 
 func (r *proxy) Start(ctx context.Context, req *choreopb.Start_Request) (*choreopb.Start_Response, error) {
-	choreoCtx, err := r.getChoreoCtx(req.Choreo)
+	choreoCtx, err := r.getChoreoCtx(types.NamespacedName{Namespace: req.Options.ProxyNamespace, Name: req.Options.ProxyName})
 	if err != nil {
 		return &choreopb.Start_Response{}, err
 	}
@@ -76,7 +77,7 @@ func (r *proxy) Start(ctx context.Context, req *choreopb.Start_Request) (*choreo
 }
 
 func (r *proxy) Stop(ctx context.Context, req *choreopb.Stop_Request) (*choreopb.Stop_Response, error) {
-	choreoCtx, err := r.getChoreoCtx(req.Choreo)
+	choreoCtx, err := r.getChoreoCtx(types.NamespacedName{Namespace: req.Options.ProxyNamespace, Name: req.Options.ProxyName})
 	if err != nil {
 		return &choreopb.Stop_Response{}, err
 	}
@@ -84,14 +85,14 @@ func (r *proxy) Stop(ctx context.Context, req *choreopb.Stop_Request) (*choreopb
 }
 
 func (r *proxy) Once(ctx context.Context, req *choreopb.Once_Request) (*choreopb.Once_Response, error) {
-	choreoCtx, err := r.getChoreoCtx(req.Choreo)
+	choreoCtx, err := r.getChoreoCtx(types.NamespacedName{Namespace: req.Options.ProxyNamespace, Name: req.Options.ProxyName})
 	if err != nil {
 		return &choreopb.Once_Response{}, err
 	}
 	return choreoCtx.ChoreoClient.Once(ctx, req)
 }
 func (r *proxy) Load(ctx context.Context, req *choreopb.Load_Request) (*choreopb.Load_Response, error) {
-	choreoCtx, err := r.getChoreoCtx(req.Choreo)
+	choreoCtx, err := r.getChoreoCtx(types.NamespacedName{Namespace: req.Options.ProxyNamespace, Name: req.Options.ProxyName})
 	if err != nil {
 		return &choreopb.Load_Response{}, err
 	}

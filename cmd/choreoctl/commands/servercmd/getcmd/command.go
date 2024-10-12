@@ -21,6 +21,7 @@ import (
 	"fmt"
 
 	"github.com/kform-dev/choreo/pkg/cli/genericclioptions"
+	"github.com/kform-dev/choreo/pkg/client/go/choreoclient"
 	"github.com/spf13/cobra"
 	//docs "github.com/kform-dev/kform/internal/docs/generated/applydocs"
 )
@@ -61,7 +62,9 @@ func (r *Runner) runE(cmd *cobra.Command, args []string) error {
 	}
 	defer client.Close()
 
-	rsp, err := client.Get(ctx)
+	rsp, err := client.Get(ctx, &choreoclient.GetOptions{
+		Proxy: r.ConfigFlags.ToProxy(),
+	})
 	if err != nil {
 		return err
 	}

@@ -97,7 +97,9 @@ func (r *Completion) compGetResource(cmd *cobra.Command, resourceName string, to
 func (r *Completion) CompBranch(cmd *cobra.Command, toComplete string) []string {
 	ctx := cmd.Context()
 	branchClient := r.Factory.GetBranchClient()
-	branches, err := branchClient.List(ctx, branchclient.ListOptions{})
+	branches, err := branchClient.List(ctx, &branchclient.ListOptions{
+		Proxy: r.Factory.GetProxy(),
+	})
 	if err != nil {
 		return []string{}
 	}

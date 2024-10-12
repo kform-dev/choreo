@@ -84,7 +84,9 @@ func (r *Runner) runE(cmd *cobra.Command, args []string) error {
 			}
 		}
 
-		logs, err := branchClient.Get(ctx, branchName, branchclient.GetOptions{})
+		logs, err := branchClient.Get(ctx, branchName, &branchclient.GetOptions{
+			Proxy: r.factory.GetProxy(),
+		})
 		if err != nil {
 			return err
 		}
@@ -107,8 +109,8 @@ func (r *Runner) runE(cmd *cobra.Command, args []string) error {
 		return errm
 	}
 
-	branches, err := branchClient.List(ctx, branchclient.ListOptions{
-		Choreo: "network",
+	branches, err := branchClient.List(ctx, &branchclient.ListOptions{
+		Proxy: r.factory.GetProxy(),
 	})
 	if err != nil {
 		return err

@@ -23,6 +23,7 @@ import (
 	"sort"
 
 	"github.com/kform-dev/choreo/pkg/cli/genericclioptions"
+	"github.com/kform-dev/choreo/pkg/client/go/choreoclient"
 	"github.com/kform-dev/choreo/pkg/client/go/util"
 	"github.com/kform-dev/choreo/pkg/proto/choreopb"
 	"github.com/spf13/cobra"
@@ -62,7 +63,9 @@ func (r *Runner) runE(cmd *cobra.Command, args []string) error {
 	ctx := cmd.Context()
 
 	choreoClient := r.factory.GetChoreoClient()
-	rsp, err := choreoClient.Once(ctx)
+	rsp, err := choreoClient.Once(ctx, &choreoclient.OnceOptions{
+		Proxy: r.factory.GetProxy(),
+	})
 	if err != nil {
 		return err
 	}

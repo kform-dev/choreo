@@ -64,7 +64,9 @@ func (r *Runner) runE(cmd *cobra.Command, args []string) error {
 	branchClient := r.factory.GetBranchClient()
 	srcBranchName := args[0]
 	dstBranchName := args[1]
-	diffs, err := branchClient.Diff(ctx, srcBranchName, dstBranchName, branchclient.DiffOptions{})
+	diffs, err := branchClient.Diff(ctx, srcBranchName, dstBranchName, &branchclient.DiffOptions{
+		Proxy: r.factory.GetProxy(),
+	})
 	if err != nil {
 		return err
 	}

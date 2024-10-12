@@ -60,7 +60,9 @@ func (r *Runner) runE(cmd *cobra.Command, args []string) error {
 
 	branchClient := r.factory.GetBranchClient()
 	branchName := args[0]
-	if err := branchClient.Checkout(ctx, branchName, branchclient.CheckoutOptions{}); err != nil {
+	if err := branchClient.Checkout(ctx, branchName, &branchclient.CheckoutOptions{
+		Proxy: r.factory.GetProxy(),
+	}); err != nil {
 		return err
 	}
 	return nil

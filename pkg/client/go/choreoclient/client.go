@@ -23,15 +23,16 @@ import (
 	"github.com/kform-dev/choreo/pkg/proto/choreopb"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
+	"k8s.io/apimachinery/pkg/types"
 )
 
 type Client interface {
 	Get(ctx context.Context, opts ...GetOption) (*choreopb.Get_Response, error)
 	Apply(ctx context.Context, choreoCtx *choreopb.ChoreoContext, opts ...ApplyOption) error
-	Start(ctx context.Context) error
-	Stop(ctx context.Context) error
-	Once(ctx context.Context) (*choreopb.Once_Response, error)
-	Load(ctx context.Context) error
+	Start(ctx context.Context, opts ...StartOption) error
+	Stop(ctx context.Context, opts ...StopOption) error
+	Once(ctx context.Context, opts ...OnceOption) (*choreopb.Once_Response, error)
+	Load(ctx context.Context, opts ...LoadOption) error
 	Close() error
 }
 
@@ -68,37 +69,84 @@ func (r *client) Close() error {
 }
 
 func (r *client) Get(ctx context.Context, opts ...GetOption) (*choreopb.Get_Response, error) {
-	return r.client.Get(ctx, &choreopb.Get_Request{})
+	o := GetOptions{}
+	o.ApplyOptions(opts)
+
+	return r.client.Get(ctx, &choreopb.Get_Request{
+		Options: &choreopb.Get_Options{
+			ProxyName:      o.Proxy.Name,
+			ProxyNamespace: o.Proxy.Namespace,
+		},
+	})
 }
 
 func (r *client) Apply(ctx context.Context, choreoCtx *choreopb.ChoreoContext, opts ...ApplyOption) error {
+	o := ApplyOptions{}
+	o.ApplyOptions(opts)
+
 	_, err := r.client.Apply(ctx, &choreopb.Apply_Request{
 		ChoreoContext: choreoCtx,
+		Options: &choreopb.Apply_Options{
+			ProxyName:      o.Proxy.Name,
+			ProxyNamespace: o.Proxy.Namespace,
+		},
 	})
 	return err
 }
 
-func (r *client) Start(ctx context.Context) error {
-	if _, err := r.client.Start(ctx, &choreopb.Start_Request{}); err != nil {
+func (r *client) Start(ctx context.Context, opts ...StartOption) error {
+	o := StartOptions{}
+	o.ApplyOptions(opts)
+
+	if _, err := r.client.Start(ctx, &choreopb.Start_Request{
+		Options: &choreopb.Start_Options{
+			ProxyName:      o.Proxy.Name,
+			ProxyNamespace: o.Proxy.Namespace,
+		},
+	}); err != nil {
 		return err
 	}
 	return nil
 }
-func (r *client) Stop(ctx context.Context) error {
-	if _, err := r.client.Stop(ctx, &choreopb.Stop_Request{}); err != nil {
+func (r *client) Stop(ctx context.Context, opts ...StopOption) error {
+	o := StopOptions{}
+	o.ApplyOptions(opts)
+
+	if _, err := r.client.Stop(ctx, &choreopb.Stop_Request{
+		Options: &choreopb.Stop_Options{
+			ProxyName:      o.Proxy.Name,
+			ProxyNamespace: o.Proxy.Namespace,
+		},
+	}); err != nil {
 		return err
 	}
 	return nil
 }
-func (r *client) Once(ctx context.Context) (*choreopb.Once_Response, error) {
-	rsp, err := r.client.Once(ctx, &choreopb.Once_Request{})
+func (r *client) Once(ctx context.Context, opts ...OnceOption) (*choreopb.Once_Response, error) {
+	o := OnceOptions{}
+	o.ApplyOptions(opts)
+
+	rsp, err := r.client.Once(ctx, &choreopb.Once_Request{
+		Options: &choreopb.Once_Options{
+			ProxyName:      o.Proxy.Name,
+			ProxyNamespace: o.Proxy.Namespace,
+		},
+	})
 	if err != nil {
 		return nil, err
 	}
 	return rsp, nil
 }
-func (r *client) Load(ctx context.Context) error {
-	if _, err := r.client.Load(ctx, &choreopb.Load_Request{}); err != nil {
+func (r *client) Load(ctx context.Context, opts ...LoadOption) error {
+	o := LoadOptions{}
+	o.ApplyOptions(opts)
+
+	if _, err := r.client.Load(ctx, &choreopb.Load_Request{
+		Options: &choreopb.Load_Options{
+			ProxyName:      o.Proxy.Name,
+			ProxyNamespace: o.Proxy.Namespace,
+		},
+	}); err != nil {
 		return err
 	}
 	return nil
@@ -112,11 +160,11 @@ type GetOption interface {
 var _ GetOption = &GetOptions{}
 
 type GetOptions struct {
-	// To be added
+	Proxy types.NamespacedName
 }
 
 func (o *GetOptions) ApplyToGet(lo *GetOptions) {
-	// To be added
+	lo.Proxy = o.Proxy
 }
 
 // ApplyOptions applies the given get options on these options,
@@ -136,11 +184,11 @@ type ApplyOption interface {
 var _ ApplyOption = &ApplyOptions{}
 
 type ApplyOptions struct {
-	// TO be added
+	Proxy types.NamespacedName
 }
 
 func (o *ApplyOptions) ApplyToApply(lo *ApplyOptions) {
-	// To be added
+	lo.Proxy = o.Proxy
 }
 
 // ApplyOptions applies the given get options on these options,
@@ -148,6 +196,99 @@ func (o *ApplyOptions) ApplyToApply(lo *ApplyOptions) {
 func (o *ApplyOptions) ApplyOptions(opts []ApplyOption) *ApplyOptions {
 	for _, opt := range opts {
 		opt.ApplyToApply(o)
+	}
+	return o
+}
+
+type StartOption interface {
+	// ApplyToGet applies this configuration to the given get options.
+	ApplyToStart(*StartOptions)
+}
+
+var _ StartOption = &StartOptions{}
+
+type StartOptions struct {
+	Proxy types.NamespacedName
+}
+
+func (o *StartOptions) ApplyToStart(lo *StartOptions) {
+	lo.Proxy = o.Proxy
+}
+
+// ApplyOptions applies the given get options on these options,
+// and then returns itself (for convenient chaining).
+func (o *StartOptions) ApplyOptions(opts []StartOption) *StartOptions {
+	for _, opt := range opts {
+		opt.ApplyToStart(o)
+	}
+	return o
+}
+
+type StopOption interface {
+	ApplyToStop(*StopOptions)
+}
+
+var _ StopOption = &StopOptions{}
+
+type StopOptions struct {
+	Proxy types.NamespacedName
+}
+
+func (o *StopOptions) ApplyToStop(lo *StopOptions) {
+	lo.Proxy = o.Proxy
+}
+
+// ApplyOptions applies the given get options on these options,
+// and then returns itself (for convenient chaining).
+func (o *StopOptions) ApplyOptions(opts []StopOption) *StopOptions {
+	for _, opt := range opts {
+		opt.ApplyToStop(o)
+	}
+	return o
+}
+
+type OnceOption interface {
+	ApplyToOnce(*OnceOptions)
+}
+
+var _ OnceOption = &OnceOptions{}
+
+type OnceOptions struct {
+	Proxy types.NamespacedName
+}
+
+func (o *OnceOptions) ApplyToOnce(lo *OnceOptions) {
+	lo.Proxy = o.Proxy
+}
+
+// ApplyOptions applies the given get options on these options,
+// and then returns itself (for convenient chaining).
+func (o *OnceOptions) ApplyOptions(opts []OnceOption) *OnceOptions {
+	for _, opt := range opts {
+		opt.ApplyToOnce(o)
+	}
+	return o
+}
+
+type LoadOption interface {
+	ApplyToLoad(*LoadOptions)
+}
+
+var _ LoadOption = &LoadOptions{}
+
+type LoadOptions struct {
+	Proxy types.NamespacedName
+}
+
+func (o *LoadOptions) ApplyToLoad(lo *LoadOptions) {
+	lo.Proxy = o.Proxy
+}
+
+// ApplyOptions applies the given get options on these options,
+// and then returns itself (for convenient chaining).
+func (o *LoadOptions) ApplyOptions(opts []LoadOption) *LoadOptions {
+	for _, opt := range opts {
+		opt.ApplyToLoad(o)
 	}
 	return o
 }

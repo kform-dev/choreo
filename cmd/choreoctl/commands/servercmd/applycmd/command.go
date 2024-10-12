@@ -20,6 +20,7 @@ import (
 	"context"
 
 	"github.com/kform-dev/choreo/pkg/cli/genericclioptions"
+	"github.com/kform-dev/choreo/pkg/client/go/choreoclient"
 	"github.com/kform-dev/choreo/pkg/proto/choreopb"
 	"github.com/spf13/cobra"
 	//docs "github.com/kform-dev/kform/internal/docs/generated/applydocs"
@@ -65,6 +66,8 @@ func (r *Runner) runE(cmd *cobra.Command, args []string) error {
 		Url:       args[0],
 		Directory: args[1],
 		Ref:       args[2],
+	}, &choreoclient.ApplyOptions{
+		Proxy: r.ConfigFlags.ToProxy(),
 	}); err != nil {
 		return err
 	}

@@ -61,7 +61,9 @@ func (r *Runner) runE(cmd *cobra.Command, args []string) error {
 	branchClient := r.factory.GetBranchClient()
 	srcBranchName := args[0]
 	dstBranchName := args[1]
-	if err := branchClient.Merge(ctx, srcBranchName, dstBranchName, branchclient.MergeOptions{}); err != nil {
+	if err := branchClient.Merge(ctx, srcBranchName, dstBranchName, &branchclient.MergeOptions{
+		Proxy: r.factory.GetProxy(),
+	}); err != nil {
 		return err
 	}
 	return nil
