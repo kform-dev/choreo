@@ -53,7 +53,6 @@ type APILoaderFile2APIStoreAndAPI struct {
 func (r *APILoaderFile2APIStoreAndAPI) LoadFromCommit(ctx context.Context, commit *object.Commit) error {
 	//log := log.FromContext(ctx)
 	var errm error
-	fmt.Println("load from commit", *r.Flags.CRDPath, commit.Hash.String())
 	if err := r.loadAPIs(ctx, crdloader.GetCommitFileAPICRDReader(
 		filepath.Join(r.PathInRepo, *r.Flags.CRDPath), commit)); err != nil {
 		errm = errors.Join(errm, fmt.Errorf("cannot load api file in repo, err: %v", err))
