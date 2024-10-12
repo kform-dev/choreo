@@ -19,7 +19,6 @@ package choreo
 import (
 	"context"
 	"errors"
-	"fmt"
 
 	"github.com/go-git/go-git/v5/plumbing/object"
 	"github.com/kform-dev/choreo/pkg/cli/genericclioptions"
@@ -105,7 +104,6 @@ func (r *CheckedOut) loadAPIFromUpstreamRefs(ctx context.Context, branchCtx *Bra
 		if err := loader.LoadFromCommit(ctx, childChoreoInstance.GetCommit()); err != nil {
 			return err
 		}
-		fmt.Println("gvks", apiStore.GetGVKSet().UnsortedList())
 		// we load the data first to an new apistore
 		// after we import to the childresource apistore and the main apistore
 		childChoreoInstance.GetAPIStore().Import(apiStore)

@@ -45,52 +45,11 @@ func (r *For) EventHandler(ctx context.Context, _ resourcepb.Watch_EventType, ob
 	log := log.FromContext(ctx)
 
 	if r.Selector != nil {
-		/*
-			reqname := usrc.GetName()
-			match := false
-			if r.Name == "infra.kuid.dev_node_if-si-ni" || r.Name == "infra.kuid.dev_node_bgp" {
-				match = true
-			}
-			conditionStatus := "unknown"
-			conditionMessage := "unknown"
-
-			if match {
-				c := object.GetCondition(usrc.Object, "IPClaimReady")
-				conditionStatus = fmt.Sprintf("%v", c["status"])
-				conditionMessage = fmt.Sprintf("%v", c["message"])
-				//fmt.Println(r.Name, reqname, "eventhandler for", "ipclaimready condition", conditionStatus, conditionMessage)
-			}
-		*/
 
 		if !r.Selector.Matches(usrc.Object) {
-			/*
-				if match {
-					fmt.Println(r.Name, reqname, "eventhandler for", "selectornomatch", conditionStatus, conditionMessage)
-				}
-			*/
-
 			log.Debug("for reconcile event filtered", "src", obj.GetObjectKind().GroupVersionKind().String(), "name", usrc.GetName())
 			return true
 		}
-
-		/*
-			if match {
-				if conditionStatus == "unknown" {
-					fmt.Println("should never happens\n", usrc)
-				}
-				ul := &unstructured.UnstructuredList{}
-				ul.SetAPIVersion("ipam.be.kuid.dev/v1alpha1")
-				ul.SetKind("IPClaim")
-				r.Client.List(ctx, ul, resourceclient.ListOptions{ExprSelector: &resourcepb.ExpressionSelector{}, Origin: "eventhandler"})
-
-				for _, u := range ul.Items {
-					fmt.Println(r.Name, reqname, "ipclam", u.GetName())
-				}
-
-				fmt.Println(r.Name, reqname, "eventhandler for", "selectormatch", conditionStatus, conditionMessage)
-			}
-		*/
-
 	}
 	req := types.NamespacedName{
 		Name:      usrc.GetName(),

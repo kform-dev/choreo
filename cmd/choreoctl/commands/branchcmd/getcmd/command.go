@@ -21,6 +21,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/henderiw/logger/log"
 	"github.com/kform-dev/choreo/pkg/cli/genericclioptions"
 	"github.com/kform-dev/choreo/pkg/client/go/branchclient"
 	"github.com/kform-dev/choreo/pkg/client/go/util"
@@ -61,8 +62,9 @@ type Runner struct {
 }
 
 func (r *Runner) runE(cmd *cobra.Command, args []string) error {
-	ctx := cmd.Context()
 
+	ctx := cmd.Context()
+	log := log.FromContext(ctx)
 	branchClient := r.factory.GetBranchClient()
 	if len(args) == 1 {
 		branchName := args[0]
@@ -78,7 +80,7 @@ func (r *Runner) runE(cmd *cobra.Command, args []string) error {
 						return nil
 					}
 					if _, err := fmt.Fprintf(r.streams.Out, "%s:\n%s", file.Name, file.Data); err != nil {
-						fmt.Println(err)
+						log.Error("cannot stream to output", "err", err)
 					}
 				}
 			}

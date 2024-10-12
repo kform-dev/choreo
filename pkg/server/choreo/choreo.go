@@ -94,6 +94,7 @@ func (r *choreo) Get(ctx context.Context, req *choreopb.Get_Request) (*choreopb.
 }
 
 func (r *choreo) Apply(ctx context.Context, req *choreopb.Apply_Request) (*choreopb.Apply_Response, error) {
+	log := log.FromContext(ctx)
 	if req.ChoreoContext.Path != "" {
 		// we dont deal with change in this case
 		mainChoreoInstance, err := NewMainChoreoInstance(ctx, &Config{Path: req.ChoreoContext.Path, Flags: r.flags})
@@ -116,7 +117,7 @@ func (r *choreo) Apply(ctx context.Context, req *choreopb.Apply_Request) (*chore
 		mainChoreoInstance := r.status.Get().MainChoreoInstance
 		if mainChoreoInstance != nil {
 			if err := mainChoreoInstance.Destroy(); err != nil {
-				fmt.Println("destroy failed", err)
+				log.Error("destroy failed", "error", err)
 			}
 		}
 		r.status.Set(Failed("reinitializing"))
@@ -189,7 +190,7 @@ func (r *choreo) Start(ctx context.Context) {
 
 		case <-ctx.Done():
 			time.Sleep(1 * time.Second)
-			fmt.Println("choreo done")
+			log.Info("choreo done")
 			return
 		}
 	}

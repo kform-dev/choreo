@@ -46,6 +46,11 @@ type DataLoader struct {
 
 func (r *DataLoader) Load(ctx context.Context) error {
 	var errm error
+
+	if err := fsys.EnsureDir(ctx, r.RepoPth, r.PathInRepo, *r.Flags.InputPath); err != nil {
+		return err
+	}
+
 	//if err := r.loadReconcilers(ctx); err != nil {
 	//	errm = errors.Join(errm, fmt.Errorf("cannot load reconcilers, err: %v", err))
 	//}

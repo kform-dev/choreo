@@ -18,13 +18,11 @@ package eventhandler
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/henderiw/logger/log"
 	"github.com/kform-dev/choreo/pkg/client/go/resourceclient"
 	"github.com/kform-dev/choreo/pkg/proto/resourcepb"
 	"github.com/kform-dev/choreo/pkg/server/selector"
-	"github.com/kform-dev/choreo/pkg/util/object"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -78,17 +76,6 @@ func (r *Custom) EventHandler(ctx context.Context, _ resourcepb.Watch_EventType,
 
 		if r.ForSelector != nil {
 			if r.ForSelector.Matches(usrc.Object) {
-				match := false
-				if r.Name == "infra.kuid.dev_node_if-si-ni" || r.Name == "infra.kuid.dev_node_bgp" {
-					match = true
-				}
-				if match {
-					c := object.GetCondition(obj.UnstructuredContent(), "IPClaimReady")
-					conditionStatus := fmt.Sprintf("%v", c["status"])
-					conditionMessage := fmt.Sprintf("%v", c["message"])
-					fmt.Println(r.Name, u.GetName(), "eventhandler watch", "selectormatch", conditionStatus, conditionMessage)
-				}
-
 				r.Queue.Add(req)
 			}
 		}

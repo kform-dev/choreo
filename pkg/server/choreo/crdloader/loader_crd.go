@@ -77,10 +77,6 @@ func LoadCRD(ctx context.Context, pathInRepo, dbpath string, crd *apiextensionsv
 				return nil, fmt.Errorf("error building openapi models for %s: %v", crd.Name, err)
 			}
 
-			//for k, v := range openAPIModels {
-			//	fmt.Println("key", k, "schema", v)
-			//}
-
 			var typeConverter managedfields.TypeConverter = managedfields.NewDeducedTypeConverter()
 			if len(openAPIModels) > 0 {
 				typeConverter, err = managedfields.NewTypeConverter(openAPIModels, crd.Spec.PreserveUnknownFields)

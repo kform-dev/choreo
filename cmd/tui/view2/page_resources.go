@@ -175,7 +175,6 @@ func (r *Resources) StartStream(parentCtx context.Context) {
 		case <-parentCtx.Done():
 			return // Exit the function, no restart
 		default:
-			fmt.Println("restart")
 			time.Sleep(time.Second * 2) // Throttle the restart mechanism
 		}
 	}

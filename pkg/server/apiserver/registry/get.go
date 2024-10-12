@@ -18,7 +18,6 @@ package registry
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/henderiw/logger/log"
 	"github.com/henderiw/store"
@@ -44,14 +43,15 @@ func (r *storage) Get(ctx context.Context, name string, opts ...rest.GetOption) 
 
 	if !o.ShowManagedFields {
 		copiedObj := obj.DeepCopyObject().(runtime.Unstructured)
-		removeManagedFieldsFromUnstructured(copiedObj)
-		removeResourceVersionAndGenerationFromUnstructured(copiedObj)
+		removeManagedFieldsFromUnstructured(ctx, copiedObj)
+		removeResourceVersionAndGenerationFromUnstructured(ctx, copiedObj)
 		return copiedObj, nil
 	}
 	return obj, nil
 }
 
-func removeManagedFieldsFromUnstructured(obj runtime.Unstructured) {
+func removeManagedFieldsFromUnstructured(ctx context.Context, obj runtime.Unstructured) {
+	log := log.FromContext(ctx)
 	// Access the unstructured content
 	unstructuredContent := obj.UnstructuredContent()
 
@@ -67,11 +67,12 @@ func removeManagedFieldsFromUnstructured(obj runtime.Unstructured) {
 	// Set the updated metadata back to the unstructured content
 	err = unstructured.SetNestedMap(unstructuredContent, metadata, "metadata")
 	if err != nil {
-		fmt.Println("Error setting metadata:", err)
+		log.Error("failed setting metadata", "error", err)
 	}
 }
 
-func removeResourceVersionAndGenerationFromUnstructured(obj runtime.Unstructured) {
+func removeResourceVersionAndGenerationFromUnstructured(ctx context.Context, obj runtime.Unstructured) {
+	log := log.FromContext(ctx)
 	// Access the unstructured content
 	unstructuredContent := obj.UnstructuredContent()
 
@@ -88,6 +89,6 @@ func removeResourceVersionAndGenerationFromUnstructured(obj runtime.Unstructured
 	// Set the updated metadata back to the unstructured content
 	err = unstructured.SetNestedMap(unstructuredContent, metadata, "metadata")
 	if err != nil {
-		fmt.Println("Error setting metadata:", err)
+		log.Error("failed setting metadata", "error", err)
 	}
 }

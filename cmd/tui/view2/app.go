@@ -18,7 +18,6 @@ package view
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/kform-dev/choreo/pkg/client/go/util"
@@ -135,16 +134,16 @@ func (a *App) stop(key *tcell.EventKey) *tcell.EventKey {
 	a.Stop()
 
 	a.actions.List(func(k string, ka KeyAction) {
-		fmt.Println("list key", k)
+		//fmt.Println("list key", k)
 	})
-	fmt.Println("key", key.Key())
+	//fmt.Println("key", key.Key())
 
 	switch key.Key() {
 	case tcell.KeyRune:
-		fmt.Println("rune", key.Rune())
+		//fmt.Println("rune", key.Rune())
 
-		_, exists := a.actions.Get(string(key.Rune()))
-		fmt.Println("key", exists)
+		//_, exists := a.actions.Get(string(key.Rune()))
+		//fmt.Println("key", exists)
 	}
 
 	return nil

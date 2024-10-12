@@ -180,12 +180,12 @@ func CheckoutRef(repo *git.Repository, refName string) error {
 		return fmt.Errorf("cannot get worktree: %v", err)
 	}
 
-	fmt.Println("refName", refName)
+	//fmt.Println("refName", refName)
 	hash, err := GetHash(repo, refName)
 	if err != nil {
 		return fmt.Errorf("cannot get hash: %v", err)
 	}
-	fmt.Println("refName", hash.String())
+	//fmt.Println("refName", hash.String())
 	err = wt.Checkout(&git.CheckoutOptions{
 		Hash: *hash,
 	})

@@ -23,6 +23,7 @@ import (
 	"strings"
 
 	"github.com/go-git/go-git/v5/plumbing/object"
+	"github.com/henderiw/logger/log"
 	"github.com/kform-dev/choreo/pkg/cli/genericclioptions"
 	"github.com/kform-dev/choreo/pkg/client/go/resourceclient"
 	"github.com/kform-dev/choreo/pkg/repository"
@@ -115,12 +116,13 @@ type MainChoreoInstance struct {
 }
 
 func (r *MainChoreoInstance) Destroy() error {
+	log := log.FromContext(context.Background())
 	if err := r.repo.StashBranch(DummyBranch); err != nil {
-		fmt.Println("statsh branch failed", err)
+		log.Error("stash branch failed", "err", err)
 		return err
 	}
 	if err := r.repo.DeleteBranch(DummyBranch); err != nil {
-		fmt.Println("delete branch failed", err)
+		log.Error("delete branch failed", "err", err)
 		return err
 	}
 	return nil

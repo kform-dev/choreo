@@ -58,10 +58,7 @@ func (r *proxy) Get(ctx context.Context, req *resourcepb.Get_Request) (*resource
 	if err != nil {
 		return &resourcepb.Get_Response{}, err
 	}
-	fmt.Println("proxy get", req.Object, req.Options.String())
 	rsp, err := choreoCtx.ResourceClient.Get(ctx, req)
-	fmt.Println("proxy get rsp err", err)
-	fmt.Println("proxy get rsp", rsp)
 	return rsp, err
 }
 
@@ -70,10 +67,7 @@ func (r *proxy) List(ctx context.Context, req *resourcepb.List_Request) (*resour
 	if err != nil {
 		return &resourcepb.List_Response{}, err
 	}
-	fmt.Println("proxy list", req.Object, req.Options.String())
 	rsp, err := choreoCtx.ResourceClient.List(ctx, req)
-	fmt.Println("proxy list rsp err", err)
-	fmt.Println("proxy list rsp", rsp)
 	return rsp, err
 }
 
@@ -143,7 +137,6 @@ func (r *proxy) watch(ctx context.Context, client resourceclient.ResourceClient,
 				log.Info("watch done")
 				return
 			}
-			fmt.Println("proxy watch", rsp.EventType.String(), rsp.Object)
 			if err := clientStream.Send(rsp); err != nil {
 				p, _ := peer.FromContext(clientStream.Context())
 				addr := "unknown"

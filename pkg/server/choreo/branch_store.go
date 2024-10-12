@@ -21,6 +21,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/henderiw/logger/log"
 	"github.com/henderiw/store"
 	"github.com/henderiw/store/memory"
 	"github.com/henderiw/store/watch"
@@ -84,6 +85,7 @@ func (r *BranchStore) Update(ctx context.Context, branches []*branchpb.BranchObj
 }
 
 func (r *BranchStore) update(ctx context.Context, branch string, newState State) error {
+	log := log.FromContext(ctx)
 	key := store.ToKey(branch)
 	var oldState State
 	branchCtx, err := r.store.Get(key)
@@ -109,7 +111,7 @@ func (r *BranchStore) update(ctx context.Context, branch string, newState State)
 		return err
 	}
 
-	fmt.Println("branchstore update", branch, "oldstate", oldState, "->", "newstate", newState)
+	log.Info("branchstore update", "branch", branch, "state change", fmt.Sprintf("%s->%s", oldState.String(), newState.String()))
 	if err := r.handleTransition(ctx, newBranchCtx, oldState, newState); err != nil {
 		return err
 	}
@@ -121,6 +123,7 @@ func (r *BranchStore) update(ctx context.Context, branch string, newState State)
 }
 
 func (r *BranchStore) Delete(ctx context.Context, branchSet repository.BranchSet) error {
+	log := log.FromContext(ctx)
 	// to be executed before updates, otherwise this iwill not work
 	var errm error
 	branchesToBeDeleted := []string{}
@@ -137,12 +140,12 @@ func (r *BranchStore) Delete(ctx context.Context, branchSet repository.BranchSet
 	})
 	// when we do a list in the store and you do another store operation the mutex will lock
 	for _, branch := range branchesToBeDeleted {
-		fmt.Println("delete branch from store", branch)
+		log.Info("branchstore delete", "branch", branch)
 		if err := r.store.Delete(store.ToKey(branch)); err != nil {
 			errm = errors.Join(errm, err)
 			continue
 		}
-		fmt.Println("deleted branch from store", branch)
+		log.Info("branchstore deleted", "branch", branch)
 	}
 	return errm
 }

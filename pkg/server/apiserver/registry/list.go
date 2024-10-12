@@ -51,8 +51,8 @@ func (r *storage) List(ctx context.Context, opts ...rest.ListOption) (runtime.Un
 		if !filter {
 			if !o.ShowManagedFields {
 				copiedObj := obj.DeepCopyObject().(runtime.Unstructured)
-				removeManagedFieldsFromUnstructured(copiedObj)
-				removeResourceVersionAndGenerationFromUnstructured(copiedObj)
+				removeManagedFieldsFromUnstructured(ctx, copiedObj)
+				removeResourceVersionAndGenerationFromUnstructured(ctx, copiedObj)
 				AppendItem(v, copiedObj)
 			} else {
 				AppendItem(v, obj)
