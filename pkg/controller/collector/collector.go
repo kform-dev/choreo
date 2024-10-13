@@ -7,7 +7,7 @@ import (
 
 	"github.com/henderiw/logger/log"
 	reconcileresult "github.com/kform-dev/choreo/pkg/controller/collector/result"
-	"github.com/kform-dev/choreo/pkg/proto/choreopb"
+	"github.com/kform-dev/choreo/pkg/proto/runnerpb"
 )
 
 type Collector interface {
@@ -16,22 +16,22 @@ type Collector interface {
 
 func New(
 	reconcilerResultCh chan reconcileresult.Result,
-	collectorResultCh chan *choreopb.Once_Response,
+	collectorResultCh chan *runnerpb.Once_Response,
 ) Collector {
 
 	return &collector{
 		reconcilerResultCh: reconcilerResultCh,
 		collectorResultCh:  collectorResultCh,
 		work:               map[reconcileresult.ReconcileRef]time.Time{},
-		results:            map[string]*choreopb.Once_Operations{},
+		results:            map[string]*runnerpb.Once_Operations{},
 	}
 }
 
 type collector struct {
 	reconcilerResultCh chan reconcileresult.Result
-	collectorResultCh  chan *choreopb.Once_Response
+	collectorResultCh  chan *runnerpb.Once_Response
 	work               map[reconcileresult.ReconcileRef]time.Time
-	results            map[string]*choreopb.Once_Operations
+	results            map[string]*runnerpb.Once_Operations
 	finishing          bool
 	done               bool
 	idle               int
@@ -72,7 +72,7 @@ func (r *collector) Start(ctx context.Context, once bool) {
 			if once {
 				if r.done {
 					log.Debug("done", "elapsed time (sec)", r.finish.Sub(start).Seconds())
-					r.collectorResultCh <- &choreopb.Once_Response{
+					r.collectorResultCh <- &runnerpb.Once_Response{
 						Success:       true,
 						ExecutionTime: fmt.Sprintf("%v", r.finish.Sub(start).Seconds()),
 						Results:       r.results,
@@ -99,7 +99,7 @@ func (r *collector) handleResult(ctx context.Context, result reconcileresult.Res
 	log.Debug("collector result", "ref", ref.String(), "op", result.Operation.String(), "time", result.Time)
 
 	if _, ok := r.results[ref.ReconcilerName]; !ok {
-		r.results[ref.ReconcilerName] = &choreopb.Once_Operations{
+		r.results[ref.ReconcilerName] = &runnerpb.Once_Operations{
 			OperationCounts: map[string]int32{},
 		}
 	}
@@ -111,7 +111,7 @@ func (r *collector) processOperation(ctx context.Context, result reconcileresult
 	log := log.FromContext(ctx)
 	ref := result.ReconcileRef
 	switch result.Operation {
-	case choreopb.Operation_ERROR:
+	case runnerpb.Operation_ERROR:
 		startTime := r.getStartTime(ref)
 		if startTime != nil {
 			result.Elapsed = result.Time.Sub(*startTime)
@@ -120,13 +120,13 @@ func (r *collector) processOperation(ctx context.Context, result reconcileresult
 		//r.reconcileResults = append(r.reconcileResults, result)
 		log.Debug("execution failed", "ref", ref.String(), "error", result.Message)
 		// context of the error
-		r.collectorResultCh <- &choreopb.Once_Response{
+		r.collectorResultCh <- &runnerpb.Once_Response{
 			Success:      false,
 			ReconcileRef: ref.String(),
 			Message:      result.Message,
 		}
 		return
-	case choreopb.Operation_REQUEUE:
+	case runnerpb.Operation_REQUEUE:
 		startTime := r.getStartTime(ref)
 		if startTime != nil {
 			result.Elapsed = result.Time.Sub(*startTime)
@@ -134,9 +134,9 @@ func (r *collector) processOperation(ctx context.Context, result reconcileresult
 		//r.reconcileResults = append(r.reconcileResults, result)
 		r.work[ref] = result.Time // this is a dummy time
 		log.Debug("execution requeue", "ref", ref.String(), "error", result.Message)
-	case choreopb.Operation_START:
+	case runnerpb.Operation_START:
 		r.work[ref] = result.Time
-	case choreopb.Operation_STOP:
+	case runnerpb.Operation_STOP:
 		startTime := r.getStartTime(ref)
 		if startTime != nil {
 			result.Elapsed = result.Time.Sub(*startTime)

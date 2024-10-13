@@ -29,9 +29,9 @@ import (
 	"github.com/kform-dev/choreo/pkg/controller/collector/result"
 	"github.com/kform-dev/choreo/pkg/controller/informers"
 	"github.com/kform-dev/choreo/pkg/controller/reconciler"
-	"github.com/kform-dev/choreo/pkg/proto/choreopb"
 	"github.com/kform-dev/choreo/pkg/proto/discoverypb"
 	"github.com/kform-dev/choreo/pkg/proto/resourcepb"
+	"github.com/kform-dev/choreo/pkg/proto/runnerpb"
 	"github.com/kform-dev/choreo/pkg/util/inventory"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -43,9 +43,9 @@ import (
 
 type Runner interface {
 	AddResourceClientAndContext(ctx context.Context, client resourceclient.Client)
-	Start(ctx context.Context, bctx *BranchCtx) (*choreopb.Start_Response, error)
+	Start(ctx context.Context, bctx *BranchCtx) (*runnerpb.Start_Response, error)
 	Stop()
-	RunOnce(ctx context.Context, bctx *BranchCtx) (*choreopb.Once_Response, error)
+	RunOnce(ctx context.Context, bctx *BranchCtx) (*runnerpb.Once_Response, error)
 }
 
 func NewRunner(choreo Choreo) Runner {
@@ -68,7 +68,7 @@ type run struct {
 	reconcilerConfigs  []*choreov1alpha1.Reconciler
 	libs               *unstructured.UnstructuredList
 	reconcilerResultCh chan result.Result
-	runResultCh        chan *choreopb.Once_Response
+	runResultCh        chan *runnerpb.Once_Response
 	collector          collector.Collector
 	informerfactory    informers.InformerFactory
 }
@@ -78,17 +78,17 @@ func (r *run) AddResourceClientAndContext(ctx context.Context, client resourcecl
 	r.ctx = ctx
 }
 
-func (r *run) Start(ctx context.Context, bctx *BranchCtx) (*choreopb.Start_Response, error) {
+func (r *run) Start(ctx context.Context, bctx *BranchCtx) (*runnerpb.Start_Response, error) {
 	if r.getStatus() == RunnerStatus_Running {
-		return &choreopb.Start_Response{}, nil
+		return &runnerpb.Start_Response{}, nil
 	}
 	if r.getStatus() == RunnerStatus_Once {
-		return &choreopb.Start_Response{},
+		return &runnerpb.Start_Response{},
 			status.Errorf(codes.InvalidArgument, "runner is already running, status %s", r.status.String())
 	}
 
 	if err := r.load(ctx, bctx); err != nil {
-		return &choreopb.Start_Response{}, err
+		return &runnerpb.Start_Response{}, err
 	}
 
 	// we use the server context to cancel/handle the status of the server
@@ -106,7 +106,7 @@ func (r *run) Start(ctx context.Context, bctx *BranchCtx) (*choreopb.Start_Respo
 			r.runReconciler(runctx, bctx, false) // false -> run continuously, not once
 		}
 	}()
-	return &choreopb.Start_Response{}, nil
+	return &runnerpb.Start_Response{}, nil
 }
 
 func (r *run) Stop() {
@@ -117,9 +117,9 @@ func (r *run) Stop() {
 	// don't nilify the other resources, since they will be reinitialized
 }
 
-func (r *run) RunOnce(ctx context.Context, bctx *BranchCtx) (*choreopb.Once_Response, error) {
+func (r *run) RunOnce(ctx context.Context, bctx *BranchCtx) (*runnerpb.Once_Response, error) {
 	if r.getStatus() != RunnerStatus_Stopped {
-		return &choreopb.Once_Response{},
+		return &runnerpb.Once_Response{},
 			status.Errorf(codes.InvalidArgument, "runner is already running, status %s", r.status.String())
 	}
 
@@ -244,7 +244,7 @@ func (r *run) load(ctx context.Context, bctx *BranchCtx) error {
 	}
 
 	r.reconcilerResultCh = make(chan result.Result)
-	r.runResultCh = make(chan *choreopb.Once_Response)
+	r.runResultCh = make(chan *runnerpb.Once_Response)
 	r.collector = collector.New(r.reconcilerResultCh, r.runResultCh)
 	r.informerfactory = informers.NewInformerFactory(r.client, reconcilerGVKs, bctx.Branch)
 
@@ -273,7 +273,7 @@ func HasAPIResource(apiResources []*discoverypb.APIResource, gvk schema.GroupVer
 	return false
 }
 
-func (r *run) runReconciler(ctx context.Context, bctx *BranchCtx, once bool) (*choreopb.Once_Response, error) {
+func (r *run) runReconciler(ctx context.Context, bctx *BranchCtx, once bool) (*runnerpb.Once_Response, error) {
 	reconcilerfactory, err := reconciler.NewReconcilerFactory(
 		ctx, r.client, r.informerfactory, r.reconcilerConfigs, r.libs, r.reconcilerResultCh, bctx.Branch)
 

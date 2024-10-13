@@ -14,28 +14,28 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package choreo
+package snapshot
 
 import (
 	"context"
 	"fmt"
 
 	"github.com/henderiw/store"
-	"github.com/kform-dev/choreo/pkg/proto/choreopb"
+	"github.com/kform-dev/choreo/pkg/proto/snapshotpb"
 	"github.com/kform-dev/choreo/pkg/server/proxyserver/choreoctx"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"k8s.io/apimachinery/pkg/types"
 )
 
-func New(store store.Storer[*choreoctx.ChoreoCtx]) choreopb.ChoreoServer {
+func New(store store.Storer[*choreoctx.ChoreoCtx]) snapshotpb.SnapshotServer {
 	return &proxy{
 		store: store,
 	}
 }
 
 type proxy struct {
-	choreopb.UnimplementedChoreoServer
+	snapshotpb.UnimplementedSnapshotServer
 	store store.Storer[*choreoctx.ChoreoCtx]
 }
 
@@ -50,20 +50,36 @@ func (r *proxy) getChoreoCtx(proxy types.NamespacedName) (*choreoctx.ChoreoCtx, 
 	return choreoCtx, nil
 }
 
-func (r *proxy) Get(ctx context.Context, req *choreopb.Get_Request) (*choreopb.Get_Response, error) {
+func (r *proxy) Get(ctx context.Context, req *snapshotpb.Get_Request) (*snapshotpb.Get_Response, error) {
 	choreoCtx, err := r.getChoreoCtx(types.NamespacedName{Namespace: req.Options.ProxyNamespace, Name: req.Options.ProxyName})
 	if err != nil {
-		return &choreopb.Get_Response{}, err
+		return &snapshotpb.Get_Response{}, err
 	}
-
-	return choreoCtx.ChoreoClient.Get(ctx, req)
+	return choreoCtx.SnapshotClient.Get(ctx, req)
 }
 
-func (r *proxy) Apply(ctx context.Context, req *choreopb.Apply_Request) (*choreopb.Apply_Response, error) {
+func (r *proxy) List(ctx context.Context, req *snapshotpb.List_Request) (*snapshotpb.List_Response, error) {
 	choreoCtx, err := r.getChoreoCtx(types.NamespacedName{Namespace: req.Options.ProxyNamespace, Name: req.Options.ProxyName})
 	if err != nil {
-		return &choreopb.Apply_Response{}, err
+		return &snapshotpb.List_Response{}, err
 	}
-
-	return choreoCtx.ChoreoClient.Apply(ctx, req)
+	return choreoCtx.SnapshotClient.List(ctx, req)
 }
+
+func (r *proxy) Delete(ctx context.Context, req *snapshotpb.Delete_Request) (*snapshotpb.Delete_Response, error) {
+	choreoCtx, err := r.getChoreoCtx(types.NamespacedName{Namespace: req.Options.ProxyNamespace, Name: req.Options.ProxyName})
+	if err != nil {
+		return &snapshotpb.Delete_Response{}, err
+	}
+	return choreoCtx.SnapshotClient.Delete(ctx, req)
+}
+
+func (r *proxy) Diff(ctx context.Context, req *snapshotpb.Diff_Request) (*snapshotpb.Diff_Response, error) {
+	choreoCtx, err := r.getChoreoCtx(types.NamespacedName{Namespace: req.Options.ProxyNamespace, Name: req.Options.ProxyName})
+	if err != nil {
+		return &snapshotpb.Diff_Response{}, err
+	}
+	return choreoCtx.SnapshotClient.Diff(ctx, req)
+}
+
+// TODO implement watch

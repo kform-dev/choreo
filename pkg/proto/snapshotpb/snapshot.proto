@@ -16,35 +16,27 @@ limitations under the License.
 
 syntax = "proto3";
 
-package choreopb;
-option go_package = "github.com/kform-dev/choreo/pkg/proto/choreopb";
+package snapshotpb;
+option go_package = "github.com/kform-dev/choreo/pkg/proto/snapshotpb";
 
 
-service Choreo {
+service Snapshot {
     rpc Get (Get.Request) returns (Get.Response) {}
-    rpc Apply (Apply.Request) returns (Apply.Response) {}
-    //rpc Watch (Watch.Request) returns (stream Watch.Response) {}
+    rpc List (List.Request) returns (List.Response) {}
+    rpc Delete (Delete.Request) returns (Delete.Response) {}
+    rpc Diff (Diff.Request) returns (Diff.Response) {}
+    rpc Watch (Watch.Request) returns (stream Watch.Response) {}
+    
   }
-
-
-message ChoreoContext {
-    string path = 1; // when we supply this this is a manual path
-    string url = 2;
-    string ref = 3;
-    string directory = 4;
-    string secret = 5;
-    bool continuous = 6;
-}
 
 message Get {
     message Request {
-        Options options = 1;        
+        string id = 1;
+        Options options = 2;        
     }
 
     message Response {
-        ChoreoContext choreoContext = 1;   
-        bool status = 2;
-        string reason = 3; 
+        bytes object = 1; 
     }
 
     message Options {
@@ -53,10 +45,25 @@ message Get {
     }
 }
 
-message Apply {
+message List {
     message Request {
-        ChoreoContext choreoContext = 1; 
-        Options options = 2;
+        Options options = 1; 
+    }
+
+    message Response {
+        bytes object = 1;
+    }
+
+    message Options {
+        string proxyName = 1;
+        string proxyNamespace = 2;
+    }
+}
+
+message Delete {
+    message Request {
+        string id = 1;
+        Options options = 2; 
     }
 
     message Response {
@@ -65,6 +72,23 @@ message Apply {
     message Options {
         string proxyName = 1;
         string proxyNamespace = 2;
+    }
+}
+
+message Diff {
+    message Request {
+        Options options = 1;
+    }
+
+    message Response {
+        bytes object = 1; 
+    }
+
+    message Options {
+        string proxyName = 1;
+        string proxyNamespace = 2;
+        bool showManagedField = 3;
+        bool showChoreoAPIs = 4;
     }
 }
 
@@ -74,7 +98,7 @@ message Watch {
     }
 
     message Response {
-        ChoreoContext choreoContext = 1; 
+        bytes object = 1; 
         EventType eventType = 2;
 
     }
@@ -88,8 +112,8 @@ message Watch {
     }  
 
     message Options {
-        bool watch = 1 ; // indicate watch only, otherwise list and watch is used
-        string proxyName = 2;
-        string proxyNamespace = 3;
+        string proxyName = 1;
+        string proxyNamespace = 2;
+        bool watch = 3;
     }
 }

@@ -24,14 +24,6 @@ const _ = grpc.SupportPackageIsVersion7
 type ChoreoClient interface {
 	Get(ctx context.Context, in *Get_Request, opts ...grpc.CallOption) (*Get_Response, error)
 	Apply(ctx context.Context, in *Apply_Request, opts ...grpc.CallOption) (*Apply_Response, error)
-	// rpc Watch (Watch.Request) returns (stream Watch.Response) {}
-	Start(ctx context.Context, in *Start_Request, opts ...grpc.CallOption) (*Start_Response, error)
-	Stop(ctx context.Context, in *Stop_Request, opts ...grpc.CallOption) (*Stop_Response, error)
-	Once(ctx context.Context, in *Once_Request, opts ...grpc.CallOption) (*Once_Response, error)
-	Load(ctx context.Context, in *Load_Request, opts ...grpc.CallOption) (*Load_Response, error)
-	// TODO this should go into its own service -> add delete, get
-	Diff(ctx context.Context, in *Diff_Request, opts ...grpc.CallOption) (*Diff_Response, error)
-	List(ctx context.Context, in *List_Request, opts ...grpc.CallOption) (*List_Response, error)
 }
 
 type choreoClient struct {
@@ -60,74 +52,12 @@ func (c *choreoClient) Apply(ctx context.Context, in *Apply_Request, opts ...grp
 	return out, nil
 }
 
-func (c *choreoClient) Start(ctx context.Context, in *Start_Request, opts ...grpc.CallOption) (*Start_Response, error) {
-	out := new(Start_Response)
-	err := c.cc.Invoke(ctx, "/choreopb.Choreo/Start", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *choreoClient) Stop(ctx context.Context, in *Stop_Request, opts ...grpc.CallOption) (*Stop_Response, error) {
-	out := new(Stop_Response)
-	err := c.cc.Invoke(ctx, "/choreopb.Choreo/Stop", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *choreoClient) Once(ctx context.Context, in *Once_Request, opts ...grpc.CallOption) (*Once_Response, error) {
-	out := new(Once_Response)
-	err := c.cc.Invoke(ctx, "/choreopb.Choreo/Once", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *choreoClient) Load(ctx context.Context, in *Load_Request, opts ...grpc.CallOption) (*Load_Response, error) {
-	out := new(Load_Response)
-	err := c.cc.Invoke(ctx, "/choreopb.Choreo/Load", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *choreoClient) Diff(ctx context.Context, in *Diff_Request, opts ...grpc.CallOption) (*Diff_Response, error) {
-	out := new(Diff_Response)
-	err := c.cc.Invoke(ctx, "/choreopb.Choreo/Diff", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *choreoClient) List(ctx context.Context, in *List_Request, opts ...grpc.CallOption) (*List_Response, error) {
-	out := new(List_Response)
-	err := c.cc.Invoke(ctx, "/choreopb.Choreo/List", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
 // ChoreoServer is the server API for Choreo service.
 // All implementations must embed UnimplementedChoreoServer
 // for forward compatibility
 type ChoreoServer interface {
 	Get(context.Context, *Get_Request) (*Get_Response, error)
 	Apply(context.Context, *Apply_Request) (*Apply_Response, error)
-	// rpc Watch (Watch.Request) returns (stream Watch.Response) {}
-	Start(context.Context, *Start_Request) (*Start_Response, error)
-	Stop(context.Context, *Stop_Request) (*Stop_Response, error)
-	Once(context.Context, *Once_Request) (*Once_Response, error)
-	Load(context.Context, *Load_Request) (*Load_Response, error)
-	// TODO this should go into its own service -> add delete, get
-	Diff(context.Context, *Diff_Request) (*Diff_Response, error)
-	List(context.Context, *List_Request) (*List_Response, error)
 	mustEmbedUnimplementedChoreoServer()
 }
 
@@ -140,24 +70,6 @@ func (UnimplementedChoreoServer) Get(context.Context, *Get_Request) (*Get_Respon
 }
 func (UnimplementedChoreoServer) Apply(context.Context, *Apply_Request) (*Apply_Response, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Apply not implemented")
-}
-func (UnimplementedChoreoServer) Start(context.Context, *Start_Request) (*Start_Response, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method Start not implemented")
-}
-func (UnimplementedChoreoServer) Stop(context.Context, *Stop_Request) (*Stop_Response, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method Stop not implemented")
-}
-func (UnimplementedChoreoServer) Once(context.Context, *Once_Request) (*Once_Response, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method Once not implemented")
-}
-func (UnimplementedChoreoServer) Load(context.Context, *Load_Request) (*Load_Response, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method Load not implemented")
-}
-func (UnimplementedChoreoServer) Diff(context.Context, *Diff_Request) (*Diff_Response, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method Diff not implemented")
-}
-func (UnimplementedChoreoServer) List(context.Context, *List_Request) (*List_Response, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method List not implemented")
 }
 func (UnimplementedChoreoServer) mustEmbedUnimplementedChoreoServer() {}
 
@@ -208,114 +120,6 @@ func _Choreo_Apply_Handler(srv interface{}, ctx context.Context, dec func(interf
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Choreo_Start_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(Start_Request)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(ChoreoServer).Start(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/choreopb.Choreo/Start",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ChoreoServer).Start(ctx, req.(*Start_Request))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _Choreo_Stop_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(Stop_Request)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(ChoreoServer).Stop(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/choreopb.Choreo/Stop",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ChoreoServer).Stop(ctx, req.(*Stop_Request))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _Choreo_Once_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(Once_Request)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(ChoreoServer).Once(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/choreopb.Choreo/Once",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ChoreoServer).Once(ctx, req.(*Once_Request))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _Choreo_Load_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(Load_Request)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(ChoreoServer).Load(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/choreopb.Choreo/Load",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ChoreoServer).Load(ctx, req.(*Load_Request))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _Choreo_Diff_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(Diff_Request)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(ChoreoServer).Diff(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/choreopb.Choreo/Diff",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ChoreoServer).Diff(ctx, req.(*Diff_Request))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _Choreo_List_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(List_Request)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(ChoreoServer).List(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/choreopb.Choreo/List",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ChoreoServer).List(ctx, req.(*List_Request))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
 // Choreo_ServiceDesc is the grpc.ServiceDesc for Choreo service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -330,30 +134,6 @@ var Choreo_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "Apply",
 			Handler:    _Choreo_Apply_Handler,
-		},
-		{
-			MethodName: "Start",
-			Handler:    _Choreo_Start_Handler,
-		},
-		{
-			MethodName: "Stop",
-			Handler:    _Choreo_Stop_Handler,
-		},
-		{
-			MethodName: "Once",
-			Handler:    _Choreo_Once_Handler,
-		},
-		{
-			MethodName: "Load",
-			Handler:    _Choreo_Load_Handler,
-		},
-		{
-			MethodName: "Diff",
-			Handler:    _Choreo_Diff_Handler,
-		},
-		{
-			MethodName: "List",
-			Handler:    _Choreo_List_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

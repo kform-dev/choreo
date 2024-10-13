@@ -70,16 +70,6 @@ func (r *storage) Delete(ctx context.Context, name string, opts ...rest.DeleteOp
 			metaNow := metav1.NewTime(now)
 			newObjectMeta.SetDeletionTimestamp(&metaNow)
 
-			/*
-				if err = r.storage.Update(store.ToKey(objectMeta.GetName()), obj); err != nil {
-					return nil, status.Errorf(codes.Internal, "cannot update object in store, err: %s", err.Error())
-				}
-
-				r.notifyWatcher(ctx, watch.Event{
-					Type:   resourcepb.Watch_MODIFIED,
-					Object: obj,
-				})
-			*/
 			new, ok := newObj.(runtime.Unstructured)
 			if !ok {
 				return nil, status.Errorf(codes.Internal, "fieldmanager does not return an unstructured object")

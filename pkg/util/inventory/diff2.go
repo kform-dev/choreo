@@ -20,12 +20,12 @@ import (
 	"context"
 
 	choreov1alpha1 "github.com/kform-dev/choreo/apis/choreo/v1alpha1"
-	"github.com/kform-dev/choreo/pkg/proto/choreopb"
+	"github.com/kform-dev/choreo/pkg/proto/snapshotpb"
 	"github.com/kform-dev/choreo/pkg/util/object"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
-func (inv Inventory) Diff(invBefore Inventory, diff *choreov1alpha1.Diff, opts *choreopb.Diff_Options) error {
+func (inv Inventory) Diff(invBefore Inventory, diff *choreov1alpha1.Diff, opts *snapshotpb.Diff_Options) error {
 	diff.Status.Items = []*choreov1alpha1.DiffItem{}
 
 	invSetsBefore := invBefore.Sets()

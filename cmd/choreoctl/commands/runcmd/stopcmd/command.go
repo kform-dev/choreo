@@ -20,7 +20,7 @@ import (
 	"context"
 
 	"github.com/kform-dev/choreo/pkg/cli/genericclioptions"
-	"github.com/kform-dev/choreo/pkg/client/go/choreoclient"
+	"github.com/kform-dev/choreo/pkg/client/go/runnerclient"
 	"github.com/kform-dev/choreo/pkg/client/go/util"
 	"github.com/spf13/cobra"
 	//docs "github.com/kform-dev/kform/internal/docs/generated/applydocs"
@@ -58,8 +58,8 @@ type Runner struct {
 func (r *Runner) runE(cmd *cobra.Command, args []string) error {
 	ctx := cmd.Context()
 
-	choreoClient := r.factory.GetChoreoClient()
-	if err := choreoClient.Stop(ctx, &choreoclient.StopOptions{
+	runnerClient := r.factory.GetRunnerClient()
+	if err := runnerClient.Stop(ctx, &runnerclient.StopOptions{
 		Proxy: r.factory.GetProxy(),
 	}); err != nil {
 		return err

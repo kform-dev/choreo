@@ -1,0 +1,110 @@
+/*
+Copyright 2024 Nokia.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
+syntax = "proto3";
+
+package runnerpb;
+option go_package = "github.com/kform-dev/choreo/pkg/proto/runnerpb";
+
+
+service Runner {
+    rpc Start (Start.Request) returns (Start.Response) {}
+    rpc Stop (Stop.Request) returns (Stop.Response) {}
+    rpc Once (Once.Request) returns (Once.Response) {}
+    rpc Load (Load.Request) returns (Load.Response) {}
+  }
+
+
+// Start start choreo
+// Removed branch since we only allow checkedout -> RW, other branches are RO
+message Start {
+    message Request {
+        Options options = 1;
+    }
+
+    message Response {
+    }
+
+    message Options {
+        string proxyName = 1;
+        string proxyNamespace = 2;
+    }
+}
+
+// Removed branch since we only allow checkedout -> RW, other branches are RO
+message Stop {
+    message Request {
+        Options options = 1;
+    }
+
+    message Response {
+    }
+
+    message Options {
+        string proxyName = 1;
+        string proxyNamespace = 2;
+    }
+}
+
+// Removed branch since we only allow checkedout -> RW, other branches are RO
+message Once {
+    message Request {
+        Options options = 1;
+    }
+
+    message Options {
+        string proxyName = 1;
+        string proxyNamespace = 2;
+    }
+
+    message Response {
+        string executionTime = 1;
+        bool success = 2;
+        string reconcileRef = 3;
+        string message = 4;
+        map<string, Operations> results = 5;
+    }
+
+    message Operations {
+        // sting is the string of the operation
+        map<string, int32> operation_counts = 1;
+    }
+}
+
+
+message Load {
+    message Request {
+        Options options = 1;
+    }
+
+    message Response {
+        bytes object = 1;
+    }
+
+    message Options {
+        string proxyName = 1;
+        string proxyNamespace = 2;
+    }
+}
+
+enum Operation {
+    UNKNOWN = 0;
+    START = 1;
+    STOP = 2;
+    ERROR = 3;
+    REQUEUE = 4;
+    // Add more operations as needed
+}

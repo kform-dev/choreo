@@ -32,7 +32,7 @@ import (
 	"github.com/kform-dev/choreo/pkg/controller/reconciler/gotemplate"
 	"github.com/kform-dev/choreo/pkg/controller/reconciler/jinjatemplate"
 	"github.com/kform-dev/choreo/pkg/controller/reconciler/starlark"
-	"github.com/kform-dev/choreo/pkg/proto/choreopb"
+	"github.com/kform-dev/choreo/pkg/proto/runnerpb"
 	"github.com/kform-dev/choreo/pkg/server/selector"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -246,7 +246,7 @@ func (r *reconciler) reconcileHandler(ctx context.Context, req types.NamespacedN
 		Req:            req,
 	}
 	result := reconcileresult.Result{
-		Operation:    choreopb.Operation_START,
+		Operation:    runnerpb.Operation_START,
 		ReconcileID:  reconcileID,
 		ReconcileRef: reconcileRef,
 		Time:         time.Now(),
@@ -268,7 +268,7 @@ func (r *reconciler) reconcileHandler(ctx context.Context, req types.NamespacedN
 		//	log.Info("Warning: Reconciler returned both a non-zero result and a non-nil error. The result will always be ignored if the error is non-nil and the non-nil error causes reqeueuing with exponential backoff. For more details, see: https://pkg.go.dev/sigs.k8s.io/controller-runtime/pkg/reconcile#Reconciler")
 		//}
 		log.Error("reconcile error", "gvk", r.forgvk.String(), "req", req, "error", err)
-		result.Operation = choreopb.Operation_ERROR
+		result.Operation = runnerpb.Operation_ERROR
 		result.Message = err.Error()
 		r.resultCh <- result
 		r.queue.Forget(req)
@@ -278,7 +278,7 @@ func (r *reconciler) reconcileHandler(ctx context.Context, req types.NamespacedN
 		// along with a non-nil error. But this is intended as
 		// We need to drive to stable reconcile loops before queuing due
 		// to result.RequestAfter
-		result.Operation = choreopb.Operation_REQUEUE
+		result.Operation = runnerpb.Operation_REQUEUE
 		r.resultCh <- result
 
 		r.queue.Forget(req)
@@ -286,7 +286,7 @@ func (r *reconciler) reconcileHandler(ctx context.Context, req types.NamespacedN
 		//ctrlmetrics.ReconcileTotal.WithLabelValues(c.Name, labelRequeueAfter).Inc()
 	case res.Requeue:
 		log.Debug("reconcile requeue")
-		result.Operation = choreopb.Operation_REQUEUE
+		result.Operation = runnerpb.Operation_REQUEUE
 		result.Message = res.Message
 		r.resultCh <- result
 		r.queue.AddRateLimited(req)
@@ -295,7 +295,7 @@ func (r *reconciler) reconcileHandler(ctx context.Context, req types.NamespacedN
 		log.Debug("reconcile done")
 		// Finally, if no error occurs we Forget this item so it does not
 		// get queued again until another change happens.
-		result.Operation = choreopb.Operation_STOP
+		result.Operation = runnerpb.Operation_STOP
 		r.resultCh <- result
 		r.queue.Forget(req)
 

@@ -26,6 +26,8 @@ import (
 	"github.com/kform-dev/choreo/pkg/client/go/discovery"
 	"github.com/kform-dev/choreo/pkg/client/go/resourceclient"
 	"github.com/kform-dev/choreo/pkg/client/go/resourcemapper"
+	"github.com/kform-dev/choreo/pkg/client/go/runnerclient"
+	"github.com/kform-dev/choreo/pkg/client/go/snapshotclient"
 	"k8s.io/apimachinery/pkg/types"
 )
 
@@ -36,6 +38,8 @@ type Factory interface {
 	GetResourceMapper() resourcemapper.Mapper
 	GetResourceClient() resourceclient.Client
 	GetBranchClient() branchclient.Client
+	GetRunnerClient() runnerclient.Client
+	GetSnapshotClient() snapshotclient.Client
 	Close() error
 	GetBranch() string
 	GetProxy() types.NamespacedName
@@ -63,6 +67,16 @@ func NewFactory(clientGetter genericclioptions.ClientGetter) (Factory, error) {
 		return nil, err
 	}
 
+	runnerClient, err := clientGetter.ToRunnerClient()
+	if err != nil {
+		return nil, err
+	}
+
+	snapshotClient, err := clientGetter.ToSnapshotClient()
+	if err != nil {
+		return nil, err
+	}
+
 	resourceClient, err := clientGetter.ToResourceClient()
 	if err != nil {
 		return nil, err
@@ -78,8 +92,8 @@ func NewFactory(clientGetter genericclioptions.ClientGetter) (Factory, error) {
 		resourceMapper:  resourceMapper,
 		resourceClient:  resourceClient,
 		branchClient:    branchClient,
-		//branch:          clientGetter.ToBranch(),
-		//proxy:           clientGetter.ToProxy(),
+		runnerClient:    runnerClient,
+		snapshotClient:  snapshotClient,
 	}, nil
 }
 
@@ -91,6 +105,8 @@ type factory struct {
 	resourceMapper  resourcemapper.Mapper
 	resourceClient  resourceclient.Client
 	branchClient    branchclient.Client
+	runnerClient    runnerclient.Client
+	snapshotClient  snapshotclient.Client
 }
 
 func (r *factory) Close() error {
@@ -135,6 +151,14 @@ func (r *factory) GetResourceClient() resourceclient.Client {
 
 func (r *factory) GetBranchClient() branchclient.Client {
 	return r.branchClient
+}
+
+func (r *factory) GetRunnerClient() runnerclient.Client {
+	return r.runnerClient
+}
+
+func (r *factory) GetSnapshotClient() snapshotclient.Client {
+	return r.snapshotClient
 }
 
 func (r *factory) GetBranch() string {

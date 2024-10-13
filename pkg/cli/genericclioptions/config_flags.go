@@ -30,6 +30,8 @@ import (
 	"github.com/kform-dev/choreo/pkg/client/go/discovery/cached/disk"
 	"github.com/kform-dev/choreo/pkg/client/go/resourceclient"
 	"github.com/kform-dev/choreo/pkg/client/go/resourcemapper"
+	"github.com/kform-dev/choreo/pkg/client/go/runnerclient"
+	"github.com/kform-dev/choreo/pkg/client/go/snapshotclient"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/ptr"
 )
@@ -75,6 +77,10 @@ type ClientGetter interface {
 	ToResourceClient() (resourceclient.Client, error)
 	// ToBranchClient returns branch client
 	ToBranchClient() (branchclient.Client, error)
+	// ToRunnerClient returns runner client
+	ToRunnerClient() (runnerclient.Client, error)
+	// TosnapshotClient returns snapshot client
+	ToSnapshotClient() (snapshotclient.Client, error)
 	// Branch()
 	ToBranch() string
 	// Proxy()
@@ -200,6 +206,16 @@ func (r *ConfigFlags) toResourceMapper() (resourcemapper.Mapper, error) {
 func (r *ConfigFlags) ToBranchClient() (branchclient.Client, error) {
 	config := r.toConfig()
 	return branchclient.NewClient(config)
+}
+
+func (r *ConfigFlags) ToRunnerClient() (runnerclient.Client, error) {
+	config := r.toConfig()
+	return runnerclient.NewClient(config)
+}
+
+func (r *ConfigFlags) ToSnapshotClient() (snapshotclient.Client, error) {
+	config := r.toConfig()
+	return snapshotclient.NewClient(config)
 }
 
 func (r *ConfigFlags) ToBranch() string {

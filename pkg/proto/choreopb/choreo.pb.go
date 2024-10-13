@@ -35,61 +35,6 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
-type Operation int32
-
-const (
-	Operation_UNKNOWN Operation = 0
-	Operation_START   Operation = 1
-	Operation_STOP    Operation = 2
-	Operation_ERROR   Operation = 3
-	Operation_REQUEUE Operation = 4 // Add more operations as needed
-)
-
-// Enum value maps for Operation.
-var (
-	Operation_name = map[int32]string{
-		0: "UNKNOWN",
-		1: "START",
-		2: "STOP",
-		3: "ERROR",
-		4: "REQUEUE",
-	}
-	Operation_value = map[string]int32{
-		"UNKNOWN": 0,
-		"START":   1,
-		"STOP":    2,
-		"ERROR":   3,
-		"REQUEUE": 4,
-	}
-)
-
-func (x Operation) Enum() *Operation {
-	p := new(Operation)
-	*p = x
-	return p
-}
-
-func (x Operation) String() string {
-	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
-}
-
-func (Operation) Descriptor() protoreflect.EnumDescriptor {
-	return file_choreo_proto_enumTypes[0].Descriptor()
-}
-
-func (Operation) Type() protoreflect.EnumType {
-	return &file_choreo_proto_enumTypes[0]
-}
-
-func (x Operation) Number() protoreflect.EnumNumber {
-	return protoreflect.EnumNumber(x)
-}
-
-// Deprecated: Use Operation.Descriptor instead.
-func (Operation) EnumDescriptor() ([]byte, []int) {
-	return file_choreo_proto_rawDescGZIP(), []int{0}
-}
-
 type Watch_EventType int32
 
 const (
@@ -129,11 +74,11 @@ func (x Watch_EventType) String() string {
 }
 
 func (Watch_EventType) Descriptor() protoreflect.EnumDescriptor {
-	return file_choreo_proto_enumTypes[1].Descriptor()
+	return file_choreo_proto_enumTypes[0].Descriptor()
 }
 
 func (Watch_EventType) Type() protoreflect.EnumType {
-	return &file_choreo_proto_enumTypes[1]
+	return &file_choreo_proto_enumTypes[0]
 }
 
 func (x Watch_EventType) Number() protoreflect.EnumNumber {
@@ -346,238 +291,6 @@ func (*Watch) Descriptor() ([]byte, []int) {
 	return file_choreo_proto_rawDescGZIP(), []int{3}
 }
 
-// Start start choreo
-// Removed branch since we only allow checkedout -> RW, other branches are RO
-type Start struct {
-	state         protoimpl.MessageState
-	sizeCache     protoimpl.SizeCache
-	unknownFields protoimpl.UnknownFields
-}
-
-func (x *Start) Reset() {
-	*x = Start{}
-	if protoimpl.UnsafeEnabled {
-		mi := &file_choreo_proto_msgTypes[4]
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		ms.StoreMessageInfo(mi)
-	}
-}
-
-func (x *Start) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*Start) ProtoMessage() {}
-
-func (x *Start) ProtoReflect() protoreflect.Message {
-	mi := &file_choreo_proto_msgTypes[4]
-	if protoimpl.UnsafeEnabled && x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use Start.ProtoReflect.Descriptor instead.
-func (*Start) Descriptor() ([]byte, []int) {
-	return file_choreo_proto_rawDescGZIP(), []int{4}
-}
-
-// Removed branch since we only allow checkedout -> RW, other branches are RO
-type Stop struct {
-	state         protoimpl.MessageState
-	sizeCache     protoimpl.SizeCache
-	unknownFields protoimpl.UnknownFields
-}
-
-func (x *Stop) Reset() {
-	*x = Stop{}
-	if protoimpl.UnsafeEnabled {
-		mi := &file_choreo_proto_msgTypes[5]
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		ms.StoreMessageInfo(mi)
-	}
-}
-
-func (x *Stop) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*Stop) ProtoMessage() {}
-
-func (x *Stop) ProtoReflect() protoreflect.Message {
-	mi := &file_choreo_proto_msgTypes[5]
-	if protoimpl.UnsafeEnabled && x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use Stop.ProtoReflect.Descriptor instead.
-func (*Stop) Descriptor() ([]byte, []int) {
-	return file_choreo_proto_rawDescGZIP(), []int{5}
-}
-
-// Removed branch since we only allow checkedout -> RW, other branches are RO
-type Once struct {
-	state         protoimpl.MessageState
-	sizeCache     protoimpl.SizeCache
-	unknownFields protoimpl.UnknownFields
-}
-
-func (x *Once) Reset() {
-	*x = Once{}
-	if protoimpl.UnsafeEnabled {
-		mi := &file_choreo_proto_msgTypes[6]
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		ms.StoreMessageInfo(mi)
-	}
-}
-
-func (x *Once) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*Once) ProtoMessage() {}
-
-func (x *Once) ProtoReflect() protoreflect.Message {
-	mi := &file_choreo_proto_msgTypes[6]
-	if protoimpl.UnsafeEnabled && x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use Once.ProtoReflect.Descriptor instead.
-func (*Once) Descriptor() ([]byte, []int) {
-	return file_choreo_proto_rawDescGZIP(), []int{6}
-}
-
-type Load struct {
-	state         protoimpl.MessageState
-	sizeCache     protoimpl.SizeCache
-	unknownFields protoimpl.UnknownFields
-}
-
-func (x *Load) Reset() {
-	*x = Load{}
-	if protoimpl.UnsafeEnabled {
-		mi := &file_choreo_proto_msgTypes[7]
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		ms.StoreMessageInfo(mi)
-	}
-}
-
-func (x *Load) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*Load) ProtoMessage() {}
-
-func (x *Load) ProtoReflect() protoreflect.Message {
-	mi := &file_choreo_proto_msgTypes[7]
-	if protoimpl.UnsafeEnabled && x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use Load.ProtoReflect.Descriptor instead.
-func (*Load) Descriptor() ([]byte, []int) {
-	return file_choreo_proto_rawDescGZIP(), []int{7}
-}
-
-type Diff struct {
-	state         protoimpl.MessageState
-	sizeCache     protoimpl.SizeCache
-	unknownFields protoimpl.UnknownFields
-}
-
-func (x *Diff) Reset() {
-	*x = Diff{}
-	if protoimpl.UnsafeEnabled {
-		mi := &file_choreo_proto_msgTypes[8]
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		ms.StoreMessageInfo(mi)
-	}
-}
-
-func (x *Diff) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*Diff) ProtoMessage() {}
-
-func (x *Diff) ProtoReflect() protoreflect.Message {
-	mi := &file_choreo_proto_msgTypes[8]
-	if protoimpl.UnsafeEnabled && x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use Diff.ProtoReflect.Descriptor instead.
-func (*Diff) Descriptor() ([]byte, []int) {
-	return file_choreo_proto_rawDescGZIP(), []int{8}
-}
-
-type List struct {
-	state         protoimpl.MessageState
-	sizeCache     protoimpl.SizeCache
-	unknownFields protoimpl.UnknownFields
-}
-
-func (x *List) Reset() {
-	*x = List{}
-	if protoimpl.UnsafeEnabled {
-		mi := &file_choreo_proto_msgTypes[9]
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		ms.StoreMessageInfo(mi)
-	}
-}
-
-func (x *List) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*List) ProtoMessage() {}
-
-func (x *List) ProtoReflect() protoreflect.Message {
-	mi := &file_choreo_proto_msgTypes[9]
-	if protoimpl.UnsafeEnabled && x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use List.ProtoReflect.Descriptor instead.
-func (*List) Descriptor() ([]byte, []int) {
-	return file_choreo_proto_rawDescGZIP(), []int{9}
-}
-
 type Get_Request struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -589,7 +302,7 @@ type Get_Request struct {
 func (x *Get_Request) Reset() {
 	*x = Get_Request{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_choreo_proto_msgTypes[10]
+		mi := &file_choreo_proto_msgTypes[4]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -602,7 +315,7 @@ func (x *Get_Request) String() string {
 func (*Get_Request) ProtoMessage() {}
 
 func (x *Get_Request) ProtoReflect() protoreflect.Message {
-	mi := &file_choreo_proto_msgTypes[10]
+	mi := &file_choreo_proto_msgTypes[4]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -638,7 +351,7 @@ type Get_Response struct {
 func (x *Get_Response) Reset() {
 	*x = Get_Response{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_choreo_proto_msgTypes[11]
+		mi := &file_choreo_proto_msgTypes[5]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -651,7 +364,7 @@ func (x *Get_Response) String() string {
 func (*Get_Response) ProtoMessage() {}
 
 func (x *Get_Response) ProtoReflect() protoreflect.Message {
-	mi := &file_choreo_proto_msgTypes[11]
+	mi := &file_choreo_proto_msgTypes[5]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -700,7 +413,7 @@ type Get_Options struct {
 func (x *Get_Options) Reset() {
 	*x = Get_Options{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_choreo_proto_msgTypes[12]
+		mi := &file_choreo_proto_msgTypes[6]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -713,7 +426,7 @@ func (x *Get_Options) String() string {
 func (*Get_Options) ProtoMessage() {}
 
 func (x *Get_Options) ProtoReflect() protoreflect.Message {
-	mi := &file_choreo_proto_msgTypes[12]
+	mi := &file_choreo_proto_msgTypes[6]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -755,7 +468,7 @@ type Apply_Request struct {
 func (x *Apply_Request) Reset() {
 	*x = Apply_Request{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_choreo_proto_msgTypes[13]
+		mi := &file_choreo_proto_msgTypes[7]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -768,7 +481,7 @@ func (x *Apply_Request) String() string {
 func (*Apply_Request) ProtoMessage() {}
 
 func (x *Apply_Request) ProtoReflect() protoreflect.Message {
-	mi := &file_choreo_proto_msgTypes[13]
+	mi := &file_choreo_proto_msgTypes[7]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -807,7 +520,7 @@ type Apply_Response struct {
 func (x *Apply_Response) Reset() {
 	*x = Apply_Response{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_choreo_proto_msgTypes[14]
+		mi := &file_choreo_proto_msgTypes[8]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -820,7 +533,7 @@ func (x *Apply_Response) String() string {
 func (*Apply_Response) ProtoMessage() {}
 
 func (x *Apply_Response) ProtoReflect() protoreflect.Message {
-	mi := &file_choreo_proto_msgTypes[14]
+	mi := &file_choreo_proto_msgTypes[8]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -848,7 +561,7 @@ type Apply_Options struct {
 func (x *Apply_Options) Reset() {
 	*x = Apply_Options{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_choreo_proto_msgTypes[15]
+		mi := &file_choreo_proto_msgTypes[9]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -861,7 +574,7 @@ func (x *Apply_Options) String() string {
 func (*Apply_Options) ProtoMessage() {}
 
 func (x *Apply_Options) ProtoReflect() protoreflect.Message {
-	mi := &file_choreo_proto_msgTypes[15]
+	mi := &file_choreo_proto_msgTypes[9]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -902,7 +615,7 @@ type Watch_Request struct {
 func (x *Watch_Request) Reset() {
 	*x = Watch_Request{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_choreo_proto_msgTypes[16]
+		mi := &file_choreo_proto_msgTypes[10]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -915,7 +628,7 @@ func (x *Watch_Request) String() string {
 func (*Watch_Request) ProtoMessage() {}
 
 func (x *Watch_Request) ProtoReflect() protoreflect.Message {
-	mi := &file_choreo_proto_msgTypes[16]
+	mi := &file_choreo_proto_msgTypes[10]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -950,7 +663,7 @@ type Watch_Response struct {
 func (x *Watch_Response) Reset() {
 	*x = Watch_Response{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_choreo_proto_msgTypes[17]
+		mi := &file_choreo_proto_msgTypes[11]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -963,7 +676,7 @@ func (x *Watch_Response) String() string {
 func (*Watch_Response) ProtoMessage() {}
 
 func (x *Watch_Response) ProtoReflect() protoreflect.Message {
-	mi := &file_choreo_proto_msgTypes[17]
+	mi := &file_choreo_proto_msgTypes[11]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1006,7 +719,7 @@ type Watch_Options struct {
 func (x *Watch_Options) Reset() {
 	*x = Watch_Options{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_choreo_proto_msgTypes[18]
+		mi := &file_choreo_proto_msgTypes[12]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -1019,7 +732,7 @@ func (x *Watch_Options) String() string {
 func (*Watch_Options) ProtoMessage() {}
 
 func (x *Watch_Options) ProtoReflect() protoreflect.Message {
-	mi := &file_choreo_proto_msgTypes[18]
+	mi := &file_choreo_proto_msgTypes[12]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1050,978 +763,6 @@ func (x *Watch_Options) GetProxyName() string {
 }
 
 func (x *Watch_Options) GetProxyNamespace() string {
-	if x != nil {
-		return x.ProxyNamespace
-	}
-	return ""
-}
-
-type Start_Request struct {
-	state         protoimpl.MessageState
-	sizeCache     protoimpl.SizeCache
-	unknownFields protoimpl.UnknownFields
-
-	Options *Start_Options `protobuf:"bytes,1,opt,name=options,proto3" json:"options,omitempty"`
-}
-
-func (x *Start_Request) Reset() {
-	*x = Start_Request{}
-	if protoimpl.UnsafeEnabled {
-		mi := &file_choreo_proto_msgTypes[19]
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		ms.StoreMessageInfo(mi)
-	}
-}
-
-func (x *Start_Request) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*Start_Request) ProtoMessage() {}
-
-func (x *Start_Request) ProtoReflect() protoreflect.Message {
-	mi := &file_choreo_proto_msgTypes[19]
-	if protoimpl.UnsafeEnabled && x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use Start_Request.ProtoReflect.Descriptor instead.
-func (*Start_Request) Descriptor() ([]byte, []int) {
-	return file_choreo_proto_rawDescGZIP(), []int{4, 0}
-}
-
-func (x *Start_Request) GetOptions() *Start_Options {
-	if x != nil {
-		return x.Options
-	}
-	return nil
-}
-
-type Start_Response struct {
-	state         protoimpl.MessageState
-	sizeCache     protoimpl.SizeCache
-	unknownFields protoimpl.UnknownFields
-}
-
-func (x *Start_Response) Reset() {
-	*x = Start_Response{}
-	if protoimpl.UnsafeEnabled {
-		mi := &file_choreo_proto_msgTypes[20]
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		ms.StoreMessageInfo(mi)
-	}
-}
-
-func (x *Start_Response) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*Start_Response) ProtoMessage() {}
-
-func (x *Start_Response) ProtoReflect() protoreflect.Message {
-	mi := &file_choreo_proto_msgTypes[20]
-	if protoimpl.UnsafeEnabled && x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use Start_Response.ProtoReflect.Descriptor instead.
-func (*Start_Response) Descriptor() ([]byte, []int) {
-	return file_choreo_proto_rawDescGZIP(), []int{4, 1}
-}
-
-type Start_Options struct {
-	state         protoimpl.MessageState
-	sizeCache     protoimpl.SizeCache
-	unknownFields protoimpl.UnknownFields
-
-	ProxyName      string `protobuf:"bytes,1,opt,name=proxyName,proto3" json:"proxyName,omitempty"`
-	ProxyNamespace string `protobuf:"bytes,2,opt,name=proxyNamespace,proto3" json:"proxyNamespace,omitempty"`
-}
-
-func (x *Start_Options) Reset() {
-	*x = Start_Options{}
-	if protoimpl.UnsafeEnabled {
-		mi := &file_choreo_proto_msgTypes[21]
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		ms.StoreMessageInfo(mi)
-	}
-}
-
-func (x *Start_Options) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*Start_Options) ProtoMessage() {}
-
-func (x *Start_Options) ProtoReflect() protoreflect.Message {
-	mi := &file_choreo_proto_msgTypes[21]
-	if protoimpl.UnsafeEnabled && x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use Start_Options.ProtoReflect.Descriptor instead.
-func (*Start_Options) Descriptor() ([]byte, []int) {
-	return file_choreo_proto_rawDescGZIP(), []int{4, 2}
-}
-
-func (x *Start_Options) GetProxyName() string {
-	if x != nil {
-		return x.ProxyName
-	}
-	return ""
-}
-
-func (x *Start_Options) GetProxyNamespace() string {
-	if x != nil {
-		return x.ProxyNamespace
-	}
-	return ""
-}
-
-type Stop_Request struct {
-	state         protoimpl.MessageState
-	sizeCache     protoimpl.SizeCache
-	unknownFields protoimpl.UnknownFields
-
-	Options *Stop_Options `protobuf:"bytes,1,opt,name=options,proto3" json:"options,omitempty"`
-}
-
-func (x *Stop_Request) Reset() {
-	*x = Stop_Request{}
-	if protoimpl.UnsafeEnabled {
-		mi := &file_choreo_proto_msgTypes[22]
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		ms.StoreMessageInfo(mi)
-	}
-}
-
-func (x *Stop_Request) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*Stop_Request) ProtoMessage() {}
-
-func (x *Stop_Request) ProtoReflect() protoreflect.Message {
-	mi := &file_choreo_proto_msgTypes[22]
-	if protoimpl.UnsafeEnabled && x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use Stop_Request.ProtoReflect.Descriptor instead.
-func (*Stop_Request) Descriptor() ([]byte, []int) {
-	return file_choreo_proto_rawDescGZIP(), []int{5, 0}
-}
-
-func (x *Stop_Request) GetOptions() *Stop_Options {
-	if x != nil {
-		return x.Options
-	}
-	return nil
-}
-
-type Stop_Response struct {
-	state         protoimpl.MessageState
-	sizeCache     protoimpl.SizeCache
-	unknownFields protoimpl.UnknownFields
-}
-
-func (x *Stop_Response) Reset() {
-	*x = Stop_Response{}
-	if protoimpl.UnsafeEnabled {
-		mi := &file_choreo_proto_msgTypes[23]
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		ms.StoreMessageInfo(mi)
-	}
-}
-
-func (x *Stop_Response) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*Stop_Response) ProtoMessage() {}
-
-func (x *Stop_Response) ProtoReflect() protoreflect.Message {
-	mi := &file_choreo_proto_msgTypes[23]
-	if protoimpl.UnsafeEnabled && x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use Stop_Response.ProtoReflect.Descriptor instead.
-func (*Stop_Response) Descriptor() ([]byte, []int) {
-	return file_choreo_proto_rawDescGZIP(), []int{5, 1}
-}
-
-type Stop_Options struct {
-	state         protoimpl.MessageState
-	sizeCache     protoimpl.SizeCache
-	unknownFields protoimpl.UnknownFields
-
-	ProxyName      string `protobuf:"bytes,1,opt,name=proxyName,proto3" json:"proxyName,omitempty"`
-	ProxyNamespace string `protobuf:"bytes,2,opt,name=proxyNamespace,proto3" json:"proxyNamespace,omitempty"`
-}
-
-func (x *Stop_Options) Reset() {
-	*x = Stop_Options{}
-	if protoimpl.UnsafeEnabled {
-		mi := &file_choreo_proto_msgTypes[24]
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		ms.StoreMessageInfo(mi)
-	}
-}
-
-func (x *Stop_Options) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*Stop_Options) ProtoMessage() {}
-
-func (x *Stop_Options) ProtoReflect() protoreflect.Message {
-	mi := &file_choreo_proto_msgTypes[24]
-	if protoimpl.UnsafeEnabled && x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use Stop_Options.ProtoReflect.Descriptor instead.
-func (*Stop_Options) Descriptor() ([]byte, []int) {
-	return file_choreo_proto_rawDescGZIP(), []int{5, 2}
-}
-
-func (x *Stop_Options) GetProxyName() string {
-	if x != nil {
-		return x.ProxyName
-	}
-	return ""
-}
-
-func (x *Stop_Options) GetProxyNamespace() string {
-	if x != nil {
-		return x.ProxyNamespace
-	}
-	return ""
-}
-
-type Once_Request struct {
-	state         protoimpl.MessageState
-	sizeCache     protoimpl.SizeCache
-	unknownFields protoimpl.UnknownFields
-
-	Options *Once_Options `protobuf:"bytes,1,opt,name=options,proto3" json:"options,omitempty"`
-}
-
-func (x *Once_Request) Reset() {
-	*x = Once_Request{}
-	if protoimpl.UnsafeEnabled {
-		mi := &file_choreo_proto_msgTypes[25]
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		ms.StoreMessageInfo(mi)
-	}
-}
-
-func (x *Once_Request) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*Once_Request) ProtoMessage() {}
-
-func (x *Once_Request) ProtoReflect() protoreflect.Message {
-	mi := &file_choreo_proto_msgTypes[25]
-	if protoimpl.UnsafeEnabled && x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use Once_Request.ProtoReflect.Descriptor instead.
-func (*Once_Request) Descriptor() ([]byte, []int) {
-	return file_choreo_proto_rawDescGZIP(), []int{6, 0}
-}
-
-func (x *Once_Request) GetOptions() *Once_Options {
-	if x != nil {
-		return x.Options
-	}
-	return nil
-}
-
-type Once_Options struct {
-	state         protoimpl.MessageState
-	sizeCache     protoimpl.SizeCache
-	unknownFields protoimpl.UnknownFields
-
-	ProxyName      string `protobuf:"bytes,1,opt,name=proxyName,proto3" json:"proxyName,omitempty"`
-	ProxyNamespace string `protobuf:"bytes,2,opt,name=proxyNamespace,proto3" json:"proxyNamespace,omitempty"`
-}
-
-func (x *Once_Options) Reset() {
-	*x = Once_Options{}
-	if protoimpl.UnsafeEnabled {
-		mi := &file_choreo_proto_msgTypes[26]
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		ms.StoreMessageInfo(mi)
-	}
-}
-
-func (x *Once_Options) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*Once_Options) ProtoMessage() {}
-
-func (x *Once_Options) ProtoReflect() protoreflect.Message {
-	mi := &file_choreo_proto_msgTypes[26]
-	if protoimpl.UnsafeEnabled && x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use Once_Options.ProtoReflect.Descriptor instead.
-func (*Once_Options) Descriptor() ([]byte, []int) {
-	return file_choreo_proto_rawDescGZIP(), []int{6, 1}
-}
-
-func (x *Once_Options) GetProxyName() string {
-	if x != nil {
-		return x.ProxyName
-	}
-	return ""
-}
-
-func (x *Once_Options) GetProxyNamespace() string {
-	if x != nil {
-		return x.ProxyNamespace
-	}
-	return ""
-}
-
-type Once_Response struct {
-	state         protoimpl.MessageState
-	sizeCache     protoimpl.SizeCache
-	unknownFields protoimpl.UnknownFields
-
-	ExecutionTime string                      `protobuf:"bytes,1,opt,name=executionTime,proto3" json:"executionTime,omitempty"`
-	Success       bool                        `protobuf:"varint,2,opt,name=success,proto3" json:"success,omitempty"`
-	ReconcileRef  string                      `protobuf:"bytes,3,opt,name=reconcileRef,proto3" json:"reconcileRef,omitempty"`
-	Message       string                      `protobuf:"bytes,4,opt,name=message,proto3" json:"message,omitempty"`
-	Results       map[string]*Once_Operations `protobuf:"bytes,5,rep,name=results,proto3" json:"results,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
-}
-
-func (x *Once_Response) Reset() {
-	*x = Once_Response{}
-	if protoimpl.UnsafeEnabled {
-		mi := &file_choreo_proto_msgTypes[27]
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		ms.StoreMessageInfo(mi)
-	}
-}
-
-func (x *Once_Response) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*Once_Response) ProtoMessage() {}
-
-func (x *Once_Response) ProtoReflect() protoreflect.Message {
-	mi := &file_choreo_proto_msgTypes[27]
-	if protoimpl.UnsafeEnabled && x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use Once_Response.ProtoReflect.Descriptor instead.
-func (*Once_Response) Descriptor() ([]byte, []int) {
-	return file_choreo_proto_rawDescGZIP(), []int{6, 2}
-}
-
-func (x *Once_Response) GetExecutionTime() string {
-	if x != nil {
-		return x.ExecutionTime
-	}
-	return ""
-}
-
-func (x *Once_Response) GetSuccess() bool {
-	if x != nil {
-		return x.Success
-	}
-	return false
-}
-
-func (x *Once_Response) GetReconcileRef() string {
-	if x != nil {
-		return x.ReconcileRef
-	}
-	return ""
-}
-
-func (x *Once_Response) GetMessage() string {
-	if x != nil {
-		return x.Message
-	}
-	return ""
-}
-
-func (x *Once_Response) GetResults() map[string]*Once_Operations {
-	if x != nil {
-		return x.Results
-	}
-	return nil
-}
-
-type Once_Operations struct {
-	state         protoimpl.MessageState
-	sizeCache     protoimpl.SizeCache
-	unknownFields protoimpl.UnknownFields
-
-	// sting is the string of the operation
-	OperationCounts map[string]int32 `protobuf:"bytes,1,rep,name=operation_counts,json=operationCounts,proto3" json:"operation_counts,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"varint,2,opt,name=value,proto3"`
-}
-
-func (x *Once_Operations) Reset() {
-	*x = Once_Operations{}
-	if protoimpl.UnsafeEnabled {
-		mi := &file_choreo_proto_msgTypes[28]
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		ms.StoreMessageInfo(mi)
-	}
-}
-
-func (x *Once_Operations) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*Once_Operations) ProtoMessage() {}
-
-func (x *Once_Operations) ProtoReflect() protoreflect.Message {
-	mi := &file_choreo_proto_msgTypes[28]
-	if protoimpl.UnsafeEnabled && x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use Once_Operations.ProtoReflect.Descriptor instead.
-func (*Once_Operations) Descriptor() ([]byte, []int) {
-	return file_choreo_proto_rawDescGZIP(), []int{6, 3}
-}
-
-func (x *Once_Operations) GetOperationCounts() map[string]int32 {
-	if x != nil {
-		return x.OperationCounts
-	}
-	return nil
-}
-
-type Load_Request struct {
-	state         protoimpl.MessageState
-	sizeCache     protoimpl.SizeCache
-	unknownFields protoimpl.UnknownFields
-
-	Options *Load_Options `protobuf:"bytes,1,opt,name=options,proto3" json:"options,omitempty"`
-}
-
-func (x *Load_Request) Reset() {
-	*x = Load_Request{}
-	if protoimpl.UnsafeEnabled {
-		mi := &file_choreo_proto_msgTypes[31]
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		ms.StoreMessageInfo(mi)
-	}
-}
-
-func (x *Load_Request) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*Load_Request) ProtoMessage() {}
-
-func (x *Load_Request) ProtoReflect() protoreflect.Message {
-	mi := &file_choreo_proto_msgTypes[31]
-	if protoimpl.UnsafeEnabled && x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use Load_Request.ProtoReflect.Descriptor instead.
-func (*Load_Request) Descriptor() ([]byte, []int) {
-	return file_choreo_proto_rawDescGZIP(), []int{7, 0}
-}
-
-func (x *Load_Request) GetOptions() *Load_Options {
-	if x != nil {
-		return x.Options
-	}
-	return nil
-}
-
-type Load_Response struct {
-	state         protoimpl.MessageState
-	sizeCache     protoimpl.SizeCache
-	unknownFields protoimpl.UnknownFields
-
-	Object []byte `protobuf:"bytes,1,opt,name=object,proto3" json:"object,omitempty"`
-}
-
-func (x *Load_Response) Reset() {
-	*x = Load_Response{}
-	if protoimpl.UnsafeEnabled {
-		mi := &file_choreo_proto_msgTypes[32]
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		ms.StoreMessageInfo(mi)
-	}
-}
-
-func (x *Load_Response) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*Load_Response) ProtoMessage() {}
-
-func (x *Load_Response) ProtoReflect() protoreflect.Message {
-	mi := &file_choreo_proto_msgTypes[32]
-	if protoimpl.UnsafeEnabled && x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use Load_Response.ProtoReflect.Descriptor instead.
-func (*Load_Response) Descriptor() ([]byte, []int) {
-	return file_choreo_proto_rawDescGZIP(), []int{7, 1}
-}
-
-func (x *Load_Response) GetObject() []byte {
-	if x != nil {
-		return x.Object
-	}
-	return nil
-}
-
-type Load_Options struct {
-	state         protoimpl.MessageState
-	sizeCache     protoimpl.SizeCache
-	unknownFields protoimpl.UnknownFields
-
-	ProxyName      string `protobuf:"bytes,1,opt,name=proxyName,proto3" json:"proxyName,omitempty"`
-	ProxyNamespace string `protobuf:"bytes,2,opt,name=proxyNamespace,proto3" json:"proxyNamespace,omitempty"`
-}
-
-func (x *Load_Options) Reset() {
-	*x = Load_Options{}
-	if protoimpl.UnsafeEnabled {
-		mi := &file_choreo_proto_msgTypes[33]
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		ms.StoreMessageInfo(mi)
-	}
-}
-
-func (x *Load_Options) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*Load_Options) ProtoMessage() {}
-
-func (x *Load_Options) ProtoReflect() protoreflect.Message {
-	mi := &file_choreo_proto_msgTypes[33]
-	if protoimpl.UnsafeEnabled && x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use Load_Options.ProtoReflect.Descriptor instead.
-func (*Load_Options) Descriptor() ([]byte, []int) {
-	return file_choreo_proto_rawDescGZIP(), []int{7, 2}
-}
-
-func (x *Load_Options) GetProxyName() string {
-	if x != nil {
-		return x.ProxyName
-	}
-	return ""
-}
-
-func (x *Load_Options) GetProxyNamespace() string {
-	if x != nil {
-		return x.ProxyNamespace
-	}
-	return ""
-}
-
-type Diff_Request struct {
-	state         protoimpl.MessageState
-	sizeCache     protoimpl.SizeCache
-	unknownFields protoimpl.UnknownFields
-
-	Options *Diff_Options `protobuf:"bytes,1,opt,name=options,proto3" json:"options,omitempty"`
-}
-
-func (x *Diff_Request) Reset() {
-	*x = Diff_Request{}
-	if protoimpl.UnsafeEnabled {
-		mi := &file_choreo_proto_msgTypes[34]
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		ms.StoreMessageInfo(mi)
-	}
-}
-
-func (x *Diff_Request) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*Diff_Request) ProtoMessage() {}
-
-func (x *Diff_Request) ProtoReflect() protoreflect.Message {
-	mi := &file_choreo_proto_msgTypes[34]
-	if protoimpl.UnsafeEnabled && x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use Diff_Request.ProtoReflect.Descriptor instead.
-func (*Diff_Request) Descriptor() ([]byte, []int) {
-	return file_choreo_proto_rawDescGZIP(), []int{8, 0}
-}
-
-func (x *Diff_Request) GetOptions() *Diff_Options {
-	if x != nil {
-		return x.Options
-	}
-	return nil
-}
-
-type Diff_Response struct {
-	state         protoimpl.MessageState
-	sizeCache     protoimpl.SizeCache
-	unknownFields protoimpl.UnknownFields
-
-	Object []byte `protobuf:"bytes,1,opt,name=object,proto3" json:"object,omitempty"`
-}
-
-func (x *Diff_Response) Reset() {
-	*x = Diff_Response{}
-	if protoimpl.UnsafeEnabled {
-		mi := &file_choreo_proto_msgTypes[35]
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		ms.StoreMessageInfo(mi)
-	}
-}
-
-func (x *Diff_Response) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*Diff_Response) ProtoMessage() {}
-
-func (x *Diff_Response) ProtoReflect() protoreflect.Message {
-	mi := &file_choreo_proto_msgTypes[35]
-	if protoimpl.UnsafeEnabled && x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use Diff_Response.ProtoReflect.Descriptor instead.
-func (*Diff_Response) Descriptor() ([]byte, []int) {
-	return file_choreo_proto_rawDescGZIP(), []int{8, 1}
-}
-
-func (x *Diff_Response) GetObject() []byte {
-	if x != nil {
-		return x.Object
-	}
-	return nil
-}
-
-type Diff_Options struct {
-	state         protoimpl.MessageState
-	sizeCache     protoimpl.SizeCache
-	unknownFields protoimpl.UnknownFields
-
-	ProxyName        string `protobuf:"bytes,1,opt,name=proxyName,proto3" json:"proxyName,omitempty"`
-	ProxyNamespace   string `protobuf:"bytes,2,opt,name=proxyNamespace,proto3" json:"proxyNamespace,omitempty"`
-	ShowManagedField bool   `protobuf:"varint,3,opt,name=showManagedField,proto3" json:"showManagedField,omitempty"`
-	ShowChoreoAPIs   bool   `protobuf:"varint,4,opt,name=showChoreoAPIs,proto3" json:"showChoreoAPIs,omitempty"`
-}
-
-func (x *Diff_Options) Reset() {
-	*x = Diff_Options{}
-	if protoimpl.UnsafeEnabled {
-		mi := &file_choreo_proto_msgTypes[36]
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		ms.StoreMessageInfo(mi)
-	}
-}
-
-func (x *Diff_Options) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*Diff_Options) ProtoMessage() {}
-
-func (x *Diff_Options) ProtoReflect() protoreflect.Message {
-	mi := &file_choreo_proto_msgTypes[36]
-	if protoimpl.UnsafeEnabled && x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use Diff_Options.ProtoReflect.Descriptor instead.
-func (*Diff_Options) Descriptor() ([]byte, []int) {
-	return file_choreo_proto_rawDescGZIP(), []int{8, 2}
-}
-
-func (x *Diff_Options) GetProxyName() string {
-	if x != nil {
-		return x.ProxyName
-	}
-	return ""
-}
-
-func (x *Diff_Options) GetProxyNamespace() string {
-	if x != nil {
-		return x.ProxyNamespace
-	}
-	return ""
-}
-
-func (x *Diff_Options) GetShowManagedField() bool {
-	if x != nil {
-		return x.ShowManagedField
-	}
-	return false
-}
-
-func (x *Diff_Options) GetShowChoreoAPIs() bool {
-	if x != nil {
-		return x.ShowChoreoAPIs
-	}
-	return false
-}
-
-type List_Request struct {
-	state         protoimpl.MessageState
-	sizeCache     protoimpl.SizeCache
-	unknownFields protoimpl.UnknownFields
-
-	Options *List_Options `protobuf:"bytes,1,opt,name=options,proto3" json:"options,omitempty"`
-}
-
-func (x *List_Request) Reset() {
-	*x = List_Request{}
-	if protoimpl.UnsafeEnabled {
-		mi := &file_choreo_proto_msgTypes[37]
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		ms.StoreMessageInfo(mi)
-	}
-}
-
-func (x *List_Request) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*List_Request) ProtoMessage() {}
-
-func (x *List_Request) ProtoReflect() protoreflect.Message {
-	mi := &file_choreo_proto_msgTypes[37]
-	if protoimpl.UnsafeEnabled && x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use List_Request.ProtoReflect.Descriptor instead.
-func (*List_Request) Descriptor() ([]byte, []int) {
-	return file_choreo_proto_rawDescGZIP(), []int{9, 0}
-}
-
-func (x *List_Request) GetOptions() *List_Options {
-	if x != nil {
-		return x.Options
-	}
-	return nil
-}
-
-type List_Response struct {
-	state         protoimpl.MessageState
-	sizeCache     protoimpl.SizeCache
-	unknownFields protoimpl.UnknownFields
-
-	Object []byte `protobuf:"bytes,1,opt,name=object,proto3" json:"object,omitempty"`
-}
-
-func (x *List_Response) Reset() {
-	*x = List_Response{}
-	if protoimpl.UnsafeEnabled {
-		mi := &file_choreo_proto_msgTypes[38]
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		ms.StoreMessageInfo(mi)
-	}
-}
-
-func (x *List_Response) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*List_Response) ProtoMessage() {}
-
-func (x *List_Response) ProtoReflect() protoreflect.Message {
-	mi := &file_choreo_proto_msgTypes[38]
-	if protoimpl.UnsafeEnabled && x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use List_Response.ProtoReflect.Descriptor instead.
-func (*List_Response) Descriptor() ([]byte, []int) {
-	return file_choreo_proto_rawDescGZIP(), []int{9, 1}
-}
-
-func (x *List_Response) GetObject() []byte {
-	if x != nil {
-		return x.Object
-	}
-	return nil
-}
-
-type List_Options struct {
-	state         protoimpl.MessageState
-	sizeCache     protoimpl.SizeCache
-	unknownFields protoimpl.UnknownFields
-
-	ProxyName      string `protobuf:"bytes,1,opt,name=proxyName,proto3" json:"proxyName,omitempty"`
-	ProxyNamespace string `protobuf:"bytes,2,opt,name=proxyNamespace,proto3" json:"proxyNamespace,omitempty"`
-}
-
-func (x *List_Options) Reset() {
-	*x = List_Options{}
-	if protoimpl.UnsafeEnabled {
-		mi := &file_choreo_proto_msgTypes[39]
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		ms.StoreMessageInfo(mi)
-	}
-}
-
-func (x *List_Options) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*List_Options) ProtoMessage() {}
-
-func (x *List_Options) ProtoReflect() protoreflect.Message {
-	mi := &file_choreo_proto_msgTypes[39]
-	if protoimpl.UnsafeEnabled && x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use List_Options.ProtoReflect.Descriptor instead.
-func (*List_Options) Descriptor() ([]byte, []int) {
-	return file_choreo_proto_rawDescGZIP(), []int{9, 2}
-}
-
-func (x *List_Options) GetProxyName() string {
-	if x != nil {
-		return x.ProxyName
-	}
-	return ""
-}
-
-func (x *List_Options) GetProxyNamespace() string {
 	if x != nil {
 		return x.ProxyNamespace
 	}
@@ -2097,145 +838,19 @@ var file_choreo_proto_rawDesc = []byte{
 	0x05, 0x45, 0x52, 0x52, 0x4f, 0x52, 0x10, 0x00, 0x12, 0x09, 0x0a, 0x05, 0x41, 0x44, 0x44, 0x45,
 	0x44, 0x10, 0x01, 0x12, 0x0c, 0x0a, 0x08, 0x4d, 0x4f, 0x44, 0x49, 0x46, 0x49, 0x45, 0x44, 0x10,
 	0x02, 0x12, 0x0b, 0x0a, 0x07, 0x44, 0x45, 0x4c, 0x45, 0x54, 0x45, 0x44, 0x10, 0x03, 0x12, 0x0c,
-	0x0a, 0x08, 0x42, 0x4f, 0x4f, 0x4b, 0x4d, 0x41, 0x52, 0x4b, 0x10, 0x04, 0x22, 0xa2, 0x01, 0x0a,
-	0x05, 0x53, 0x74, 0x61, 0x72, 0x74, 0x1a, 0x3c, 0x0a, 0x07, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73,
-	0x74, 0x12, 0x31, 0x0a, 0x07, 0x6f, 0x70, 0x74, 0x69, 0x6f, 0x6e, 0x73, 0x18, 0x01, 0x20, 0x01,
-	0x28, 0x0b, 0x32, 0x17, 0x2e, 0x63, 0x68, 0x6f, 0x72, 0x65, 0x6f, 0x70, 0x62, 0x2e, 0x53, 0x74,
-	0x61, 0x72, 0x74, 0x2e, 0x4f, 0x70, 0x74, 0x69, 0x6f, 0x6e, 0x73, 0x52, 0x07, 0x6f, 0x70, 0x74,
-	0x69, 0x6f, 0x6e, 0x73, 0x1a, 0x0a, 0x0a, 0x08, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65,
-	0x1a, 0x4f, 0x0a, 0x07, 0x4f, 0x70, 0x74, 0x69, 0x6f, 0x6e, 0x73, 0x12, 0x1c, 0x0a, 0x09, 0x70,
-	0x72, 0x6f, 0x78, 0x79, 0x4e, 0x61, 0x6d, 0x65, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x09,
-	0x70, 0x72, 0x6f, 0x78, 0x79, 0x4e, 0x61, 0x6d, 0x65, 0x12, 0x26, 0x0a, 0x0e, 0x70, 0x72, 0x6f,
-	0x78, 0x79, 0x4e, 0x61, 0x6d, 0x65, 0x73, 0x70, 0x61, 0x63, 0x65, 0x18, 0x02, 0x20, 0x01, 0x28,
-	0x09, 0x52, 0x0e, 0x70, 0x72, 0x6f, 0x78, 0x79, 0x4e, 0x61, 0x6d, 0x65, 0x73, 0x70, 0x61, 0x63,
-	0x65, 0x22, 0xa0, 0x01, 0x0a, 0x04, 0x53, 0x74, 0x6f, 0x70, 0x1a, 0x3b, 0x0a, 0x07, 0x52, 0x65,
-	0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x30, 0x0a, 0x07, 0x6f, 0x70, 0x74, 0x69, 0x6f, 0x6e, 0x73,
-	0x18, 0x01, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x16, 0x2e, 0x63, 0x68, 0x6f, 0x72, 0x65, 0x6f, 0x70,
-	0x62, 0x2e, 0x53, 0x74, 0x6f, 0x70, 0x2e, 0x4f, 0x70, 0x74, 0x69, 0x6f, 0x6e, 0x73, 0x52, 0x07,
-	0x6f, 0x70, 0x74, 0x69, 0x6f, 0x6e, 0x73, 0x1a, 0x0a, 0x0a, 0x08, 0x52, 0x65, 0x73, 0x70, 0x6f,
-	0x6e, 0x73, 0x65, 0x1a, 0x4f, 0x0a, 0x07, 0x4f, 0x70, 0x74, 0x69, 0x6f, 0x6e, 0x73, 0x12, 0x1c,
-	0x0a, 0x09, 0x70, 0x72, 0x6f, 0x78, 0x79, 0x4e, 0x61, 0x6d, 0x65, 0x18, 0x01, 0x20, 0x01, 0x28,
-	0x09, 0x52, 0x09, 0x70, 0x72, 0x6f, 0x78, 0x79, 0x4e, 0x61, 0x6d, 0x65, 0x12, 0x26, 0x0a, 0x0e,
-	0x70, 0x72, 0x6f, 0x78, 0x79, 0x4e, 0x61, 0x6d, 0x65, 0x73, 0x70, 0x61, 0x63, 0x65, 0x18, 0x02,
-	0x20, 0x01, 0x28, 0x09, 0x52, 0x0e, 0x70, 0x72, 0x6f, 0x78, 0x79, 0x4e, 0x61, 0x6d, 0x65, 0x73,
-	0x70, 0x61, 0x63, 0x65, 0x22, 0xe4, 0x04, 0x0a, 0x04, 0x4f, 0x6e, 0x63, 0x65, 0x1a, 0x3b, 0x0a,
-	0x07, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x30, 0x0a, 0x07, 0x6f, 0x70, 0x74, 0x69,
-	0x6f, 0x6e, 0x73, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x16, 0x2e, 0x63, 0x68, 0x6f, 0x72,
-	0x65, 0x6f, 0x70, 0x62, 0x2e, 0x4f, 0x6e, 0x63, 0x65, 0x2e, 0x4f, 0x70, 0x74, 0x69, 0x6f, 0x6e,
-	0x73, 0x52, 0x07, 0x6f, 0x70, 0x74, 0x69, 0x6f, 0x6e, 0x73, 0x1a, 0x4f, 0x0a, 0x07, 0x4f, 0x70,
-	0x74, 0x69, 0x6f, 0x6e, 0x73, 0x12, 0x1c, 0x0a, 0x09, 0x70, 0x72, 0x6f, 0x78, 0x79, 0x4e, 0x61,
-	0x6d, 0x65, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x09, 0x70, 0x72, 0x6f, 0x78, 0x79, 0x4e,
-	0x61, 0x6d, 0x65, 0x12, 0x26, 0x0a, 0x0e, 0x70, 0x72, 0x6f, 0x78, 0x79, 0x4e, 0x61, 0x6d, 0x65,
-	0x73, 0x70, 0x61, 0x63, 0x65, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x0e, 0x70, 0x72, 0x6f,
-	0x78, 0x79, 0x4e, 0x61, 0x6d, 0x65, 0x73, 0x70, 0x61, 0x63, 0x65, 0x1a, 0x9f, 0x02, 0x0a, 0x08,
-	0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x24, 0x0a, 0x0d, 0x65, 0x78, 0x65, 0x63,
-	0x75, 0x74, 0x69, 0x6f, 0x6e, 0x54, 0x69, 0x6d, 0x65, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52,
-	0x0d, 0x65, 0x78, 0x65, 0x63, 0x75, 0x74, 0x69, 0x6f, 0x6e, 0x54, 0x69, 0x6d, 0x65, 0x12, 0x18,
-	0x0a, 0x07, 0x73, 0x75, 0x63, 0x63, 0x65, 0x73, 0x73, 0x18, 0x02, 0x20, 0x01, 0x28, 0x08, 0x52,
-	0x07, 0x73, 0x75, 0x63, 0x63, 0x65, 0x73, 0x73, 0x12, 0x22, 0x0a, 0x0c, 0x72, 0x65, 0x63, 0x6f,
-	0x6e, 0x63, 0x69, 0x6c, 0x65, 0x52, 0x65, 0x66, 0x18, 0x03, 0x20, 0x01, 0x28, 0x09, 0x52, 0x0c,
-	0x72, 0x65, 0x63, 0x6f, 0x6e, 0x63, 0x69, 0x6c, 0x65, 0x52, 0x65, 0x66, 0x12, 0x18, 0x0a, 0x07,
-	0x6d, 0x65, 0x73, 0x73, 0x61, 0x67, 0x65, 0x18, 0x04, 0x20, 0x01, 0x28, 0x09, 0x52, 0x07, 0x6d,
-	0x65, 0x73, 0x73, 0x61, 0x67, 0x65, 0x12, 0x3e, 0x0a, 0x07, 0x72, 0x65, 0x73, 0x75, 0x6c, 0x74,
-	0x73, 0x18, 0x05, 0x20, 0x03, 0x28, 0x0b, 0x32, 0x24, 0x2e, 0x63, 0x68, 0x6f, 0x72, 0x65, 0x6f,
-	0x70, 0x62, 0x2e, 0x4f, 0x6e, 0x63, 0x65, 0x2e, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65,
-	0x2e, 0x52, 0x65, 0x73, 0x75, 0x6c, 0x74, 0x73, 0x45, 0x6e, 0x74, 0x72, 0x79, 0x52, 0x07, 0x72,
-	0x65, 0x73, 0x75, 0x6c, 0x74, 0x73, 0x1a, 0x55, 0x0a, 0x0c, 0x52, 0x65, 0x73, 0x75, 0x6c, 0x74,
-	0x73, 0x45, 0x6e, 0x74, 0x72, 0x79, 0x12, 0x10, 0x0a, 0x03, 0x6b, 0x65, 0x79, 0x18, 0x01, 0x20,
-	0x01, 0x28, 0x09, 0x52, 0x03, 0x6b, 0x65, 0x79, 0x12, 0x2f, 0x0a, 0x05, 0x76, 0x61, 0x6c, 0x75,
-	0x65, 0x18, 0x02, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x19, 0x2e, 0x63, 0x68, 0x6f, 0x72, 0x65, 0x6f,
-	0x70, 0x62, 0x2e, 0x4f, 0x6e, 0x63, 0x65, 0x2e, 0x4f, 0x70, 0x65, 0x72, 0x61, 0x74, 0x69, 0x6f,
-	0x6e, 0x73, 0x52, 0x05, 0x76, 0x61, 0x6c, 0x75, 0x65, 0x3a, 0x02, 0x38, 0x01, 0x1a, 0xab, 0x01,
-	0x0a, 0x0a, 0x4f, 0x70, 0x65, 0x72, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x73, 0x12, 0x59, 0x0a, 0x10,
-	0x6f, 0x70, 0x65, 0x72, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x5f, 0x63, 0x6f, 0x75, 0x6e, 0x74, 0x73,
-	0x18, 0x01, 0x20, 0x03, 0x28, 0x0b, 0x32, 0x2e, 0x2e, 0x63, 0x68, 0x6f, 0x72, 0x65, 0x6f, 0x70,
-	0x62, 0x2e, 0x4f, 0x6e, 0x63, 0x65, 0x2e, 0x4f, 0x70, 0x65, 0x72, 0x61, 0x74, 0x69, 0x6f, 0x6e,
-	0x73, 0x2e, 0x4f, 0x70, 0x65, 0x72, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x43, 0x6f, 0x75, 0x6e, 0x74,
-	0x73, 0x45, 0x6e, 0x74, 0x72, 0x79, 0x52, 0x0f, 0x6f, 0x70, 0x65, 0x72, 0x61, 0x74, 0x69, 0x6f,
-	0x6e, 0x43, 0x6f, 0x75, 0x6e, 0x74, 0x73, 0x1a, 0x42, 0x0a, 0x14, 0x4f, 0x70, 0x65, 0x72, 0x61,
-	0x74, 0x69, 0x6f, 0x6e, 0x43, 0x6f, 0x75, 0x6e, 0x74, 0x73, 0x45, 0x6e, 0x74, 0x72, 0x79, 0x12,
-	0x10, 0x0a, 0x03, 0x6b, 0x65, 0x79, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x03, 0x6b, 0x65,
-	0x79, 0x12, 0x14, 0x0a, 0x05, 0x76, 0x61, 0x6c, 0x75, 0x65, 0x18, 0x02, 0x20, 0x01, 0x28, 0x05,
-	0x52, 0x05, 0x76, 0x61, 0x6c, 0x75, 0x65, 0x3a, 0x02, 0x38, 0x01, 0x22, 0xb8, 0x01, 0x0a, 0x04,
-	0x4c, 0x6f, 0x61, 0x64, 0x1a, 0x3b, 0x0a, 0x07, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12,
-	0x30, 0x0a, 0x07, 0x6f, 0x70, 0x74, 0x69, 0x6f, 0x6e, 0x73, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0b,
-	0x32, 0x16, 0x2e, 0x63, 0x68, 0x6f, 0x72, 0x65, 0x6f, 0x70, 0x62, 0x2e, 0x4c, 0x6f, 0x61, 0x64,
-	0x2e, 0x4f, 0x70, 0x74, 0x69, 0x6f, 0x6e, 0x73, 0x52, 0x07, 0x6f, 0x70, 0x74, 0x69, 0x6f, 0x6e,
-	0x73, 0x1a, 0x22, 0x0a, 0x08, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x16, 0x0a,
-	0x06, 0x6f, 0x62, 0x6a, 0x65, 0x63, 0x74, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0c, 0x52, 0x06, 0x6f,
-	0x62, 0x6a, 0x65, 0x63, 0x74, 0x1a, 0x4f, 0x0a, 0x07, 0x4f, 0x70, 0x74, 0x69, 0x6f, 0x6e, 0x73,
-	0x12, 0x1c, 0x0a, 0x09, 0x70, 0x72, 0x6f, 0x78, 0x79, 0x4e, 0x61, 0x6d, 0x65, 0x18, 0x01, 0x20,
-	0x01, 0x28, 0x09, 0x52, 0x09, 0x70, 0x72, 0x6f, 0x78, 0x79, 0x4e, 0x61, 0x6d, 0x65, 0x12, 0x26,
-	0x0a, 0x0e, 0x70, 0x72, 0x6f, 0x78, 0x79, 0x4e, 0x61, 0x6d, 0x65, 0x73, 0x70, 0x61, 0x63, 0x65,
-	0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x0e, 0x70, 0x72, 0x6f, 0x78, 0x79, 0x4e, 0x61, 0x6d,
-	0x65, 0x73, 0x70, 0x61, 0x63, 0x65, 0x22, 0x8d, 0x02, 0x0a, 0x04, 0x44, 0x69, 0x66, 0x66, 0x1a,
-	0x3b, 0x0a, 0x07, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x30, 0x0a, 0x07, 0x6f, 0x70,
-	0x74, 0x69, 0x6f, 0x6e, 0x73, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x16, 0x2e, 0x63, 0x68,
-	0x6f, 0x72, 0x65, 0x6f, 0x70, 0x62, 0x2e, 0x44, 0x69, 0x66, 0x66, 0x2e, 0x4f, 0x70, 0x74, 0x69,
-	0x6f, 0x6e, 0x73, 0x52, 0x07, 0x6f, 0x70, 0x74, 0x69, 0x6f, 0x6e, 0x73, 0x1a, 0x22, 0x0a, 0x08,
-	0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x16, 0x0a, 0x06, 0x6f, 0x62, 0x6a, 0x65,
-	0x63, 0x74, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0c, 0x52, 0x06, 0x6f, 0x62, 0x6a, 0x65, 0x63, 0x74,
-	0x1a, 0xa3, 0x01, 0x0a, 0x07, 0x4f, 0x70, 0x74, 0x69, 0x6f, 0x6e, 0x73, 0x12, 0x1c, 0x0a, 0x09,
-	0x70, 0x72, 0x6f, 0x78, 0x79, 0x4e, 0x61, 0x6d, 0x65, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52,
-	0x09, 0x70, 0x72, 0x6f, 0x78, 0x79, 0x4e, 0x61, 0x6d, 0x65, 0x12, 0x26, 0x0a, 0x0e, 0x70, 0x72,
-	0x6f, 0x78, 0x79, 0x4e, 0x61, 0x6d, 0x65, 0x73, 0x70, 0x61, 0x63, 0x65, 0x18, 0x02, 0x20, 0x01,
-	0x28, 0x09, 0x52, 0x0e, 0x70, 0x72, 0x6f, 0x78, 0x79, 0x4e, 0x61, 0x6d, 0x65, 0x73, 0x70, 0x61,
-	0x63, 0x65, 0x12, 0x2a, 0x0a, 0x10, 0x73, 0x68, 0x6f, 0x77, 0x4d, 0x61, 0x6e, 0x61, 0x67, 0x65,
-	0x64, 0x46, 0x69, 0x65, 0x6c, 0x64, 0x18, 0x03, 0x20, 0x01, 0x28, 0x08, 0x52, 0x10, 0x73, 0x68,
-	0x6f, 0x77, 0x4d, 0x61, 0x6e, 0x61, 0x67, 0x65, 0x64, 0x46, 0x69, 0x65, 0x6c, 0x64, 0x12, 0x26,
-	0x0a, 0x0e, 0x73, 0x68, 0x6f, 0x77, 0x43, 0x68, 0x6f, 0x72, 0x65, 0x6f, 0x41, 0x50, 0x49, 0x73,
-	0x18, 0x04, 0x20, 0x01, 0x28, 0x08, 0x52, 0x0e, 0x73, 0x68, 0x6f, 0x77, 0x43, 0x68, 0x6f, 0x72,
-	0x65, 0x6f, 0x41, 0x50, 0x49, 0x73, 0x22, 0xb8, 0x01, 0x0a, 0x04, 0x4c, 0x69, 0x73, 0x74, 0x1a,
-	0x3b, 0x0a, 0x07, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x30, 0x0a, 0x07, 0x6f, 0x70,
-	0x74, 0x69, 0x6f, 0x6e, 0x73, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x16, 0x2e, 0x63, 0x68,
-	0x6f, 0x72, 0x65, 0x6f, 0x70, 0x62, 0x2e, 0x4c, 0x69, 0x73, 0x74, 0x2e, 0x4f, 0x70, 0x74, 0x69,
-	0x6f, 0x6e, 0x73, 0x52, 0x07, 0x6f, 0x70, 0x74, 0x69, 0x6f, 0x6e, 0x73, 0x1a, 0x22, 0x0a, 0x08,
-	0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x16, 0x0a, 0x06, 0x6f, 0x62, 0x6a, 0x65,
-	0x63, 0x74, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0c, 0x52, 0x06, 0x6f, 0x62, 0x6a, 0x65, 0x63, 0x74,
-	0x1a, 0x4f, 0x0a, 0x07, 0x4f, 0x70, 0x74, 0x69, 0x6f, 0x6e, 0x73, 0x12, 0x1c, 0x0a, 0x09, 0x70,
-	0x72, 0x6f, 0x78, 0x79, 0x4e, 0x61, 0x6d, 0x65, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x09,
-	0x70, 0x72, 0x6f, 0x78, 0x79, 0x4e, 0x61, 0x6d, 0x65, 0x12, 0x26, 0x0a, 0x0e, 0x70, 0x72, 0x6f,
-	0x78, 0x79, 0x4e, 0x61, 0x6d, 0x65, 0x73, 0x70, 0x61, 0x63, 0x65, 0x18, 0x02, 0x20, 0x01, 0x28,
-	0x09, 0x52, 0x0e, 0x70, 0x72, 0x6f, 0x78, 0x79, 0x4e, 0x61, 0x6d, 0x65, 0x73, 0x70, 0x61, 0x63,
-	0x65, 0x2a, 0x45, 0x0a, 0x09, 0x4f, 0x70, 0x65, 0x72, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x12, 0x0b,
-	0x0a, 0x07, 0x55, 0x4e, 0x4b, 0x4e, 0x4f, 0x57, 0x4e, 0x10, 0x00, 0x12, 0x09, 0x0a, 0x05, 0x53,
-	0x54, 0x41, 0x52, 0x54, 0x10, 0x01, 0x12, 0x08, 0x0a, 0x04, 0x53, 0x54, 0x4f, 0x50, 0x10, 0x02,
-	0x12, 0x09, 0x0a, 0x05, 0x45, 0x52, 0x52, 0x4f, 0x52, 0x10, 0x03, 0x12, 0x0b, 0x0a, 0x07, 0x52,
-	0x45, 0x51, 0x55, 0x45, 0x55, 0x45, 0x10, 0x04, 0x32, 0xe3, 0x03, 0x0a, 0x06, 0x43, 0x68, 0x6f,
-	0x72, 0x65, 0x6f, 0x12, 0x36, 0x0a, 0x03, 0x47, 0x65, 0x74, 0x12, 0x15, 0x2e, 0x63, 0x68, 0x6f,
-	0x72, 0x65, 0x6f, 0x70, 0x62, 0x2e, 0x47, 0x65, 0x74, 0x2e, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73,
-	0x74, 0x1a, 0x16, 0x2e, 0x63, 0x68, 0x6f, 0x72, 0x65, 0x6f, 0x70, 0x62, 0x2e, 0x47, 0x65, 0x74,
-	0x2e, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x22, 0x00, 0x12, 0x3c, 0x0a, 0x05, 0x41,
-	0x70, 0x70, 0x6c, 0x79, 0x12, 0x17, 0x2e, 0x63, 0x68, 0x6f, 0x72, 0x65, 0x6f, 0x70, 0x62, 0x2e,
-	0x41, 0x70, 0x70, 0x6c, 0x79, 0x2e, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x18, 0x2e,
-	0x63, 0x68, 0x6f, 0x72, 0x65, 0x6f, 0x70, 0x62, 0x2e, 0x41, 0x70, 0x70, 0x6c, 0x79, 0x2e, 0x52,
-	0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x22, 0x00, 0x12, 0x3c, 0x0a, 0x05, 0x53, 0x74, 0x61,
-	0x72, 0x74, 0x12, 0x17, 0x2e, 0x63, 0x68, 0x6f, 0x72, 0x65, 0x6f, 0x70, 0x62, 0x2e, 0x53, 0x74,
-	0x61, 0x72, 0x74, 0x2e, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x18, 0x2e, 0x63, 0x68,
-	0x6f, 0x72, 0x65, 0x6f, 0x70, 0x62, 0x2e, 0x53, 0x74, 0x61, 0x72, 0x74, 0x2e, 0x52, 0x65, 0x73,
-	0x70, 0x6f, 0x6e, 0x73, 0x65, 0x22, 0x00, 0x12, 0x39, 0x0a, 0x04, 0x53, 0x74, 0x6f, 0x70, 0x12,
-	0x16, 0x2e, 0x63, 0x68, 0x6f, 0x72, 0x65, 0x6f, 0x70, 0x62, 0x2e, 0x53, 0x74, 0x6f, 0x70, 0x2e,
-	0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x17, 0x2e, 0x63, 0x68, 0x6f, 0x72, 0x65, 0x6f,
-	0x70, 0x62, 0x2e, 0x53, 0x74, 0x6f, 0x70, 0x2e, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65,
-	0x22, 0x00, 0x12, 0x39, 0x0a, 0x04, 0x4f, 0x6e, 0x63, 0x65, 0x12, 0x16, 0x2e, 0x63, 0x68, 0x6f,
-	0x72, 0x65, 0x6f, 0x70, 0x62, 0x2e, 0x4f, 0x6e, 0x63, 0x65, 0x2e, 0x52, 0x65, 0x71, 0x75, 0x65,
-	0x73, 0x74, 0x1a, 0x17, 0x2e, 0x63, 0x68, 0x6f, 0x72, 0x65, 0x6f, 0x70, 0x62, 0x2e, 0x4f, 0x6e,
-	0x63, 0x65, 0x2e, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x22, 0x00, 0x12, 0x39, 0x0a,
-	0x04, 0x4c, 0x6f, 0x61, 0x64, 0x12, 0x16, 0x2e, 0x63, 0x68, 0x6f, 0x72, 0x65, 0x6f, 0x70, 0x62,
-	0x2e, 0x4c, 0x6f, 0x61, 0x64, 0x2e, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x17, 0x2e,
-	0x63, 0x68, 0x6f, 0x72, 0x65, 0x6f, 0x70, 0x62, 0x2e, 0x4c, 0x6f, 0x61, 0x64, 0x2e, 0x52, 0x65,
-	0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x22, 0x00, 0x12, 0x39, 0x0a, 0x04, 0x44, 0x69, 0x66, 0x66,
-	0x12, 0x16, 0x2e, 0x63, 0x68, 0x6f, 0x72, 0x65, 0x6f, 0x70, 0x62, 0x2e, 0x44, 0x69, 0x66, 0x66,
-	0x2e, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x17, 0x2e, 0x63, 0x68, 0x6f, 0x72, 0x65,
-	0x6f, 0x70, 0x62, 0x2e, 0x44, 0x69, 0x66, 0x66, 0x2e, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73,
-	0x65, 0x22, 0x00, 0x12, 0x39, 0x0a, 0x04, 0x4c, 0x69, 0x73, 0x74, 0x12, 0x16, 0x2e, 0x63, 0x68,
-	0x6f, 0x72, 0x65, 0x6f, 0x70, 0x62, 0x2e, 0x4c, 0x69, 0x73, 0x74, 0x2e, 0x52, 0x65, 0x71, 0x75,
-	0x65, 0x73, 0x74, 0x1a, 0x17, 0x2e, 0x63, 0x68, 0x6f, 0x72, 0x65, 0x6f, 0x70, 0x62, 0x2e, 0x4c,
-	0x69, 0x73, 0x74, 0x2e, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x22, 0x00, 0x42, 0x30,
-	0x5a, 0x2e, 0x67, 0x69, 0x74, 0x68, 0x75, 0x62, 0x2e, 0x63, 0x6f, 0x6d, 0x2f, 0x6b, 0x66, 0x6f,
-	0x72, 0x6d, 0x2d, 0x64, 0x65, 0x76, 0x2f, 0x63, 0x68, 0x6f, 0x72, 0x65, 0x6f, 0x2f, 0x70, 0x6b,
-	0x67, 0x2f, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x2f, 0x63, 0x68, 0x6f, 0x72, 0x65, 0x6f, 0x70, 0x62,
-	0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
+	0x0a, 0x08, 0x42, 0x4f, 0x4f, 0x4b, 0x4d, 0x41, 0x52, 0x4b, 0x10, 0x04, 0x32, 0x7e, 0x0a, 0x06,
+	0x43, 0x68, 0x6f, 0x72, 0x65, 0x6f, 0x12, 0x36, 0x0a, 0x03, 0x47, 0x65, 0x74, 0x12, 0x15, 0x2e,
+	0x63, 0x68, 0x6f, 0x72, 0x65, 0x6f, 0x70, 0x62, 0x2e, 0x47, 0x65, 0x74, 0x2e, 0x52, 0x65, 0x71,
+	0x75, 0x65, 0x73, 0x74, 0x1a, 0x16, 0x2e, 0x63, 0x68, 0x6f, 0x72, 0x65, 0x6f, 0x70, 0x62, 0x2e,
+	0x47, 0x65, 0x74, 0x2e, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x22, 0x00, 0x12, 0x3c,
+	0x0a, 0x05, 0x41, 0x70, 0x70, 0x6c, 0x79, 0x12, 0x17, 0x2e, 0x63, 0x68, 0x6f, 0x72, 0x65, 0x6f,
+	0x70, 0x62, 0x2e, 0x41, 0x70, 0x70, 0x6c, 0x79, 0x2e, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74,
+	0x1a, 0x18, 0x2e, 0x63, 0x68, 0x6f, 0x72, 0x65, 0x6f, 0x70, 0x62, 0x2e, 0x41, 0x70, 0x70, 0x6c,
+	0x79, 0x2e, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x22, 0x00, 0x42, 0x30, 0x5a, 0x2e,
+	0x67, 0x69, 0x74, 0x68, 0x75, 0x62, 0x2e, 0x63, 0x6f, 0x6d, 0x2f, 0x6b, 0x66, 0x6f, 0x72, 0x6d,
+	0x2d, 0x64, 0x65, 0x76, 0x2f, 0x63, 0x68, 0x6f, 0x72, 0x65, 0x6f, 0x2f, 0x70, 0x6b, 0x67, 0x2f,
+	0x70, 0x72, 0x6f, 0x74, 0x6f, 0x2f, 0x63, 0x68, 0x6f, 0x72, 0x65, 0x6f, 0x70, 0x62, 0x62, 0x06,
+	0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
 }
 
 var (
@@ -2250,90 +865,41 @@ func file_choreo_proto_rawDescGZIP() []byte {
 	return file_choreo_proto_rawDescData
 }
 
-var file_choreo_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
-var file_choreo_proto_msgTypes = make([]protoimpl.MessageInfo, 40)
+var file_choreo_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
+var file_choreo_proto_msgTypes = make([]protoimpl.MessageInfo, 13)
 var file_choreo_proto_goTypes = []interface{}{
-	(Operation)(0),          // 0: choreopb.Operation
-	(Watch_EventType)(0),    // 1: choreopb.Watch.EventType
-	(*ChoreoContext)(nil),   // 2: choreopb.ChoreoContext
-	(*Get)(nil),             // 3: choreopb.Get
-	(*Apply)(nil),           // 4: choreopb.Apply
-	(*Watch)(nil),           // 5: choreopb.Watch
-	(*Start)(nil),           // 6: choreopb.Start
-	(*Stop)(nil),            // 7: choreopb.Stop
-	(*Once)(nil),            // 8: choreopb.Once
-	(*Load)(nil),            // 9: choreopb.Load
-	(*Diff)(nil),            // 10: choreopb.Diff
-	(*List)(nil),            // 11: choreopb.List
-	(*Get_Request)(nil),     // 12: choreopb.Get.Request
-	(*Get_Response)(nil),    // 13: choreopb.Get.Response
-	(*Get_Options)(nil),     // 14: choreopb.Get.Options
-	(*Apply_Request)(nil),   // 15: choreopb.Apply.Request
-	(*Apply_Response)(nil),  // 16: choreopb.Apply.Response
-	(*Apply_Options)(nil),   // 17: choreopb.Apply.Options
-	(*Watch_Request)(nil),   // 18: choreopb.Watch.Request
-	(*Watch_Response)(nil),  // 19: choreopb.Watch.Response
-	(*Watch_Options)(nil),   // 20: choreopb.Watch.Options
-	(*Start_Request)(nil),   // 21: choreopb.Start.Request
-	(*Start_Response)(nil),  // 22: choreopb.Start.Response
-	(*Start_Options)(nil),   // 23: choreopb.Start.Options
-	(*Stop_Request)(nil),    // 24: choreopb.Stop.Request
-	(*Stop_Response)(nil),   // 25: choreopb.Stop.Response
-	(*Stop_Options)(nil),    // 26: choreopb.Stop.Options
-	(*Once_Request)(nil),    // 27: choreopb.Once.Request
-	(*Once_Options)(nil),    // 28: choreopb.Once.Options
-	(*Once_Response)(nil),   // 29: choreopb.Once.Response
-	(*Once_Operations)(nil), // 30: choreopb.Once.Operations
-	nil,                     // 31: choreopb.Once.Response.ResultsEntry
-	nil,                     // 32: choreopb.Once.Operations.OperationCountsEntry
-	(*Load_Request)(nil),    // 33: choreopb.Load.Request
-	(*Load_Response)(nil),   // 34: choreopb.Load.Response
-	(*Load_Options)(nil),    // 35: choreopb.Load.Options
-	(*Diff_Request)(nil),    // 36: choreopb.Diff.Request
-	(*Diff_Response)(nil),   // 37: choreopb.Diff.Response
-	(*Diff_Options)(nil),    // 38: choreopb.Diff.Options
-	(*List_Request)(nil),    // 39: choreopb.List.Request
-	(*List_Response)(nil),   // 40: choreopb.List.Response
-	(*List_Options)(nil),    // 41: choreopb.List.Options
+	(Watch_EventType)(0),   // 0: choreopb.Watch.EventType
+	(*ChoreoContext)(nil),  // 1: choreopb.ChoreoContext
+	(*Get)(nil),            // 2: choreopb.Get
+	(*Apply)(nil),          // 3: choreopb.Apply
+	(*Watch)(nil),          // 4: choreopb.Watch
+	(*Get_Request)(nil),    // 5: choreopb.Get.Request
+	(*Get_Response)(nil),   // 6: choreopb.Get.Response
+	(*Get_Options)(nil),    // 7: choreopb.Get.Options
+	(*Apply_Request)(nil),  // 8: choreopb.Apply.Request
+	(*Apply_Response)(nil), // 9: choreopb.Apply.Response
+	(*Apply_Options)(nil),  // 10: choreopb.Apply.Options
+	(*Watch_Request)(nil),  // 11: choreopb.Watch.Request
+	(*Watch_Response)(nil), // 12: choreopb.Watch.Response
+	(*Watch_Options)(nil),  // 13: choreopb.Watch.Options
 }
 var file_choreo_proto_depIdxs = []int32{
-	14, // 0: choreopb.Get.Request.options:type_name -> choreopb.Get.Options
-	2,  // 1: choreopb.Get.Response.choreoContext:type_name -> choreopb.ChoreoContext
-	2,  // 2: choreopb.Apply.Request.choreoContext:type_name -> choreopb.ChoreoContext
-	17, // 3: choreopb.Apply.Request.options:type_name -> choreopb.Apply.Options
-	20, // 4: choreopb.Watch.Request.options:type_name -> choreopb.Watch.Options
-	2,  // 5: choreopb.Watch.Response.choreoContext:type_name -> choreopb.ChoreoContext
-	1,  // 6: choreopb.Watch.Response.eventType:type_name -> choreopb.Watch.EventType
-	23, // 7: choreopb.Start.Request.options:type_name -> choreopb.Start.Options
-	26, // 8: choreopb.Stop.Request.options:type_name -> choreopb.Stop.Options
-	28, // 9: choreopb.Once.Request.options:type_name -> choreopb.Once.Options
-	31, // 10: choreopb.Once.Response.results:type_name -> choreopb.Once.Response.ResultsEntry
-	32, // 11: choreopb.Once.Operations.operation_counts:type_name -> choreopb.Once.Operations.OperationCountsEntry
-	30, // 12: choreopb.Once.Response.ResultsEntry.value:type_name -> choreopb.Once.Operations
-	35, // 13: choreopb.Load.Request.options:type_name -> choreopb.Load.Options
-	38, // 14: choreopb.Diff.Request.options:type_name -> choreopb.Diff.Options
-	41, // 15: choreopb.List.Request.options:type_name -> choreopb.List.Options
-	12, // 16: choreopb.Choreo.Get:input_type -> choreopb.Get.Request
-	15, // 17: choreopb.Choreo.Apply:input_type -> choreopb.Apply.Request
-	21, // 18: choreopb.Choreo.Start:input_type -> choreopb.Start.Request
-	24, // 19: choreopb.Choreo.Stop:input_type -> choreopb.Stop.Request
-	27, // 20: choreopb.Choreo.Once:input_type -> choreopb.Once.Request
-	33, // 21: choreopb.Choreo.Load:input_type -> choreopb.Load.Request
-	36, // 22: choreopb.Choreo.Diff:input_type -> choreopb.Diff.Request
-	39, // 23: choreopb.Choreo.List:input_type -> choreopb.List.Request
-	13, // 24: choreopb.Choreo.Get:output_type -> choreopb.Get.Response
-	16, // 25: choreopb.Choreo.Apply:output_type -> choreopb.Apply.Response
-	22, // 26: choreopb.Choreo.Start:output_type -> choreopb.Start.Response
-	25, // 27: choreopb.Choreo.Stop:output_type -> choreopb.Stop.Response
-	29, // 28: choreopb.Choreo.Once:output_type -> choreopb.Once.Response
-	34, // 29: choreopb.Choreo.Load:output_type -> choreopb.Load.Response
-	37, // 30: choreopb.Choreo.Diff:output_type -> choreopb.Diff.Response
-	40, // 31: choreopb.Choreo.List:output_type -> choreopb.List.Response
-	24, // [24:32] is the sub-list for method output_type
-	16, // [16:24] is the sub-list for method input_type
-	16, // [16:16] is the sub-list for extension type_name
-	16, // [16:16] is the sub-list for extension extendee
-	0,  // [0:16] is the sub-list for field type_name
+	7,  // 0: choreopb.Get.Request.options:type_name -> choreopb.Get.Options
+	1,  // 1: choreopb.Get.Response.choreoContext:type_name -> choreopb.ChoreoContext
+	1,  // 2: choreopb.Apply.Request.choreoContext:type_name -> choreopb.ChoreoContext
+	10, // 3: choreopb.Apply.Request.options:type_name -> choreopb.Apply.Options
+	13, // 4: choreopb.Watch.Request.options:type_name -> choreopb.Watch.Options
+	1,  // 5: choreopb.Watch.Response.choreoContext:type_name -> choreopb.ChoreoContext
+	0,  // 6: choreopb.Watch.Response.eventType:type_name -> choreopb.Watch.EventType
+	5,  // 7: choreopb.Choreo.Get:input_type -> choreopb.Get.Request
+	8,  // 8: choreopb.Choreo.Apply:input_type -> choreopb.Apply.Request
+	6,  // 9: choreopb.Choreo.Get:output_type -> choreopb.Get.Response
+	9,  // 10: choreopb.Choreo.Apply:output_type -> choreopb.Apply.Response
+	9,  // [9:11] is the sub-list for method output_type
+	7,  // [7:9] is the sub-list for method input_type
+	7,  // [7:7] is the sub-list for extension type_name
+	7,  // [7:7] is the sub-list for extension extendee
+	0,  // [0:7] is the sub-list for field type_name
 }
 
 func init() { file_choreo_proto_init() }
@@ -2391,78 +957,6 @@ func file_choreo_proto_init() {
 			}
 		}
 		file_choreo_proto_msgTypes[4].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*Start); i {
-			case 0:
-				return &v.state
-			case 1:
-				return &v.sizeCache
-			case 2:
-				return &v.unknownFields
-			default:
-				return nil
-			}
-		}
-		file_choreo_proto_msgTypes[5].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*Stop); i {
-			case 0:
-				return &v.state
-			case 1:
-				return &v.sizeCache
-			case 2:
-				return &v.unknownFields
-			default:
-				return nil
-			}
-		}
-		file_choreo_proto_msgTypes[6].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*Once); i {
-			case 0:
-				return &v.state
-			case 1:
-				return &v.sizeCache
-			case 2:
-				return &v.unknownFields
-			default:
-				return nil
-			}
-		}
-		file_choreo_proto_msgTypes[7].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*Load); i {
-			case 0:
-				return &v.state
-			case 1:
-				return &v.sizeCache
-			case 2:
-				return &v.unknownFields
-			default:
-				return nil
-			}
-		}
-		file_choreo_proto_msgTypes[8].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*Diff); i {
-			case 0:
-				return &v.state
-			case 1:
-				return &v.sizeCache
-			case 2:
-				return &v.unknownFields
-			default:
-				return nil
-			}
-		}
-		file_choreo_proto_msgTypes[9].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*List); i {
-			case 0:
-				return &v.state
-			case 1:
-				return &v.sizeCache
-			case 2:
-				return &v.unknownFields
-			default:
-				return nil
-			}
-		}
-		file_choreo_proto_msgTypes[10].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*Get_Request); i {
 			case 0:
 				return &v.state
@@ -2474,7 +968,7 @@ func file_choreo_proto_init() {
 				return nil
 			}
 		}
-		file_choreo_proto_msgTypes[11].Exporter = func(v interface{}, i int) interface{} {
+		file_choreo_proto_msgTypes[5].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*Get_Response); i {
 			case 0:
 				return &v.state
@@ -2486,7 +980,7 @@ func file_choreo_proto_init() {
 				return nil
 			}
 		}
-		file_choreo_proto_msgTypes[12].Exporter = func(v interface{}, i int) interface{} {
+		file_choreo_proto_msgTypes[6].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*Get_Options); i {
 			case 0:
 				return &v.state
@@ -2498,7 +992,7 @@ func file_choreo_proto_init() {
 				return nil
 			}
 		}
-		file_choreo_proto_msgTypes[13].Exporter = func(v interface{}, i int) interface{} {
+		file_choreo_proto_msgTypes[7].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*Apply_Request); i {
 			case 0:
 				return &v.state
@@ -2510,7 +1004,7 @@ func file_choreo_proto_init() {
 				return nil
 			}
 		}
-		file_choreo_proto_msgTypes[14].Exporter = func(v interface{}, i int) interface{} {
+		file_choreo_proto_msgTypes[8].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*Apply_Response); i {
 			case 0:
 				return &v.state
@@ -2522,7 +1016,7 @@ func file_choreo_proto_init() {
 				return nil
 			}
 		}
-		file_choreo_proto_msgTypes[15].Exporter = func(v interface{}, i int) interface{} {
+		file_choreo_proto_msgTypes[9].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*Apply_Options); i {
 			case 0:
 				return &v.state
@@ -2534,7 +1028,7 @@ func file_choreo_proto_init() {
 				return nil
 			}
 		}
-		file_choreo_proto_msgTypes[16].Exporter = func(v interface{}, i int) interface{} {
+		file_choreo_proto_msgTypes[10].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*Watch_Request); i {
 			case 0:
 				return &v.state
@@ -2546,7 +1040,7 @@ func file_choreo_proto_init() {
 				return nil
 			}
 		}
-		file_choreo_proto_msgTypes[17].Exporter = func(v interface{}, i int) interface{} {
+		file_choreo_proto_msgTypes[11].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*Watch_Response); i {
 			case 0:
 				return &v.state
@@ -2558,236 +1052,8 @@ func file_choreo_proto_init() {
 				return nil
 			}
 		}
-		file_choreo_proto_msgTypes[18].Exporter = func(v interface{}, i int) interface{} {
+		file_choreo_proto_msgTypes[12].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*Watch_Options); i {
-			case 0:
-				return &v.state
-			case 1:
-				return &v.sizeCache
-			case 2:
-				return &v.unknownFields
-			default:
-				return nil
-			}
-		}
-		file_choreo_proto_msgTypes[19].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*Start_Request); i {
-			case 0:
-				return &v.state
-			case 1:
-				return &v.sizeCache
-			case 2:
-				return &v.unknownFields
-			default:
-				return nil
-			}
-		}
-		file_choreo_proto_msgTypes[20].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*Start_Response); i {
-			case 0:
-				return &v.state
-			case 1:
-				return &v.sizeCache
-			case 2:
-				return &v.unknownFields
-			default:
-				return nil
-			}
-		}
-		file_choreo_proto_msgTypes[21].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*Start_Options); i {
-			case 0:
-				return &v.state
-			case 1:
-				return &v.sizeCache
-			case 2:
-				return &v.unknownFields
-			default:
-				return nil
-			}
-		}
-		file_choreo_proto_msgTypes[22].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*Stop_Request); i {
-			case 0:
-				return &v.state
-			case 1:
-				return &v.sizeCache
-			case 2:
-				return &v.unknownFields
-			default:
-				return nil
-			}
-		}
-		file_choreo_proto_msgTypes[23].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*Stop_Response); i {
-			case 0:
-				return &v.state
-			case 1:
-				return &v.sizeCache
-			case 2:
-				return &v.unknownFields
-			default:
-				return nil
-			}
-		}
-		file_choreo_proto_msgTypes[24].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*Stop_Options); i {
-			case 0:
-				return &v.state
-			case 1:
-				return &v.sizeCache
-			case 2:
-				return &v.unknownFields
-			default:
-				return nil
-			}
-		}
-		file_choreo_proto_msgTypes[25].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*Once_Request); i {
-			case 0:
-				return &v.state
-			case 1:
-				return &v.sizeCache
-			case 2:
-				return &v.unknownFields
-			default:
-				return nil
-			}
-		}
-		file_choreo_proto_msgTypes[26].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*Once_Options); i {
-			case 0:
-				return &v.state
-			case 1:
-				return &v.sizeCache
-			case 2:
-				return &v.unknownFields
-			default:
-				return nil
-			}
-		}
-		file_choreo_proto_msgTypes[27].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*Once_Response); i {
-			case 0:
-				return &v.state
-			case 1:
-				return &v.sizeCache
-			case 2:
-				return &v.unknownFields
-			default:
-				return nil
-			}
-		}
-		file_choreo_proto_msgTypes[28].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*Once_Operations); i {
-			case 0:
-				return &v.state
-			case 1:
-				return &v.sizeCache
-			case 2:
-				return &v.unknownFields
-			default:
-				return nil
-			}
-		}
-		file_choreo_proto_msgTypes[31].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*Load_Request); i {
-			case 0:
-				return &v.state
-			case 1:
-				return &v.sizeCache
-			case 2:
-				return &v.unknownFields
-			default:
-				return nil
-			}
-		}
-		file_choreo_proto_msgTypes[32].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*Load_Response); i {
-			case 0:
-				return &v.state
-			case 1:
-				return &v.sizeCache
-			case 2:
-				return &v.unknownFields
-			default:
-				return nil
-			}
-		}
-		file_choreo_proto_msgTypes[33].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*Load_Options); i {
-			case 0:
-				return &v.state
-			case 1:
-				return &v.sizeCache
-			case 2:
-				return &v.unknownFields
-			default:
-				return nil
-			}
-		}
-		file_choreo_proto_msgTypes[34].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*Diff_Request); i {
-			case 0:
-				return &v.state
-			case 1:
-				return &v.sizeCache
-			case 2:
-				return &v.unknownFields
-			default:
-				return nil
-			}
-		}
-		file_choreo_proto_msgTypes[35].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*Diff_Response); i {
-			case 0:
-				return &v.state
-			case 1:
-				return &v.sizeCache
-			case 2:
-				return &v.unknownFields
-			default:
-				return nil
-			}
-		}
-		file_choreo_proto_msgTypes[36].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*Diff_Options); i {
-			case 0:
-				return &v.state
-			case 1:
-				return &v.sizeCache
-			case 2:
-				return &v.unknownFields
-			default:
-				return nil
-			}
-		}
-		file_choreo_proto_msgTypes[37].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*List_Request); i {
-			case 0:
-				return &v.state
-			case 1:
-				return &v.sizeCache
-			case 2:
-				return &v.unknownFields
-			default:
-				return nil
-			}
-		}
-		file_choreo_proto_msgTypes[38].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*List_Response); i {
-			case 0:
-				return &v.state
-			case 1:
-				return &v.sizeCache
-			case 2:
-				return &v.unknownFields
-			default:
-				return nil
-			}
-		}
-		file_choreo_proto_msgTypes[39].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*List_Options); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -2804,8 +1070,8 @@ func file_choreo_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: file_choreo_proto_rawDesc,
-			NumEnums:      2,
-			NumMessages:   40,
+			NumEnums:      1,
+			NumMessages:   13,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

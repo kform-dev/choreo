@@ -4,13 +4,13 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/kform-dev/choreo/pkg/proto/choreopb"
+	"github.com/kform-dev/choreo/pkg/proto/runnerpb"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 )
 
 type Result struct {
-	Operation    choreopb.Operation
+	Operation    runnerpb.Operation
 	ReconcileID  types.UID
 	ReconcileRef ReconcileRef
 	Message      string

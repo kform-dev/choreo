@@ -24,7 +24,7 @@ import (
 
 	choreov1alpha1 "github.com/kform-dev/choreo/apis/choreo/v1alpha1"
 	"github.com/kform-dev/choreo/pkg/cli/genericclioptions"
-	"github.com/kform-dev/choreo/pkg/client/go/choreoclient"
+	"github.com/kform-dev/choreo/pkg/client/go/snapshotclient"
 	"github.com/kform-dev/choreo/pkg/client/go/util"
 	"github.com/spf13/cobra"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -69,8 +69,8 @@ func (r *Runner) runE(cmd *cobra.Command, args []string) error {
 	ul.SetAPIVersion(choreov1alpha1.SchemeGroupVersion.Identifier())
 	ul.SetKind(choreov1alpha1.SnapshotListKind)
 
-	choreoClient := r.factory.GetChoreoClient()
-	if err := choreoClient.List(ctx, ul, &choreoclient.ListOptions{
+	snapshotClient := r.factory.GetSnapshotClient()
+	if err := snapshotClient.List(ctx, ul, &snapshotclient.ListOptions{
 		Proxy: r.factory.GetProxy(),
 	}); err != nil {
 		return err

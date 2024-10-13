@@ -22,8 +22,8 @@ import (
 	"time"
 
 	choreov1alpha1 "github.com/kform-dev/choreo/apis/choreo/v1alpha1"
-	"github.com/kform-dev/choreo/pkg/proto/choreopb"
 	"github.com/kform-dev/choreo/pkg/proto/discoverypb"
+	"github.com/kform-dev/choreo/pkg/proto/snapshotpb"
 	"github.com/kform-dev/choreo/pkg/util/inventory"
 	"github.com/kform-dev/choreo/pkg/util/object"
 	"google.golang.org/grpc/codes"
@@ -63,15 +63,7 @@ type Snapshot struct {
 	//Result
 }
 
-func (r *SnapshotManager) Get(id string) (*Snapshot, bool) {
-	r.m.RLock()
-	defer r.m.RUnlock()
-
-	snapshotNode, found := r.snapshots[id]
-	return snapshotNode.snapshot, found
-}
-
-func (r *SnapshotManager) GetLatest() (*SnapshotNode, bool) {
+func (r *SnapshotManager) getLatest() (*SnapshotNode, bool) {
 	r.m.RLock()
 	defer r.m.RUnlock()
 
@@ -81,7 +73,7 @@ func (r *SnapshotManager) GetLatest() (*SnapshotNode, bool) {
 	return r.tail, true
 }
 
-func (r *SnapshotManager) GetPrevious(id string) (*SnapshotNode, bool) {
+func (r *SnapshotManager) getPrevious(id string) (*SnapshotNode, bool) {
 	r.m.RLock()
 	defer r.m.RUnlock()
 
@@ -122,14 +114,14 @@ func (r *SnapshotManager) Create(id string, apiResources []*discoverypb.APIResou
 	r.snapshots[node.snapshot.ID] = node
 }
 
-func (r *SnapshotManager) Delete(id string) {
+func (r *SnapshotManager) Delete(req *snapshotpb.Delete_Request) (*snapshotpb.Delete_Response, error) {
 	r.m.Lock()
 	defer r.m.Unlock()
 
-	node, ok := r.snapshots[id]
+	node, ok := r.snapshots[req.Id]
 	if !ok {
 		// id does not exists
-		return
+		return &snapshotpb.Delete_Response{}, nil
 	}
 
 	// Update pointers in the linked list
@@ -147,10 +139,39 @@ func (r *SnapshotManager) Delete(id string) {
 	}
 
 	// Remove from lookup map
-	delete(r.snapshots, id)
+	delete(r.snapshots, req.Id)
+	return &snapshotpb.Delete_Response{}, nil
 }
 
-func (r *SnapshotManager) List(req *choreopb.List_Request) (*choreopb.List_Response, error) {
+func (r *SnapshotManager) Get(req *snapshotpb.Get_Request) (*snapshotpb.Get_Response, error) {
+	r.m.RLock()
+	defer r.m.RUnlock()
+
+	snapshotNode, found := r.snapshots[req.Id]
+	if !found {
+		return &snapshotpb.Get_Response{}, status.Error(codes.NotFound, "id not found")
+	}
+
+	u := &unstructured.Unstructured{}
+	u.SetAPIVersion(choreov1alpha1.SchemeGroupVersion.Identifier())
+	u.SetKind(choreov1alpha1.SnapshotListKind)
+	u.SetKind(choreov1alpha1.SnapshotKind)
+	u.SetUID(types.UID(snapshotNode.snapshot.ID))
+	u.SetCreationTimestamp(metav1.NewTime(snapshotNode.snapshot.CreatedAt))
+	u.SetName(snapshotNode.snapshot.ID)
+	u.SetResourceVersion("0")
+
+	b, err := json.Marshal(u)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "cannot marshal err: %s", err.Error())
+	}
+
+	return &snapshotpb.Get_Response{
+		Object: b,
+	}, nil
+}
+
+func (r *SnapshotManager) List(req *snapshotpb.List_Request) (*snapshotpb.List_Response, error) {
 	r.m.RLock()
 	defer r.m.RUnlock()
 
@@ -181,18 +202,18 @@ func (r *SnapshotManager) List(req *choreopb.List_Request) (*choreopb.List_Respo
 		return nil, status.Errorf(codes.Internal, "cannot marshal err: %s", err.Error())
 	}
 
-	return &choreopb.List_Response{
+	return &snapshotpb.List_Response{
 		Object: b,
 	}, nil
 }
 
-func (r *SnapshotManager) Diff(req *choreopb.Diff_Request) (*choreopb.Diff_Response, error) {
-	latestSnapshot, found := r.GetLatest()
+func (r *SnapshotManager) Diff(req *snapshotpb.Diff_Request) (*snapshotpb.Diff_Response, error) {
+	latestSnapshot, found := r.getLatest()
 	if !found {
-		return &choreopb.Diff_Response{}, status.Errorf(codes.NotFound, "latest snapshot not available")
+		return &snapshotpb.Diff_Response{}, status.Errorf(codes.NotFound, "latest snapshot not available")
 	}
 	latestInventory := latestSnapshot.snapshot.Inventory
-	previousSnapshotNode, found := r.GetPrevious(latestSnapshot.snapshot.ID)
+	previousSnapshotNode, found := r.getPrevious(latestSnapshot.snapshot.ID)
 	previousInventory := inventory.Inventory{} // create an empty inventory
 	if found {
 		previousInventory = previousSnapshotNode.snapshot.Inventory
@@ -203,7 +224,7 @@ func (r *SnapshotManager) Diff(req *choreopb.Diff_Request) (*choreopb.Diff_Respo
 		Namespace: "default",
 	}, nil, nil)
 	if err := latestInventory.Diff(previousInventory, diff, req.Options); err != nil {
-		return &choreopb.Diff_Response{}, err
+		return &snapshotpb.Diff_Response{}, err
 	}
 
 	b, err := json.Marshal(diff)
@@ -211,7 +232,7 @@ func (r *SnapshotManager) Diff(req *choreopb.Diff_Request) (*choreopb.Diff_Respo
 		return nil, status.Errorf(codes.Internal, "cannot marshal err: %s", err.Error())
 	}
 
-	return &choreopb.Diff_Response{
+	return &snapshotpb.Diff_Response{
 		Object: b,
 	}, nil
 }

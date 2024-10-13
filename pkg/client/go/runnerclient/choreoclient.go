@@ -14,24 +14,24 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package choreoclient
+package runnerclient
 
 import (
 	"context"
 
 	"github.com/kform-dev/choreo/pkg/client/go/config"
-	"github.com/kform-dev/choreo/pkg/proto/choreopb"
+	"github.com/kform-dev/choreo/pkg/proto/runnerpb"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )
 
-type ChoreoClient interface {
-	choreopb.ChoreoClient
+type RunnerClient interface {
+	runnerpb.RunnerClient
 	Close() error
 }
 
-func NewChoreoClient(config *config.Config) (ChoreoClient, error) {
-	client := &choreoclient{
+func NewChoreoClient(config *config.Config) (RunnerClient, error) {
+	client := &runnerclient{
 		config: config,
 	}
 
@@ -44,27 +44,33 @@ func NewChoreoClient(config *config.Config) (ChoreoClient, error) {
 	if err != nil {
 		return nil, err
 	}
-	client.client = choreopb.NewChoreoClient(conn)
+	client.client = runnerpb.NewRunnerClient(conn)
 	client.conn = conn
 	return client, nil
 }
 
-type choreoclient struct {
+type runnerclient struct {
 	config *config.Config
 	conn   *grpc.ClientConn
-	client choreopb.ChoreoClient
+	client runnerpb.RunnerClient
 }
 
-func (r *choreoclient) Close() error {
+func (r *runnerclient) Close() error {
 	if r.conn == nil {
 		return nil
 	}
 	return r.conn.Close()
 }
 
-func (r *choreoclient) Get(ctx context.Context, in *choreopb.Get_Request, opts ...grpc.CallOption) (*choreopb.Get_Response, error) {
-	return r.client.Get(ctx, in, opts...)
+func (r *runnerclient) Start(ctx context.Context, in *runnerpb.Start_Request, opts ...grpc.CallOption) (*runnerpb.Start_Response, error) {
+	return r.client.Start(ctx, in, opts...)
 }
-func (r *choreoclient) Apply(ctx context.Context, in *choreopb.Apply_Request, opts ...grpc.CallOption) (*choreopb.Apply_Response, error) {
-	return r.client.Apply(ctx, in, opts...)
+func (r *runnerclient) Stop(ctx context.Context, in *runnerpb.Stop_Request, opts ...grpc.CallOption) (*runnerpb.Stop_Response, error) {
+	return r.client.Stop(ctx, in, opts...)
+}
+func (r *runnerclient) Once(ctx context.Context, in *runnerpb.Once_Request, opts ...grpc.CallOption) (*runnerpb.Once_Response, error) {
+	return r.client.Once(ctx, in, opts...)
+}
+func (r *runnerclient) Load(ctx context.Context, in *runnerpb.Load_Request, opts ...grpc.CallOption) (*runnerpb.Load_Response, error) {
+	return r.client.Load(ctx, in, opts...)
 }

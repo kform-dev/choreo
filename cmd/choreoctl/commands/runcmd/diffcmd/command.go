@@ -25,7 +25,7 @@ import (
 
 	choreov1alpha1 "github.com/kform-dev/choreo/apis/choreo/v1alpha1"
 	"github.com/kform-dev/choreo/pkg/cli/genericclioptions"
-	"github.com/kform-dev/choreo/pkg/client/go/choreoclient"
+	"github.com/kform-dev/choreo/pkg/client/go/snapshotclient"
 	"github.com/kform-dev/choreo/pkg/client/go/util"
 	"github.com/spf13/cobra"
 	//docs "github.com/kform-dev/kform/internal/docs/generated/applydocs"
@@ -72,8 +72,8 @@ func (r *Runner) runE(cmd *cobra.Command, args []string) error {
 	ctx := cmd.Context()
 	w := r.streams.Out
 
-	choreoClient := r.factory.GetChoreoClient()
-	b, err := choreoClient.Diff(ctx, &choreoclient.DiffOptions{
+	snapshotClient := r.factory.GetSnapshotClient()
+	b, err := snapshotClient.Diff(ctx, &snapshotclient.DiffOptions{
 		Proxy:             r.factory.GetProxy(),
 		ShowManagedFields: r.showManagedFields,
 		ShowChoreoAPIs:    r.showChoreoAPIs,

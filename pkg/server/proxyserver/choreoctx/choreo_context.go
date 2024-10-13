@@ -21,6 +21,8 @@ import (
 	"github.com/kform-dev/choreo/pkg/client/go/choreoclient"
 	"github.com/kform-dev/choreo/pkg/client/go/discoveryclient"
 	"github.com/kform-dev/choreo/pkg/client/go/resourceclient"
+	"github.com/kform-dev/choreo/pkg/client/go/runnerclient"
+	"github.com/kform-dev/choreo/pkg/client/go/snapshotclient"
 )
 
 type ChoreoCtx struct {
@@ -29,4 +31,6 @@ type ChoreoCtx struct {
 	DiscoveryClient discoveryclient.DiscoveryClient
 	ResourceClient  resourceclient.ResourceClient
 	ChoreoClient    choreoclient.ChoreoClient
+	RunnerClient    runnerclient.RunnerClient
+	SnapshotClient  snapshotclient.SnapshotClient
 }

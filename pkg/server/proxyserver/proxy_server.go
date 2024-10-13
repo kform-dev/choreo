@@ -28,12 +28,16 @@ import (
 	"github.com/kform-dev/choreo/pkg/proto/choreopb"
 	"github.com/kform-dev/choreo/pkg/proto/discoverypb"
 	"github.com/kform-dev/choreo/pkg/proto/resourcepb"
+	"github.com/kform-dev/choreo/pkg/proto/runnerpb"
+	"github.com/kform-dev/choreo/pkg/proto/snapshotpb"
 	choreohealth "github.com/kform-dev/choreo/pkg/server/health"
 	"github.com/kform-dev/choreo/pkg/server/proxyserver/choreoctx"
 	"github.com/kform-dev/choreo/pkg/server/proxyserver/services/branch"
 	"github.com/kform-dev/choreo/pkg/server/proxyserver/services/choreo"
 	"github.com/kform-dev/choreo/pkg/server/proxyserver/services/discovery"
 	"github.com/kform-dev/choreo/pkg/server/proxyserver/services/resource"
+	"github.com/kform-dev/choreo/pkg/server/proxyserver/services/runner"
+	"github.com/kform-dev/choreo/pkg/server/proxyserver/services/snapshot"
 	"github.com/pkg/errors"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/health"
@@ -111,6 +115,14 @@ func (r *ProxyServer) Run(ctx context.Context) error {
 	// Register the branch service
 	branchServer := branch.New(r.store)
 	branchpb.RegisterBranchServer(r.server, branchServer)
+
+	// Register the runner service
+	runnerServer := runner.New(r.store)
+	runnerpb.RegisterRunnerServer(r.server, runnerServer)
+
+	// Register the snapshot service
+	snapshotServer := snapshot.New(r.store)
+	snapshotpb.RegisterSnapshotServer(r.server, snapshotServer)
 
 	go func() {
 		if err := r.server.Serve(l); err != nil {

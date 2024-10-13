@@ -14,28 +14,28 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package choreo
+package runner
 
 import (
 	"context"
 	"fmt"
 
 	"github.com/henderiw/store"
-	"github.com/kform-dev/choreo/pkg/proto/choreopb"
+	"github.com/kform-dev/choreo/pkg/proto/runnerpb"
 	"github.com/kform-dev/choreo/pkg/server/proxyserver/choreoctx"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"k8s.io/apimachinery/pkg/types"
 )
 
-func New(store store.Storer[*choreoctx.ChoreoCtx]) choreopb.ChoreoServer {
+func New(store store.Storer[*choreoctx.ChoreoCtx]) runnerpb.RunnerServer {
 	return &proxy{
 		store: store,
 	}
 }
 
 type proxy struct {
-	choreopb.UnimplementedChoreoServer
+	runnerpb.UnimplementedRunnerServer
 	store store.Storer[*choreoctx.ChoreoCtx]
 }
 
@@ -50,20 +50,33 @@ func (r *proxy) getChoreoCtx(proxy types.NamespacedName) (*choreoctx.ChoreoCtx, 
 	return choreoCtx, nil
 }
 
-func (r *proxy) Get(ctx context.Context, req *choreopb.Get_Request) (*choreopb.Get_Response, error) {
+func (r *proxy) Start(ctx context.Context, req *runnerpb.Start_Request) (*runnerpb.Start_Response, error) {
 	choreoCtx, err := r.getChoreoCtx(types.NamespacedName{Namespace: req.Options.ProxyNamespace, Name: req.Options.ProxyName})
 	if err != nil {
-		return &choreopb.Get_Response{}, err
+		return &runnerpb.Start_Response{}, err
 	}
-
-	return choreoCtx.ChoreoClient.Get(ctx, req)
+	return choreoCtx.RunnerClient.Start(ctx, req)
 }
 
-func (r *proxy) Apply(ctx context.Context, req *choreopb.Apply_Request) (*choreopb.Apply_Response, error) {
+func (r *proxy) Stop(ctx context.Context, req *runnerpb.Stop_Request) (*runnerpb.Stop_Response, error) {
 	choreoCtx, err := r.getChoreoCtx(types.NamespacedName{Namespace: req.Options.ProxyNamespace, Name: req.Options.ProxyName})
 	if err != nil {
-		return &choreopb.Apply_Response{}, err
+		return &runnerpb.Stop_Response{}, err
 	}
+	return choreoCtx.RunnerClient.Stop(ctx, req)
+}
 
-	return choreoCtx.ChoreoClient.Apply(ctx, req)
+func (r *proxy) Once(ctx context.Context, req *runnerpb.Once_Request) (*runnerpb.Once_Response, error) {
+	choreoCtx, err := r.getChoreoCtx(types.NamespacedName{Namespace: req.Options.ProxyNamespace, Name: req.Options.ProxyName})
+	if err != nil {
+		return &runnerpb.Once_Response{}, err
+	}
+	return choreoCtx.RunnerClient.Once(ctx, req)
+}
+func (r *proxy) Load(ctx context.Context, req *runnerpb.Load_Request) (*runnerpb.Load_Response, error) {
+	choreoCtx, err := r.getChoreoCtx(types.NamespacedName{Namespace: req.Options.ProxyNamespace, Name: req.Options.ProxyName})
+	if err != nil {
+		return &runnerpb.Load_Response{}, err
+	}
+	return choreoCtx.RunnerClient.Load(ctx, req)
 }
