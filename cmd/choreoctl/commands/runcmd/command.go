@@ -19,6 +19,8 @@ package runcmd
 import (
 	"context"
 
+	"github.com/kform-dev/choreo/cmd/choreoctl/commands/runcmd/diffcmd"
+	"github.com/kform-dev/choreo/cmd/choreoctl/commands/runcmd/listcmd"
 	"github.com/kform-dev/choreo/cmd/choreoctl/commands/runcmd/loadcmd"
 	"github.com/kform-dev/choreo/cmd/choreoctl/commands/runcmd/oncecmd"
 	"github.com/kform-dev/choreo/cmd/choreoctl/commands/runcmd/startcmd"
@@ -52,6 +54,8 @@ func GetCommand(ctx context.Context, f util.Factory, streams *genericclioptions.
 		stopcmd.GetCommand(ctx, f, streams),
 		oncecmd.GetCommand(ctx, f, streams),
 		loadcmd.GetCommand(ctx, f, streams),
+		listcmd.GetCommand(ctx, f, streams),
+		diffcmd.GetCommand(ctx, f, streams),
 	)
 	return cmd
 }

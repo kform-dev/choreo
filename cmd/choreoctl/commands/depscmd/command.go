@@ -71,7 +71,11 @@ func (r *Runner) runE(cmd *cobra.Command, args []string) error {
 	}
 
 	inv := inventory.Inventory{}
-	if err := inv.Build(ctx, r.factory.GetResourceClient(), apiResources, branch, r.showChoreo); err != nil {
+	if err := inv.Build(ctx, r.factory.GetResourceClient(), apiResources, &inventory.BuildOptions{
+		ShowManagedField: true,
+		Branch:           branch,
+		ShowChoreoAPIs:   r.showChoreo,
+	}); err != nil {
 		return err
 	}
 	inv.Print()

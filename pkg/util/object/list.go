@@ -14,57 +14,16 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package registry
+package object
 
 import (
-	"context"
 	"fmt"
 	"reflect"
 
-	"github.com/henderiw/store"
-	"github.com/kform-dev/choreo/pkg/server/apiserver/rest"
-	"github.com/kform-dev/choreo/pkg/util/object"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/conversion"
 	"k8s.io/apimachinery/pkg/runtime"
 )
-
-func (r *storage) List(ctx context.Context, opts ...rest.ListOption) (runtime.Unstructured, error) {
-	//log := log.FromContext(ctx)
-	o := rest.ListOptions{}
-	o.ApplyOptions(opts)
-
-	newListObj := r.newListFn()
-	v, err := GetListPrt(newListObj)
-	if err != nil {
-		return nil, err
-	}
-
-	listFunc := func(key store.Key, obj runtime.Unstructured) {
-		// we don't filter by default
-		filter := false
-		if o.Selector != nil {
-			if !o.Selector.Matches(obj.UnstructuredContent()) {
-				filter = true
-			}
-		}
-
-		if !filter {
-			if !o.ShowManagedFields {
-				copiedObj := obj.DeepCopyObject().(runtime.Unstructured)
-				object.RemoveManagedFieldsFromUnstructured(ctx, copiedObj)
-				object.RemoveResourceVersionAndGenerationFromUnstructured(ctx, copiedObj)
-				AppendItem(v, copiedObj)
-			} else {
-				AppendItem(v, obj)
-			}
-
-		}
-	}
-
-	r.storage.List(listFunc, &store.ListOptions{Commit: o.Commit})
-	return newListObj, nil
-}
 
 func GetListPrt(listObj runtime.Object) (reflect.Value, error) {
 	listPtr, err := meta.GetItemsPtr(listObj)

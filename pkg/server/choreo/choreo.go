@@ -44,6 +44,7 @@ type Choreo interface {
 	GetMainChoreoInstance() ChoreoInstance
 	GetBranchStore() *BranchStore
 	Runner() Runner
+	SnapshotManager() *SnapshotManager
 	// updates resource (yaml) in the input directory
 	Store(obj runtime.Unstructured) error
 	// remove resource (yaml) from the input directory
@@ -65,6 +66,7 @@ func New(flags *genericclioptions.ConfigFlags) Choreo {
 	r.status.Set(Initializing())
 	r.branchStore = NewBranchStore(r)
 	r.runner = NewRunner(r)
+	r.snapshotMgr = NewSnapshotManager()
 	return r
 }
 
@@ -72,6 +74,7 @@ type choreo struct {
 	status      *Status
 	branchStore *BranchStore
 	runner      Runner
+	snapshotMgr *SnapshotManager
 	flags       *genericclioptions.ConfigFlags
 
 	// dynamic
@@ -158,6 +161,10 @@ func (r *choreo) GetMainChoreoInstance() ChoreoInstance {
 
 func (r *choreo) Runner() Runner {
 	return r.runner
+}
+
+func (r *choreo) SnapshotManager() *SnapshotManager {
+	return r.snapshotMgr
 }
 
 func (r *choreo) Start(ctx context.Context) {

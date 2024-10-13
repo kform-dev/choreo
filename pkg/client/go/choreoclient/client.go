@@ -18,11 +18,13 @@ package choreoclient
 
 import (
 	"context"
+	"encoding/json"
 
 	"github.com/kform-dev/choreo/pkg/client/go/config"
 	"github.com/kform-dev/choreo/pkg/proto/choreopb"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 )
 
@@ -33,6 +35,8 @@ type Client interface {
 	Stop(ctx context.Context, opts ...StopOption) error
 	Once(ctx context.Context, opts ...OnceOption) (*choreopb.Once_Response, error)
 	Load(ctx context.Context, opts ...LoadOption) error
+	List(ctx context.Context, u runtime.Unstructured, opts ...ListOption) error
+	Diff(ctx context.Context, opts ...DiffOption) ([]byte, error)
 	Close() error
 }
 
@@ -149,6 +153,46 @@ func (r *client) Load(ctx context.Context, opts ...LoadOption) error {
 	}); err != nil {
 		return err
 	}
+	return nil
+}
+func (r *client) Diff(ctx context.Context, opts ...DiffOption) ([]byte, error) {
+	o := DiffOptions{}
+	o.ApplyOptions(opts)
+
+	rsp, err := r.client.Diff(ctx, &choreopb.Diff_Request{
+		Options: &choreopb.Diff_Options{
+			ProxyName:        o.Proxy.Name,
+			ProxyNamespace:   o.Proxy.Namespace,
+			ShowManagedField: o.ShowManagedFields,
+			ShowChoreoAPIs:   o.ShowChoreoAPIs,
+		},
+	})
+	if err != nil {
+		return nil, err
+	}
+	//b = rsp.Object
+	return rsp.Object, nil
+
+}
+
+func (r *client) List(ctx context.Context, u runtime.Unstructured, opts ...ListOption) error {
+	o := ListOptions{}
+	o.ApplyOptions(opts)
+
+	rsp, err := r.client.List(ctx, &choreopb.List_Request{
+		Options: &choreopb.List_Options{
+			ProxyName:      o.Proxy.Name,
+			ProxyNamespace: o.Proxy.Namespace,
+		},
+	})
+	if err != nil {
+		return err
+	}
+	data := map[string]any{}
+	if err := json.Unmarshal(rsp.Object, &data); err != nil {
+		return err
+	}
+	u.SetUnstructuredContent(data)
 	return nil
 }
 
@@ -289,6 +333,56 @@ func (o *LoadOptions) ApplyToLoad(lo *LoadOptions) {
 func (o *LoadOptions) ApplyOptions(opts []LoadOption) *LoadOptions {
 	for _, opt := range opts {
 		opt.ApplyToLoad(o)
+	}
+	return o
+}
+
+type DiffOption interface {
+	ApplyToDiff(*DiffOptions)
+}
+
+var _ DiffOption = &DiffOptions{}
+
+type DiffOptions struct {
+	Proxy             types.NamespacedName
+	ShowManagedFields bool
+	ShowChoreoAPIs    bool
+}
+
+func (o *DiffOptions) ApplyToDiff(lo *DiffOptions) {
+	lo.Proxy = o.Proxy
+	lo.ShowManagedFields = o.ShowManagedFields
+	lo.ShowChoreoAPIs = o.ShowChoreoAPIs
+}
+
+// ApplyOptions applies the given get options on these options,
+// and then returns itself (for convenient chaining).
+func (o *DiffOptions) ApplyOptions(opts []DiffOption) *DiffOptions {
+	for _, opt := range opts {
+		opt.ApplyToDiff(o)
+	}
+	return o
+}
+
+type ListOption interface {
+	ApplyToList(*ListOptions)
+}
+
+var _ ListOption = &ListOptions{}
+
+type ListOptions struct {
+	Proxy types.NamespacedName
+}
+
+func (o *ListOptions) ApplyToList(lo *ListOptions) {
+	lo.Proxy = o.Proxy
+}
+
+// ApplyOptions applies the given get options on these options,
+// and then returns itself (for convenient chaining).
+func (o *ListOptions) ApplyOptions(opts []ListOption) *ListOptions {
+	for _, opt := range opts {
+		opt.ApplyToList(o)
 	}
 	return o
 }

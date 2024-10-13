@@ -32,7 +32,7 @@ message APIResource {
     string listKind = 5; 
     bool namespaced = 6; 
     repeated string categories = 7; 
-    bool choreo = 8;
+    bool choreoAPI = 8;
 }
 
 message Get {

@@ -80,3 +80,9 @@ func (r *choreoclient) Once(ctx context.Context, in *choreopb.Once_Request, opts
 func (r *choreoclient) Load(ctx context.Context, in *choreopb.Load_Request, opts ...grpc.CallOption) (*choreopb.Load_Response, error) {
 	return r.client.Load(ctx, in, opts...)
 }
+func (r *choreoclient) List(ctx context.Context, in *choreopb.List_Request, opts ...grpc.CallOption) (*choreopb.List_Response, error) {
+	return r.client.List(ctx, in, opts...)
+}
+func (r *choreoclient) Diff(ctx context.Context, in *choreopb.Diff_Request, opts ...grpc.CallOption) (*choreopb.Diff_Response, error) {
+	return r.client.Diff(ctx, in, opts...)
+}

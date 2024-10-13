@@ -19,6 +19,7 @@ syntax = "proto3";
 package choreopb;
 option go_package = "github.com/kform-dev/choreo/pkg/proto/choreopb";
 
+
 service Choreo {
     rpc Get (Get.Request) returns (Get.Response) {}
     rpc Apply (Apply.Request) returns (Apply.Response) {}
@@ -27,6 +28,10 @@ service Choreo {
     rpc Stop (Stop.Request) returns (Stop.Response) {}
     rpc Once (Once.Request) returns (Once.Response) {}
     rpc Load (Load.Request) returns (Load.Response) {}
+
+    // TODO this should go into its own service -> add delete, get
+    rpc Diff (Diff.Request) returns (Diff.Response) {}
+    rpc List (List.Request) returns (List.Response) {}
   }
 
 
@@ -54,7 +59,6 @@ message Get {
         string proxyName = 1;
         string proxyNamespace = 2;
     }
-
 }
 
 message Apply {
@@ -103,7 +107,6 @@ message Watch {
 message Start {
     message Request {
         Options options = 1;
-        
     }
 
     message Response {
@@ -178,4 +181,36 @@ enum Operation {
     ERROR = 3;
     REQUEUE = 4;
     // Add more operations as needed
+}
+
+message Diff {
+    message Request {
+        Options options = 1;
+    }
+
+    message Response {
+        bytes object = 1; 
+    }
+
+    message Options {
+        string proxyName = 1;
+        string proxyNamespace = 2;
+        bool showManagedField = 3;
+        bool showChoreoAPIs = 4;
+    }
+}
+
+message List {
+    message Request {
+        Options options = 1; 
+    }
+
+    message Response {
+        bytes object = 1;
+    }
+
+    message Options {
+        string proxyName = 1;
+        string proxyNamespace = 2;
+    }
 }

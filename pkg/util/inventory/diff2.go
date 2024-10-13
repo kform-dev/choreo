@@ -16,32 +16,99 @@ limitations under the License.
 
 package inventory
 
-import "fmt"
+import (
+	"context"
 
-func (inv Inventory) Diff(invBefore Inventory) error {
+	choreov1alpha1 "github.com/kform-dev/choreo/apis/choreo/v1alpha1"
+	"github.com/kform-dev/choreo/pkg/proto/choreopb"
+	"github.com/kform-dev/choreo/pkg/util/object"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+)
+
+func (inv Inventory) Diff(invBefore Inventory, diff *choreov1alpha1.Diff, opts *choreopb.Diff_Options) error {
+	diff.Status.Items = []*choreov1alpha1.DiffItem{}
+
 	invSetsBefore := invBefore.Sets()
-	// this the
+
 	for ref, treenode := range inv {
+		if !opts.ShowChoreoAPIs && treenode.ChoreoAPI {
+			continue
+		}
+		diffItem := &choreov1alpha1.DiffItem{
+			ResourceGVK: choreov1alpha1.ResourceGVK{
+				Group:   ref.GroupVersionKind().Group,
+				Version: ref.GroupVersionKind().Version,
+				Kind:    ref.GroupVersionKind().Kind,
+			},
+			Name:      ref.Name,
+			Namespace: ref.Namespace,
+		}
+
 		if invSetsBefore.Has(ref) {
 			//diffStr, err := diff(invBefore[ref].Resource, treenode.Resource)
-			diffStr, err := diff2(invBefore[ref].Resource, treenode.Resource)
+			copiedBeforeObj := invBefore[ref].Resource.DeepCopy()
+			copiedAfterObj := treenode.Resource.DeepCopy()
+			if !opts.ShowManagedField {
+				object.RemoveManagedFieldsFromUnstructured(context.Background(), copiedBeforeObj)
+				object.RemoveManagedFieldsFromUnstructured(context.Background(), copiedAfterObj)
+			}
+
+			diffStr, err := diff2(copiedBeforeObj, copiedAfterObj)
 			if err != nil {
 				return err
 			}
 			if diffStr == "" {
-				inv[ref].DiffStatus = "="
+				diffItem.Status = choreov1alpha1.DiffitemStatus_Equal
 			} else {
-				inv[ref].DiffStatus = "~"
-				inv[ref].DiffString = diffStr
-				fmt.Println(diffStr)
+				diffItem.Status = choreov1alpha1.DiffitemStatus_Modified
+				diffItem.Diff = &diffStr
 			}
 			invSetsBefore.Delete(ref)
 		} else {
-			inv[ref].DiffStatus = "="
+
+			copiedAfterObj := treenode.Resource.DeepCopy()
+			if !opts.ShowManagedField {
+				object.RemoveManagedFieldsFromUnstructured(context.Background(), copiedAfterObj)
+			}
+
+			diffItem.Status = choreov1alpha1.DiffitemStatus_Added
+			diffStr, err := diff2(&unstructured.Unstructured{}, copiedAfterObj)
+			if err != nil {
+				return err
+			}
+			diffItem.Diff = &diffStr
 		}
+		diff.Status.Items = append(diff.Status.Items, diffItem)
 	}
 	for _, ref := range invSetsBefore.UnsortedList() {
-		inv[ref].DiffStatus = "-"
+		treeNode := invBefore[ref]
+		if !opts.ShowChoreoAPIs && treeNode.ChoreoAPI {
+			continue
+		}
+
+		diffItem := &choreov1alpha1.DiffItem{
+			ResourceGVK: choreov1alpha1.ResourceGVK{
+				Group:   ref.GroupVersionKind().Group,
+				Version: ref.GroupVersionKind().Version,
+				Kind:    ref.GroupVersionKind().Kind,
+			},
+			Name:      ref.Name,
+			Namespace: ref.Namespace,
+			Status:    choreov1alpha1.DiffitemStatus_Deleted,
+		}
+
+		copiedBeforeObj := treeNode.Resource.DeepCopy()
+		if !opts.ShowManagedField {
+			object.RemoveManagedFieldsFromUnstructured(context.Background(), copiedBeforeObj)
+		}
+
+		diffStr, err := diff2(copiedBeforeObj, &unstructured.Unstructured{})
+		if err != nil {
+			return err
+		}
+		diffItem.Diff = &diffStr
+
+		diff.Status.Items = append(diff.Status.Items, diffItem)
 	}
 	return nil
 }

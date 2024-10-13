@@ -196,7 +196,7 @@ func LoadCRD(ctx context.Context, pathInRepo, dbpath string, crd *apiextensionsv
 					Resource:   crd.Spec.Names.Plural,
 					Namespaced: crd.Spec.Scope == apiextensionsv1.NamespaceScoped,
 					Categories: crd.Spec.Names.Categories,
-					Choreo:     choreoAPI,
+					ChoreoAPI:  choreoAPI,
 				},
 				Storage: storage,
 			}, nil

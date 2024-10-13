@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"sync"
 
+	"github.com/google/uuid"
 	choreov1alpha1 "github.com/kform-dev/choreo/apis/choreo/v1alpha1"
 	"github.com/kform-dev/choreo/pkg/client/go/resourceclient"
 	"github.com/kform-dev/choreo/pkg/controller/collector"
@@ -133,7 +134,34 @@ func (r *run) RunOnce(ctx context.Context, bctx *BranchCtx) (*choreopb.Once_Resp
 
 	defer r.Stop()
 
-	return r.runReconciler(ctx, bctx, true) // run once
+	rsp, err := r.runReconciler(ctx, bctx, true) // run once
+	if err != nil {
+		return rsp, err
+	}
+
+	r.createSnapshot(ctx, bctx)
+
+	return rsp, nil
+}
+
+func (r *run) createSnapshot(ctx context.Context, bctx *BranchCtx) error {
+	uid := uuid.New().String()
+
+	apiResources := bctx.APIStore.GetAPIResources()
+
+	inv := inventory.Inventory{}
+	if err := inv.Build(ctx, r.client, apiResources, &inventory.BuildOptions{
+		ShowManagedField: true,
+		Branch:           bctx.Branch,
+		ShowChoreoAPIs:   true,
+	}); err != nil {
+		return status.Errorf(codes.Internal, "err: %s", err.Error())
+	}
+	fmt.Println("create snapshot", uid)
+
+	r.choreo.SnapshotManager().Create(uid, apiResources, inv)
+
+	return nil
 }
 
 func (r *run) load(ctx context.Context, bctx *BranchCtx) error {
@@ -144,9 +172,14 @@ func (r *run) load(ctx context.Context, bctx *BranchCtx) error {
 		return status.Errorf(codes.Internal, "err: %s", err.Error())
 	}
 
-	// we use this to garbagecollect - root object they might have gotten deleted
+	// we use this to garbagecollect -
+	// Root object might have been deleted in the input so we need to cleanup
 	inv := inventory.Inventory{}
-	if err := inv.Build(ctx, r.client, apiResources, bctx.Branch, true); err != nil {
+	if err := inv.Build(ctx, r.client, apiResources, &inventory.BuildOptions{
+		ShowManagedField: true,
+		Branch:           bctx.Branch,
+		ShowChoreoAPIs:   true,
+	}); err != nil {
 		return status.Errorf(codes.Internal, "err: %s", err.Error())
 	}
 	var errm error

@@ -76,3 +76,11 @@ func (r *srv) Load(ctx context.Context, req *choreopb.Load_Request) (*choreopb.L
 
 	return &choreopb.Load_Response{}, nil
 }
+
+func (r *srv) Diff(ctx context.Context, req *choreopb.Diff_Request) (*choreopb.Diff_Response, error) {
+	return r.choreo.SnapshotManager().Diff(req)
+}
+
+func (r *srv) List(ctx context.Context, req *choreopb.List_Request) (*choreopb.List_Response, error) {
+	return r.choreo.SnapshotManager().List(req)
+}

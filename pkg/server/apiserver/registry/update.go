@@ -93,9 +93,9 @@ func (r *storage) update(ctx context.Context, new, old runtime.Unstructured, _ *
 
 	// if there is no change we dont need to do anything
 	copiedold := old.DeepCopyObject().(runtime.Unstructured)
-	removeManagedFieldsFromUnstructured(ctx, copiedold)
+	object.RemoveManagedFieldsFromUnstructured(ctx, copiedold)
 	copiednew := new.DeepCopyObject().(runtime.Unstructured)
-	removeManagedFieldsFromUnstructured(ctx, copiednew)
+	object.RemoveManagedFieldsFromUnstructured(ctx, copiednew)
 	if apiequality.Semantic.DeepEqual(copiednew, copiedold) {
 		return new, nil
 	}

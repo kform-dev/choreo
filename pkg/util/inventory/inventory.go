@@ -36,16 +36,46 @@ import (
 type Inventory map[corev1.ObjectReference]*treeNode
 
 type treeNode struct {
-	Resource   *unstructured.Unstructured
-	DiffStatus string
-	DiffString string
-	Children   []*treeNode
+	ChoreoAPI bool
+	Resource  *unstructured.Unstructured
+	Children  []*treeNode
 }
 
-func (inv Inventory) Build(ctx context.Context, client resourceclient.Client, apiResources []*discoverypb.APIResource, branch string, showChoreo bool) error {
+type BuildOption interface {
+	// ApplyToBuikd applies this configuration to the given options.
+	ApplyToBuild(*BuildOptions)
+}
+
+var _ BuildOption = &BuildOptions{}
+
+type BuildOptions struct {
+	ShowManagedField bool
+	Branch           string
+	ShowChoreoAPIs   bool
+}
+
+func (o *BuildOptions) ApplyToBuild(lo *BuildOptions) {
+	lo.ShowManagedField = o.ShowManagedField
+	lo.Branch = o.Branch
+	lo.ShowChoreoAPIs = o.ShowChoreoAPIs
+}
+
+// ApplyOptions applies the given get options on these options,
+// and then returns itself (for convenient chaining).
+func (o *BuildOptions) ApplyOptions(opts []BuildOption) *BuildOptions {
+	for _, opt := range opts {
+		opt.ApplyToBuild(o)
+	}
+	return o
+}
+
+func (inv Inventory) Build(ctx context.Context, client resourceclient.Client, apiResources []*discoverypb.APIResource, opts ...BuildOption) error {
+	o := BuildOptions{}
+	o.ApplyOptions(opts)
+
 	for _, apiResource := range apiResources {
 		// skip showing internal choreo resources: reconcilers, libraries
-		if !showChoreo && apiResource.Choreo {
+		if !o.ShowChoreoAPIs && apiResource.ChoreoAPI {
 			continue
 		}
 		ul := &unstructured.UnstructuredList{}
@@ -53,8 +83,8 @@ func (inv Inventory) Build(ctx context.Context, client resourceclient.Client, ap
 		ul.SetKind(apiResource.Kind)
 		if err := client.List(ctx, ul, &resourceclient.ListOptions{
 			ExprSelector:      &resourcepb.ExpressionSelector{},
-			ShowManagedFields: true,
-			Branch:            branch,
+			ShowManagedFields: o.ShowManagedField,
+			Branch:            o.Branch,
 		}); err != nil {
 			return err
 		}
@@ -71,6 +101,7 @@ func (inv Inventory) Build(ctx context.Context, client resourceclient.Client, ap
 			}
 			treenode := inv[objRef]
 			treenode.Resource = u
+			treenode.ChoreoAPI = apiResource.ChoreoAPI
 
 			for _, ref := range u.GetOwnerReferences() {
 				objRef := object.GetObjectRefFromOwnerRef(u.GetNamespace(), ref)
@@ -162,7 +193,7 @@ func printTree(node *treeNode, indent int) {
 		prefix = strings.Repeat(" ", (indent-1)*2) + "+-"
 	}
 
-	fmt.Printf("%s%s.%s %s %s\n", prefix, node.Resource.GetKind(), node.Resource.GetAPIVersion(), node.Resource.GetName(), node.DiffStatus)
+	fmt.Printf("%s%s.%s %s\n", prefix, node.Resource.GetKind(), node.Resource.GetAPIVersion(), node.Resource.GetName())
 
 	// Recurse over children
 	for _, child := range node.Children {

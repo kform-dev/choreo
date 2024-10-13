@@ -29,6 +29,9 @@ type ChoreoClient interface {
 	Stop(ctx context.Context, in *Stop_Request, opts ...grpc.CallOption) (*Stop_Response, error)
 	Once(ctx context.Context, in *Once_Request, opts ...grpc.CallOption) (*Once_Response, error)
 	Load(ctx context.Context, in *Load_Request, opts ...grpc.CallOption) (*Load_Response, error)
+	// TODO this should go into its own service -> add delete, get
+	Diff(ctx context.Context, in *Diff_Request, opts ...grpc.CallOption) (*Diff_Response, error)
+	List(ctx context.Context, in *List_Request, opts ...grpc.CallOption) (*List_Response, error)
 }
 
 type choreoClient struct {
@@ -93,6 +96,24 @@ func (c *choreoClient) Load(ctx context.Context, in *Load_Request, opts ...grpc.
 	return out, nil
 }
 
+func (c *choreoClient) Diff(ctx context.Context, in *Diff_Request, opts ...grpc.CallOption) (*Diff_Response, error) {
+	out := new(Diff_Response)
+	err := c.cc.Invoke(ctx, "/choreopb.Choreo/Diff", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *choreoClient) List(ctx context.Context, in *List_Request, opts ...grpc.CallOption) (*List_Response, error) {
+	out := new(List_Response)
+	err := c.cc.Invoke(ctx, "/choreopb.Choreo/List", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // ChoreoServer is the server API for Choreo service.
 // All implementations must embed UnimplementedChoreoServer
 // for forward compatibility
@@ -104,6 +125,9 @@ type ChoreoServer interface {
 	Stop(context.Context, *Stop_Request) (*Stop_Response, error)
 	Once(context.Context, *Once_Request) (*Once_Response, error)
 	Load(context.Context, *Load_Request) (*Load_Response, error)
+	// TODO this should go into its own service -> add delete, get
+	Diff(context.Context, *Diff_Request) (*Diff_Response, error)
+	List(context.Context, *List_Request) (*List_Response, error)
 	mustEmbedUnimplementedChoreoServer()
 }
 
@@ -128,6 +152,12 @@ func (UnimplementedChoreoServer) Once(context.Context, *Once_Request) (*Once_Res
 }
 func (UnimplementedChoreoServer) Load(context.Context, *Load_Request) (*Load_Response, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Load not implemented")
+}
+func (UnimplementedChoreoServer) Diff(context.Context, *Diff_Request) (*Diff_Response, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Diff not implemented")
+}
+func (UnimplementedChoreoServer) List(context.Context, *List_Request) (*List_Response, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method List not implemented")
 }
 func (UnimplementedChoreoServer) mustEmbedUnimplementedChoreoServer() {}
 
@@ -250,6 +280,42 @@ func _Choreo_Load_Handler(srv interface{}, ctx context.Context, dec func(interfa
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Choreo_Diff_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(Diff_Request)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ChoreoServer).Diff(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/choreopb.Choreo/Diff",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ChoreoServer).Diff(ctx, req.(*Diff_Request))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Choreo_List_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(List_Request)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ChoreoServer).List(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/choreopb.Choreo/List",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ChoreoServer).List(ctx, req.(*List_Request))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Choreo_ServiceDesc is the grpc.ServiceDesc for Choreo service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -280,6 +346,14 @@ var Choreo_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "Load",
 			Handler:    _Choreo_Load_Handler,
+		},
+		{
+			MethodName: "Diff",
+			Handler:    _Choreo_Diff_Handler,
+		},
+		{
+			MethodName: "List",
+			Handler:    _Choreo_List_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

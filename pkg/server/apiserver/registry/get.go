@@ -22,9 +22,9 @@ import (
 	"github.com/henderiw/logger/log"
 	"github.com/henderiw/store"
 	"github.com/kform-dev/choreo/pkg/server/apiserver/rest"
+	"github.com/kform-dev/choreo/pkg/util/object"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
@@ -43,52 +43,9 @@ func (r *storage) Get(ctx context.Context, name string, opts ...rest.GetOption) 
 
 	if !o.ShowManagedFields {
 		copiedObj := obj.DeepCopyObject().(runtime.Unstructured)
-		removeManagedFieldsFromUnstructured(ctx, copiedObj)
-		removeResourceVersionAndGenerationFromUnstructured(ctx, copiedObj)
+		object.RemoveManagedFieldsFromUnstructured(ctx, copiedObj)
+		object.RemoveResourceVersionAndGenerationFromUnstructured(ctx, copiedObj)
 		return copiedObj, nil
 	}
 	return obj, nil
-}
-
-func removeManagedFieldsFromUnstructured(ctx context.Context, obj runtime.Unstructured) {
-	log := log.FromContext(ctx)
-	// Access the unstructured content
-	unstructuredContent := obj.UnstructuredContent()
-
-	// Access the metadata section
-	metadata, found, err := unstructured.NestedMap(unstructuredContent, "metadata")
-	if err != nil || !found {
-		return
-	}
-
-	// Remove the managedFields key from metadata
-	delete(metadata, "managedFields")
-
-	// Set the updated metadata back to the unstructured content
-	err = unstructured.SetNestedMap(unstructuredContent, metadata, "metadata")
-	if err != nil {
-		log.Error("failed setting metadata", "error", err)
-	}
-}
-
-func removeResourceVersionAndGenerationFromUnstructured(ctx context.Context, obj runtime.Unstructured) {
-	log := log.FromContext(ctx)
-	// Access the unstructured content
-	unstructuredContent := obj.UnstructuredContent()
-
-	// Access the metadata section
-	metadata, found, err := unstructured.NestedMap(unstructuredContent, "metadata")
-	if err != nil || !found {
-		return
-	}
-
-	// Remove the resourceVersion key from metadata
-	delete(metadata, "resourceVersion")
-	delete(metadata, "generation")
-
-	// Set the updated metadata back to the unstructured content
-	err = unstructured.SetNestedMap(unstructuredContent, metadata, "metadata")
-	if err != nil {
-		log.Error("failed setting metadata", "error", err)
-	}
 }
