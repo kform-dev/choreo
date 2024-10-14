@@ -67,6 +67,7 @@ func NewRootChoreoInstance(ctx context.Context, config *Config) (ChoreoInstance,
 	}
 	if r.commit != nil {
 		if err := r.repo.CheckoutCommit(r.commit, DummyBranch); err != nil {
+			fmt.Println("create dummy branch failed", err)
 			return r, err
 		}
 	}

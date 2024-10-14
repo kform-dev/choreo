@@ -116,6 +116,8 @@ func (r *choreo) Apply(ctx context.Context, req *choreopb.Apply_Request) (*chore
 		replace := strings.NewReplacer("/", "-", ":", "-")
 		childRepoPath := filepath.Join(".", replace.Replace(url))
 
+		log.Info("apply new choreo context", "url", url, "childRepoPath", childRepoPath, "ref", req.ChoreoContext.Ref)
+
 		repo, commit, err := repogit.NewUpstreamRepo(ctx, childRepoPath, url, req.ChoreoContext.Ref)
 		if err != nil {
 			r.status.Set(Failed(err.Error()))

@@ -315,6 +315,11 @@ func (r *repo) StashBranch(branchName string) error {
 }
 
 func (r *repo) CheckoutCommit(commit *object.Commit, branch string) error {
+	w, err := r.repo.Worktree()
+	if err != nil {
+		return fmt.Errorf("failed to get workTree %v", err.Error())
+	}
+
 	if r.branchExists(branch) {
 		if err := r.StashBranch(branch); err != nil {
 			return err
@@ -324,25 +329,15 @@ func (r *repo) CheckoutCommit(commit *object.Commit, branch string) error {
 		}
 	}
 
-	w, err := r.repo.Worktree()
-	if err != nil {
-		return fmt.Errorf("failed to get workTree %v", err.Error())
-	}
-
 	// Checkout the specific commit
 	err = w.Checkout(&git.CheckoutOptions{
-		Hash: commit.Hash,
-	})
-	if err != nil {
-		return fmt.Errorf("failed to checkout commit %s %v", commit.Hash.String(), err.Error())
-	}
-	err = w.Checkout(&git.CheckoutOptions{
+		Hash:   commit.Hash,
 		Branch: lgit.BranchName(branch).BranchInLocal(),
 		Create: true,
-		Force:  false,
+		Force:  true,
 	})
 	if err != nil {
-		return fmt.Errorf("failed to create and checkout new branch %s %v", branch, err.Error())
+		return fmt.Errorf("failed to create and checkout new branch %s at commit %s: %v", branch, commit.Hash.String(), err)
 	}
 	branchRef := plumbing.NewHashReference(lgit.BranchName(branch).BranchInLocal(), commit.Hash)
 
