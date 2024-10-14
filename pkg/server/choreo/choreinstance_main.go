@@ -43,8 +43,8 @@ type Config struct {
 	Flags      *genericclioptions.ConfigFlags
 }
 
-func NewMainChoreoInstance(ctx context.Context, config *Config) (ChoreoInstance, error) {
-	r := &MainChoreoInstance{
+func NewRootChoreoInstance(ctx context.Context, config *Config) (ChoreoInstance, error) {
+	r := &RootChoreoInstance{
 		flags: config.Flags,
 	}
 
@@ -104,7 +104,7 @@ func getRepoFromPath(ctx context.Context, path string) (repository.Repository, s
 	return repo, pathInRepo, nil
 }
 
-type MainChoreoInstance struct {
+type RootChoreoInstance struct {
 	flags      *genericclioptions.ConfigFlags
 	repo       repository.Repository
 	pathInRepo string
@@ -115,7 +115,7 @@ type MainChoreoInstance struct {
 	apiStoreInternal *api.APIStore // this provides the storage layer - w/o the branch view
 }
 
-func (r *MainChoreoInstance) Destroy() error {
+func (r *RootChoreoInstance) Destroy() error {
 	log := log.FromContext(context.Background())
 	if err := r.repo.StashBranch(DummyBranch); err != nil {
 		log.Error("stash branch failed", "err", err)
@@ -128,7 +128,7 @@ func (r *MainChoreoInstance) Destroy() error {
 	return nil
 }
 
-func (r *MainChoreoInstance) LoadInternalAPIs() error {
+func (r *RootChoreoInstance) LoadInternalAPIs() error {
 	loader := loader.APILoaderInternal{
 		APIStore:   r.apiStoreInternal,
 		Flags:      r.flags,
@@ -138,44 +138,44 @@ func (r *MainChoreoInstance) LoadInternalAPIs() error {
 	return loader.Load(context.Background())
 }
 
-func (r *MainChoreoInstance) GetRepo() repository.Repository {
+func (r *RootChoreoInstance) GetRepo() repository.Repository {
 	return r.repo
 }
 
-func (r *MainChoreoInstance) GetName() string {
+func (r *RootChoreoInstance) GetName() string {
 	return filepath.Base(r.GetPath())
 }
 
-func (r *MainChoreoInstance) GetPath() string {
+func (r *RootChoreoInstance) GetPath() string {
 	return filepath.Join(r.repo.GetPath(), r.pathInRepo)
 }
 
-func (r *MainChoreoInstance) GetRepoPath() string {
+func (r *RootChoreoInstance) GetRepoPath() string {
 	return r.repo.GetPath()
 }
 
-func (r *MainChoreoInstance) GetPathInRepo() string {
+func (r *RootChoreoInstance) GetPathInRepo() string {
 	return r.pathInRepo
 }
 
-func (r *MainChoreoInstance) GetTempPath() string {
+func (r *RootChoreoInstance) GetTempPath() string {
 	return r.tempPath
 }
 
-func (r *MainChoreoInstance) GetDBPath() string {
+func (r *RootChoreoInstance) GetDBPath() string {
 	return filepath.Join(r.repo.GetPath(), r.pathInRepo, *r.flags.DBPath)
 }
 
-func (r *MainChoreoInstance) GetFlags() *genericclioptions.ConfigFlags {
+func (r *RootChoreoInstance) GetFlags() *genericclioptions.ConfigFlags {
 	return r.flags
 }
 
-func (r *MainChoreoInstance) GetAPIStore() *api.APIStore {
+func (r *RootChoreoInstance) GetAPIStore() *api.APIStore {
 	return r.apiStoreInternal
 }
 
-func (r *MainChoreoInstance) GetCommit() *object.Commit { return nil }
+func (r *RootChoreoInstance) GetCommit() *object.Commit { return nil }
 
-func (r *MainChoreoInstance) GetAPIClient() resourceclient.Client { return r.apiclient }
+func (r *RootChoreoInstance) GetAPIClient() resourceclient.Client { return r.apiclient }
 
-func (r *MainChoreoInstance) GetAnnotationVal() string { return "" }
+func (r *RootChoreoInstance) GetAnnotationVal() string { return "" }

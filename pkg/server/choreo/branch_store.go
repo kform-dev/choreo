@@ -64,7 +64,7 @@ func (r *BranchStore) Update(ctx context.Context, branches []*branchpb.BranchObj
 		}
 
 		if !branchObj.CheckedOut {
-			commit, err := r.choreo.status.Get().MainChoreoInstance.GetRepo().GetBranchCommit(branchObj.Name)
+			commit, err := r.choreo.status.Get().RootChoreoInstance.GetRepo().GetBranchCommit(branchObj.Name)
 			if err != nil {
 				errm = errors.Join(errm, err)
 				continue
@@ -100,7 +100,7 @@ func (r *BranchStore) update(ctx context.Context, branch string, newState State)
 
 	// import the internal apis for storage purpose
 	apiStore := api.NewAPIStore()
-	apiStore.Import(r.choreo.status.Get().MainChoreoInstance.GetAPIStore())
+	apiStore.Import(r.choreo.status.Get().RootChoreoInstance.GetAPIStore())
 
 	newBranchCtx := &BranchCtx{
 		State:    newState,

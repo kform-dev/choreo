@@ -42,7 +42,7 @@ type srv struct {
 }
 
 func (r *srv) Get(ctx context.Context, req *branchpb.Get_Request) (*branchpb.Get_Response, error) {
-	repo := r.choreo.GetMainChoreoInstance().GetRepo()
+	repo := r.choreo.GetRootChoreoInstance().GetRepo()
 	logs, err := repo.GetBranchLog(req.Branch)
 	if err != nil {
 		return &branchpb.Get_Response{}, err
@@ -52,19 +52,19 @@ func (r *srv) Get(ctx context.Context, req *branchpb.Get_Request) (*branchpb.Get
 	}, nil
 }
 func (r *srv) List(ctx context.Context, req *branchpb.List_Request) (*branchpb.List_Response, error) {
-	repo := r.choreo.GetMainChoreoInstance().GetRepo()
+	repo := r.choreo.GetRootChoreoInstance().GetRepo()
 	branches := repo.GetBranches()
 	return &branchpb.List_Response{BranchObjects: branches}, nil
 }
 func (r *srv) Create(ctx context.Context, req *branchpb.Create_Request) (*branchpb.Create_Response, error) {
-	repo := r.choreo.GetMainChoreoInstance().GetRepo()
+	repo := r.choreo.GetRootChoreoInstance().GetRepo()
 	if err := repo.CreateBranch(req.Branch); err != nil {
 		return &branchpb.Create_Response{}, status.Errorf(codes.Internal, "err: %s", err.Error())
 	}
 	return &branchpb.Create_Response{}, nil
 }
 func (r *srv) Delete(ctx context.Context, req *branchpb.Delete_Request) (*branchpb.Delete_Response, error) {
-	repo := r.choreo.GetMainChoreoInstance().GetRepo()
+	repo := r.choreo.GetRootChoreoInstance().GetRepo()
 	if err := repo.DeleteBranch(req.Branch); err != nil {
 		return &branchpb.Delete_Response{}, status.Errorf(codes.Internal, "err: %s", err.Error())
 	}
@@ -72,7 +72,7 @@ func (r *srv) Delete(ctx context.Context, req *branchpb.Delete_Request) (*branch
 }
 
 func (r *srv) Diff(ctx context.Context, req *branchpb.Diff_Request) (*branchpb.Diff_Response, error) {
-	repo := r.choreo.GetMainChoreoInstance().GetRepo()
+	repo := r.choreo.GetRootChoreoInstance().GetRepo()
 	diffs, err := repo.DiffBranch(req.SrcBranch, req.DstBranch)
 	if err != nil {
 		return &branchpb.Diff_Response{}, status.Errorf(codes.Internal, "err: %s", err.Error())
@@ -83,7 +83,7 @@ func (r *srv) Diff(ctx context.Context, req *branchpb.Diff_Request) (*branchpb.D
 }
 
 func (r *srv) Merge(ctx context.Context, req *branchpb.Merge_Request) (*branchpb.Merge_Response, error) {
-	repo := r.choreo.GetMainChoreoInstance().GetRepo()
+	repo := r.choreo.GetRootChoreoInstance().GetRepo()
 	if err := repo.MergeBranch(req.SrcBranch, req.DstBranch); err != nil {
 		return &branchpb.Merge_Response{}, status.Errorf(codes.Internal, "err: %s", err.Error())
 	}
@@ -91,7 +91,7 @@ func (r *srv) Merge(ctx context.Context, req *branchpb.Merge_Request) (*branchpb
 }
 
 func (r *srv) Stash(ctx context.Context, req *branchpb.Stash_Request) (*branchpb.Stash_Response, error) {
-	repo := r.choreo.GetMainChoreoInstance().GetRepo()
+	repo := r.choreo.GetRootChoreoInstance().GetRepo()
 	if err := repo.StashBranch(req.Branch); err != nil {
 		return &branchpb.Stash_Response{}, status.Errorf(codes.Internal, "err: %s", err.Error())
 	}
@@ -99,7 +99,7 @@ func (r *srv) Stash(ctx context.Context, req *branchpb.Stash_Request) (*branchpb
 }
 
 func (r *srv) Checkout(ctx context.Context, req *branchpb.Checkout_Request) (*branchpb.Checkout_Response, error) {
-	repo := r.choreo.GetMainChoreoInstance().GetRepo()
+	repo := r.choreo.GetRootChoreoInstance().GetRepo()
 	if err := repo.Checkout(req.Branch); err != nil {
 		return &branchpb.Checkout_Response{}, status.Errorf(codes.Internal, "err: %s", err.Error())
 	}
@@ -107,7 +107,7 @@ func (r *srv) Checkout(ctx context.Context, req *branchpb.Checkout_Request) (*br
 }
 
 func (r *srv) StreamFiles(req *branchpb.Get_Request, stream branchpb.Branch_StreamFilesServer) error {
-	repo := r.choreo.GetMainChoreoInstance().GetRepo()
+	repo := r.choreo.GetRootChoreoInstance().GetRepo()
 	return repo.StreamFiles(req.Branch, &repository.FileWriter{Stream: stream})
 }
 

@@ -26,7 +26,7 @@ import (
 type ChoreoStatus struct {
 	Status             bool
 	Reason             string
-	MainChoreoInstance ChoreoInstance
+	RootChoreoInstance ChoreoInstance
 	ChoreoCtx          *choreopb.ChoreoContext
 }
 
@@ -67,7 +67,7 @@ func Initializing() ChoreoStatus {
 	return ChoreoStatus{
 		Status:             false,
 		Reason:             "initializing",
-		MainChoreoInstance: nil,
+		RootChoreoInstance: nil,
 		ChoreoCtx:          nil,
 	}
 }
@@ -77,7 +77,7 @@ func Success(c ChoreoInstance, choreoCtx *choreopb.ChoreoContext) ChoreoStatus {
 	return ChoreoStatus{
 		Status:             true,
 		Reason:             "",
-		MainChoreoInstance: c,
+		RootChoreoInstance: c,
 		ChoreoCtx:          choreoCtx,
 	}
 }
@@ -86,7 +86,7 @@ func Failed(msg string) ChoreoStatus {
 	return ChoreoStatus{
 		Status:             true,
 		Reason:             "",
-		MainChoreoInstance: nil,
+		RootChoreoInstance: nil,
 		ChoreoCtx:          nil,
 	}
 }
