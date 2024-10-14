@@ -30,7 +30,7 @@ type RunnerClient interface {
 	Close() error
 }
 
-func NewRUnnerClient(config *config.Config) (RunnerClient, error) {
+func NewRunnerClient(config *config.Config) (RunnerClient, error) {
 	client := &runnerclient{
 		config: config,
 	}
