@@ -30,7 +30,7 @@ type RunnerClient interface {
 	Close() error
 }
 
-func NewChoreoClient(config *config.Config) (RunnerClient, error) {
+func NewRUnnerClient(config *config.Config) (RunnerClient, error) {
 	client := &runnerclient{
 		config: config,
 	}
