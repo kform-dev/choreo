@@ -24,10 +24,12 @@ import (
 	"strings"
 	"time"
 
+	"github.com/go-git/go-git/v5/plumbing/object"
 	"github.com/henderiw/logger/log"
 	"github.com/kform-dev/choreo/pkg/cli/genericclioptions"
 	"github.com/kform-dev/choreo/pkg/client/go/resourceclient"
 	"github.com/kform-dev/choreo/pkg/proto/choreopb"
+	"github.com/kform-dev/choreo/pkg/repository/git"
 	"github.com/kform-dev/choreo/pkg/repository/repogit"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -86,8 +88,11 @@ func (r *choreo) Get(ctx context.Context, req *choreopb.Get_Request) (*choreopb.
 func (r *choreo) Apply(ctx context.Context, req *choreopb.Apply_Request) (*choreopb.Apply_Response, error) {
 	log := log.FromContext(ctx)
 	if req.ChoreoContext.Path != "" {
-		// we dont deal with change in this case
-		rootChoreoInstance, err := NewRootChoreoInstance(ctx, &Config{Path: req.ChoreoContext.Path, Flags: r.flags})
+		// the server cannot update the local environment without stop/start the server
+		rootChoreoInstance, err := NewRootChoreoInstance(ctx, &Config{
+			Path:  req.ChoreoContext.Path,
+			Flags: r.flags,
+		})
 		if err != nil {
 			r.status.Set(Failed(err.Error()))
 			return &choreopb.Apply_Response{}, status.Errorf(codes.InvalidArgument, "err: %s", err.Error())
@@ -96,7 +101,7 @@ func (r *choreo) Apply(ctx context.Context, req *choreopb.Apply_Request) (*chore
 		return &choreopb.Apply_Response{}, nil
 
 	} else {
-		// dynamic
+		// the choreo context can dynamically change based on new choreoContext information
 		if !r.status.Changed(req.ChoreoContext) {
 			return &choreopb.Apply_Response{}, nil
 		}
@@ -112,20 +117,34 @@ func (r *choreo) Apply(ctx context.Context, req *choreopb.Apply_Request) (*chore
 		}
 		r.status.Set(Failed("reinitializing"))
 
-		url := req.ChoreoContext.Url
-		replace := strings.NewReplacer("/", "-", ":", "-")
-		childRepoPath := filepath.Join(".", replace.Replace(url))
-
-		log.Info("apply new choreo context", "url", url, "childRepoPath", childRepoPath, "ref", req.ChoreoContext.Ref)
-
-		repo, commit, err := repogit.NewUpstreamRepo(ctx, childRepoPath, url, req.ChoreoContext.Ref)
+		// clones or fetches the latest updates of the repo if online
+		// if not online and the repo exists it provides a warning, such that
+		// we can continue if needed
+		repoPath := getRepoPath(req.ChoreoContext.Url)
+		log.Info("apply new choreo context", "url", req.ChoreoContext.Url, "repoPath", repoPath, "ref", req.ChoreoContext.Ref)
+		repo, err := repogit.NewUpstreamRepo2(ctx, repoPath, req.ChoreoContext.Url)
 		if err != nil {
-			r.status.Set(Failed(err.Error()))
-			return &choreopb.Apply_Response{}, status.Errorf(codes.InvalidArgument, "err: %s", err.Error())
+			if git.IsWarningError(err) {
+				log.Info("warning", "err", err.Error())
+			} else {
+				r.status.Set(Failed(err.Error()))
+				return &choreopb.Apply_Response{}, status.Errorf(codes.InvalidArgument, "err: %s", err.Error())
+			}
 		}
+
+		var commit *object.Commit
+		if req.ChoreoContext.Production {
+			commit, err = repo.CheckoutCommitRef("dummy", req.ChoreoContext.Ref)
+		} else {
+			commit, err = repo.CheckoutBranchOrCommitRef(req.ChoreoContext.Branch, req.ChoreoContext.Ref)
+		}
+		if err != nil {
+			return &choreopb.Apply_Response{}, status.Errorf(codes.Internal, "err: %s", err.Error())
+		}
+
 		rootChoreoInstance, err = NewRootChoreoInstance(ctx, &Config{
 			Flags:      r.flags,
-			Path:       childRepoPath,
+			Path:       repoPath,
 			Repo:       repo,
 			Commit:     commit,
 			PathInRepo: req.ChoreoContext.Directory,
@@ -204,7 +223,7 @@ func (r *choreo) updateBranches(ctx context.Context) error {
 		return err
 	}
 
-	if status.ChoreoCtx.Continuous {
+	if status.ChoreoCtx.Production {
 		bctx, err := r.branchStore.GetCheckedOut()
 		if err != nil {
 			return err
@@ -263,4 +282,9 @@ func (r *choreo) Destroy(obj runtime.Unstructured) error {
 		))
 
 	return os.Remove(fileName)
+}
+
+func getRepoPath(url string) string {
+	replace := strings.NewReplacer("/", "-", ":", "-")
+	return filepath.Join(".", replace.Replace(url))
 }

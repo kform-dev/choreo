@@ -24,16 +24,22 @@ service Choreo {
     rpc Get (Get.Request) returns (Get.Response) {}
     rpc Apply (Apply.Request) returns (Apply.Response) {}
     //rpc Watch (Watch.Request) returns (stream Watch.Response) {}
+    rpc Commit (Commit.Request) returns (Commit.Response) {}
+    rpc Push (Push.Request) returns (Push.Response) {}
   }
 
-
+// 3 usages:
+// 1. dev with human git -> production = false, path is set
+// 2. dev with choreo git -> production = false, branch, url, ref, dir is set
+// 3. prod ->  production = true, url, ref, dir is set; (branch is irrelevant)
 message ChoreoContext {
-    string path = 1; // when we supply this this is a manual path
-    string url = 2;
-    string ref = 3;
-    string directory = 4;
-    string secret = 5;
-    bool continuous = 6;
+    bool production = 1; // drives continuous mode
+    string path = 2; // when we supply this this is a manual path -> dev with human git
+    string branch = 3; // dev with choreo git
+    string url = 4;
+    string ref = 5;
+    string directory = 6;
+    string secret = 7;
 }
 
 message Get {
@@ -91,5 +97,36 @@ message Watch {
         bool watch = 1 ; // indicate watch only, otherwise list and watch is used
         string proxyName = 2;
         string proxyNamespace = 3;
+    }
+}
+
+message Commit {
+    message Request {
+        string message = 1; 
+        Options options = 2;
+    }
+
+    message Response {
+        string message = 1; 
+    }
+
+    message Options {
+        string proxyName = 1;
+        string proxyNamespace = 2;
+        bool push = 3; // when the push is set the commit is push
+    }
+}
+
+message Push {
+    message Request {
+        Options options = 2;
+    }
+
+    message Response {
+    }
+
+    message Options {
+        string proxyName = 1;
+        string proxyNamespace = 2;
     }
 }

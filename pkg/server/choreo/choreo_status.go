@@ -49,7 +49,8 @@ func (r *Status) Changed(newChoreoCtx *choreopb.ChoreoContext) bool {
 	if oldChoreoCtx == nil {
 		return true
 	}
-	if oldChoreoCtx.Url != newChoreoCtx.Url ||
+	if oldChoreoCtx.Branch != newChoreoCtx.Branch ||
+		oldChoreoCtx.Url != newChoreoCtx.Url ||
 		oldChoreoCtx.Directory != newChoreoCtx.Directory ||
 		oldChoreoCtx.Ref != newChoreoCtx.Ref {
 		return true

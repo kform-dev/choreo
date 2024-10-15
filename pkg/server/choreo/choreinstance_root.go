@@ -26,11 +26,14 @@ import (
 	"github.com/henderiw/logger/log"
 	"github.com/kform-dev/choreo/pkg/cli/genericclioptions"
 	"github.com/kform-dev/choreo/pkg/client/go/resourceclient"
+	"github.com/kform-dev/choreo/pkg/proto/choreopb"
 	"github.com/kform-dev/choreo/pkg/repository"
 	"github.com/kform-dev/choreo/pkg/repository/git"
 	"github.com/kform-dev/choreo/pkg/repository/repogit"
 	"github.com/kform-dev/choreo/pkg/server/api"
 	"github.com/kform-dev/choreo/pkg/server/choreo/loader"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 const DummyBranch = "dummy"
@@ -64,12 +67,6 @@ func NewRootChoreoInstance(ctx context.Context, config *Config) (ChoreoInstance,
 	r.tempPath = filepath.Join(r.GetPath(), ".choreo")
 	if err := EnsureDir(r.tempPath); err != nil {
 		return r, err
-	}
-	if r.commit != nil {
-		if err := r.repo.CheckoutCommit(r.commit, DummyBranch); err != nil {
-			fmt.Println("create dummy branch failed", err)
-			return r, err
-		}
 	}
 
 	/*
@@ -180,3 +177,23 @@ func (r *RootChoreoInstance) GetCommit() *object.Commit { return nil }
 func (r *RootChoreoInstance) GetAPIClient() resourceclient.Client { return r.apiclient }
 
 func (r *RootChoreoInstance) GetAnnotationVal() string { return "" }
+
+func (r *RootChoreoInstance) CommitWorktree(msg string) (*choreopb.Commit_Response, error) {
+	msg, err := r.repo.CommitWorktree(msg, []string{
+		filepath.Join(r.pathInRepo, *r.flags.InputPath),
+	})
+	if err != nil {
+		return &choreopb.Commit_Response{}, status.Errorf(codes.Internal, "failed pushing branch: %v", err)
+	}
+	return &choreopb.Commit_Response{
+		Message: msg,
+	}, nil
+}
+
+func (r *RootChoreoInstance) PushBranch(branch string) (*choreopb.Push_Response, error) {
+	err := r.repo.PushBranch(branch)
+	if err != nil {
+		return &choreopb.Push_Response{}, status.Errorf(codes.Internal, "failed pushing branch: %v", err)
+	}
+	return &choreopb.Push_Response{}, nil
+}

@@ -40,7 +40,10 @@ type Repository interface {
 	StashBranch(branch string) error
 	StreamFiles(branch string, w *FileWriter) error
 	Checkout(branch string) error
-	CheckoutCommit(commit *object.Commit, branch string) error
+	CheckoutCommitRef(commitRef, branch string) (*object.Commit, error)
+	CheckoutBranchOrCommitRef(branch, commitRef string) (*object.Commit, error)
+	CommitWorktree(msg string, paths []string) (string, error)
+	PushBranch(branch string) error
 }
 
 type FileWriter struct {

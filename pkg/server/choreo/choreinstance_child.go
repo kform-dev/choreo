@@ -23,9 +23,12 @@ import (
 	"github.com/go-git/go-git/v5/plumbing/object"
 	"github.com/kform-dev/choreo/pkg/cli/genericclioptions"
 	"github.com/kform-dev/choreo/pkg/client/go/resourceclient"
+	"github.com/kform-dev/choreo/pkg/proto/choreopb"
 	"github.com/kform-dev/choreo/pkg/repository"
 	"github.com/kform-dev/choreo/pkg/server/api"
 	"github.com/kform-dev/choreo/pkg/server/choreo/loader"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 func NewChildChoreoInstance(ctx context.Context, repo repository.Repository, pathInRepo string, flags *genericclioptions.ConfigFlags, commit *object.Commit, annotationVal string) (ChoreoInstance, error) {
@@ -112,4 +115,12 @@ func (r *ChildChoreoInstance) GetAnnotationVal() string { return r.annotationVal
 
 func (r *ChildChoreoInstance) Destroy() error {
 	return nil
+}
+
+func (r *ChildChoreoInstance) CommitWorktree(msg string) (*choreopb.Commit_Response, error) {
+	return &choreopb.Commit_Response{}, status.Errorf(codes.Unimplemented, "commitWorktree not implemented on child choreo instance")
+}
+
+func (r *ChildChoreoInstance) PushBranch(branch string) (*choreopb.Push_Response, error) {
+	return &choreopb.Push_Response{}, status.Errorf(codes.Unimplemented, "commitWorktree not implemented on child choreo instance")
 }

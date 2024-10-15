@@ -28,8 +28,10 @@ import (
 	"time"
 
 	"github.com/go-git/go-git/v5"
+	"github.com/go-git/go-git/v5/config"
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/go-git/go-git/v5/plumbing/object"
+	"github.com/go-git/go-git/v5/plumbing/transport/http"
 	"github.com/go-git/go-git/v5/utils/merkletrie"
 	"github.com/henderiw/logger/log"
 	"github.com/kform-dev/choreo/pkg/proto/branchpb"
@@ -42,6 +44,18 @@ func NewLocalRepo(ctx context.Context, repopath string) (repository.Repository, 
 	if err != nil {
 		return nil, err
 	}
+	return &repo{
+		repopath: repopath,
+		repo:     gitrepo,
+	}, nil
+}
+
+func NewUpstreamRepo2(ctx context.Context, repopath, url string) (repository.Repository, error) {
+	gitrepo, err := lgit.Open2(ctx, repopath, url)
+	if err != nil {
+		return nil, err
+	}
+
 	return &repo{
 		repopath: repopath,
 		repo:     gitrepo,
@@ -181,8 +195,9 @@ func (r *repo) GetBranchLog(branchName string) ([]*branchpb.Get_Log, error) {
 	return logs, nil
 }
 
-func (r *repo) CreateBranch(branchName string) error {
-	if r.branchExists(branchName) {
+func (r *repo) CreateBranch(branch string) error {
+	branchRefName := lgit.BranchName(branch).BranchInLocal()
+	if r.branchExists(branchRefName) {
 		return nil
 	}
 
@@ -190,7 +205,7 @@ func (r *repo) CreateBranch(branchName string) error {
 	if err != nil {
 		return err
 	}
-	branchRef := plumbing.NewHashReference(lgit.BranchName(branchName).BranchInLocal(), headRef.Hash())
+	branchRef := plumbing.NewHashReference(branchRefName, headRef.Hash())
 
 	err = r.repo.Storer.SetReference(branchRef)
 	if err != nil {
@@ -200,8 +215,9 @@ func (r *repo) CreateBranch(branchName string) error {
 	return nil
 }
 
-func (r *repo) DeleteBranch(branchName string) error {
-	if !r.branchExists(branchName) {
+func (r *repo) DeleteBranch(branch string) error {
+	branchRefName := lgit.BranchName(branch).BranchInLocal()
+	if !r.branchExists(branchRefName) {
 		return nil
 	}
 
@@ -209,10 +225,8 @@ func (r *repo) DeleteBranch(branchName string) error {
 		return err
 	}
 
-	branchRef := lgit.BranchName(branchName).BranchInLocal()
-
 	// Deleting the branch
-	if err := r.repo.Storer.RemoveReference(branchRef); err != nil {
+	if err := r.repo.Storer.RemoveReference(branchRefName); err != nil {
 		return fmt.Errorf("failed to delete local branch: %s", err)
 	}
 	return nil
@@ -314,39 +328,82 @@ func (r *repo) StashBranch(branchName string) error {
 	return nil
 }
 
-func (r *repo) CheckoutCommit(commit *object.Commit, branch string) error {
+func (r *repo) CheckoutBranchOrCommitRef(branch, commitRef string) (*object.Commit, error) {
 	w, err := r.repo.Worktree()
 	if err != nil {
-		return fmt.Errorf("failed to get workTree %v", err.Error())
+		return nil, fmt.Errorf("failed to get workTree %v", err.Error())
+	}
+	remoteRef, err := r.repo.Reference(lgit.BranchName(branch).BranchInRemote(), true)
+	if err == nil {
+		localRef, err := r.repo.Reference(lgit.BranchName(branch).BranchInLocal(), true)
+		if err == nil {
+			commit, err := lgit.ResolveToCommit(r.repo, string(remoteRef.Name()))
+			if err != nil {
+				return nil, err
+			}
+			if localRef.Hash() != remoteRef.Hash() {
+				// Ensure the branch is checked out
+				err = w.Checkout(&git.CheckoutOptions{
+					Branch: lgit.BranchName(branch).BranchInLocal(),
+					Force:  true, // Force the checkout in case the working directory is not clean
+				})
+				if err != nil {
+					return commit, err
+				}
+				// Reset the local branch to match the remote
+				return commit, w.Reset(&git.ResetOptions{
+					Mode:   git.HardReset,
+					Commit: remoteRef.Hash(),
+				})
+			} else {
+				return commit, w.Checkout(&git.CheckoutOptions{
+					Branch: lgit.BranchName(branch).BranchInLocal(),
+					Force:  true,
+				})
+			}
+		}
+		return r.CheckoutCommitRef(branch, string(remoteRef.Name()))
+	}
+	return r.CheckoutCommitRef(branch, commitRef)
+}
+
+func (r *repo) CheckoutCommitRef(branch, commitRef string) (*object.Commit, error) {
+	commit, err := lgit.ResolveToCommit(r.repo, commitRef)
+	if err != nil {
+		return nil, err
+	}
+	w, err := r.repo.Worktree()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get workTree %v", err.Error())
 	}
 
-	if r.branchExists(branch) {
+	branchRefName := lgit.BranchName(branch).BranchInLocal()
+
+	if r.branchExists(branchRefName) {
 		if err := r.StashBranch(branch); err != nil {
-			return err
+			return nil, err
 		}
 		if err := r.DeleteBranch(branch); err != nil {
-			return err
+			return nil, err
 		}
 	}
-
 	// Checkout the specific commit
 	err = w.Checkout(&git.CheckoutOptions{
 		Hash:   commit.Hash,
-		Branch: lgit.BranchName(branch).BranchInLocal(),
+		Branch: branchRefName,
 		Create: true,
 		Force:  true,
 	})
 	if err != nil {
-		return fmt.Errorf("failed to create and checkout new branch %s at commit %s: %v", branch, commit.Hash.String(), err)
+		return nil, fmt.Errorf("failed to create and checkout new branch %s at commit %s: %v", branch, commit.Hash.String(), err)
 	}
 	branchRef := plumbing.NewHashReference(lgit.BranchName(branch).BranchInLocal(), commit.Hash)
 
 	err = r.repo.Storer.SetReference(branchRef)
 	if err != nil {
-		return err
+		return nil, err
 	}
-
-	return nil
+	return commit, nil
 }
 
 func (r *repo) StreamFiles(branchName string, w *repository.FileWriter) error {
@@ -482,8 +539,8 @@ func (r *repo) Commit(branchName string, msg string) (string, error) {
 	return commit.String(), nil
 }
 
-func (r *repo) branchExists(branchName string) bool {
-	ref, err := r.repo.Reference(lgit.BranchName(branchName).BranchInLocal(), false)
+func (r *repo) branchExists(branchRef plumbing.ReferenceName) bool {
+	ref, err := r.repo.Reference(branchRef, false)
 	if err != nil {
 		// this might be an emty
 		return false
@@ -536,4 +593,61 @@ func (r *repo) getBranchFromHeadFIle() string {
 		}
 	}
 	return ""
+}
+
+func (r *repo) CommitWorktree(msg string, paths []string) (string, error) {
+	// Get the working directory for the repository
+	w, err := r.repo.Worktree()
+	if err != nil {
+		return "", fmt.Errorf("failed to get worktree: %s", err.Error())
+	}
+
+	// Add all files in the specified subdirectory to the staging area
+	var errm error
+	for _, path := range paths {
+		err = filepath.Walk(filepath.Join(r.repopath, path), func(path string, info os.FileInfo, err error) error {
+			if err != nil {
+				return err
+			}
+			if !info.IsDir() {
+				// Add each file to the staging area
+				_, err := w.Add(path[len(r.repopath)+1:]) // Strip the repoPath and get the relative path
+				if err != nil {
+					return fmt.Errorf("could not stage file %s: %v", path, err)
+				}
+			}
+			return nil
+		})
+
+		if err != nil {
+			errm = errors.Join(errm, fmt.Errorf("could not stage file %v", err))
+		}
+	}
+
+	// Commit the changes
+	commit, err := w.Commit(msg, &git.CommitOptions{
+		Author: &object.Signature{
+			Name:  "choreo",
+			Email: "choreo@example.com",
+			When:  time.Now(),
+		},
+	})
+	if err != nil {
+		return "", fmt.Errorf("failed to get worktree: %s", err.Error())
+	}
+	return commit.String(), nil
+}
+
+func (r *repo) PushBranch(branch string) error {
+	return r.repo.Push(&git.PushOptions{
+		RemoteName: lgit.OriginName,
+		RefSpecs: []config.RefSpec{
+			//config.RefSpec(fmt.Sprintf("refs/heads/%s:refs/heads/%s", branchName, branchName)),
+			config.RefSpec("+" + lgit.BranchName(branch).BranchInRemote() + "*:" + lgit.BranchName(branch).BranchInLocal() + "*"),
+		},
+		Auth: &http.BasicAuth{
+			Username: "henderiw",
+			Password: "your-access-token",
+		},
+	})
 }

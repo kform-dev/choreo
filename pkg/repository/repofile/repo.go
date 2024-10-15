@@ -84,6 +84,17 @@ func (r *repo) GetRefCommit(_ string) (*object.Commit, error) {
 	return nil, fmt.Errorf("GetRefCommit not supported in filerepo")
 }
 
-func (r *repo) CheckoutCommit(_ *object.Commit, _ string) error {
-	return fmt.Errorf("CheckoutCommit not supported in filerepo")
+func (r *repo) CheckoutCommitRef(_, _ string) (*object.Commit, error) {
+	return nil, fmt.Errorf("CheckoutCommit not supported in filerepo")
+}
+
+func (r *repo) CheckoutBranchOrCommitRef(branch, commitRef string) (*object.Commit, error) {
+	return nil, fmt.Errorf("CheckoutBranchOrCommitRef not supported in filerepo")
+}
+
+func (r *repo) CommitWorktree(msg string, paths []string) (string, error) {
+	return "", fmt.Errorf("CommitWorktree not supported in filerepo")
+}
+func (r *repo) PushBranch(branch string) error {
+	return fmt.Errorf("PushBranch not supported in filerepo")
 }

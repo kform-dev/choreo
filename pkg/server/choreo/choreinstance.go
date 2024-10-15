@@ -20,6 +20,7 @@ import (
 	"github.com/go-git/go-git/v5/plumbing/object"
 	"github.com/kform-dev/choreo/pkg/cli/genericclioptions"
 	"github.com/kform-dev/choreo/pkg/client/go/resourceclient"
+	"github.com/kform-dev/choreo/pkg/proto/choreopb"
 	"github.com/kform-dev/choreo/pkg/repository"
 	"github.com/kform-dev/choreo/pkg/server/api"
 )
@@ -38,4 +39,6 @@ type ChoreoInstance interface {
 	GetAPIClient() resourceclient.Client
 	GetAnnotationVal() string
 	Destroy() error
+	CommitWorktree(msg string) (*choreopb.Commit_Response, error)
+	PushBranch(branch string) (*choreopb.Push_Response, error)
 }

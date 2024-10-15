@@ -29,6 +29,8 @@ import (
 type Client interface {
 	Get(ctx context.Context, opts ...GetOption) (*choreopb.Get_Response, error)
 	Apply(ctx context.Context, choreoCtx *choreopb.ChoreoContext, opts ...ApplyOption) error
+	Commit(ctx context.Context, msg string, opts ...CommitOption) error
+	Push(ctx context.Context, opts ...PushOption) error
 	Close() error
 }
 
@@ -90,6 +92,34 @@ func (r *client) Apply(ctx context.Context, choreoCtx *choreopb.ChoreoContext, o
 	return err
 }
 
+func (r *client) Commit(ctx context.Context, msg string, opts ...CommitOption) error {
+	o := CommitOptions{}
+	o.ApplyOptions(opts)
+
+	_, err := r.client.Commit(ctx, &choreopb.Commit_Request{
+		Message: msg,
+		Options: &choreopb.Commit_Options{
+			ProxyName:      o.Proxy.Name,
+			ProxyNamespace: o.Proxy.Namespace,
+			Push:           o.Push,
+		},
+	})
+	return err
+}
+
+func (r *client) Push(ctx context.Context, opts ...PushOption) error {
+	o := PushOptions{}
+	o.ApplyOptions(opts)
+
+	_, err := r.client.Push(ctx, &choreopb.Push_Request{
+		Options: &choreopb.Push_Options{
+			ProxyName:      o.Proxy.Name,
+			ProxyNamespace: o.Proxy.Namespace,
+		},
+	})
+	return err
+}
+
 type GetOption interface {
 	// ApplyToGet applies this configuration to the given get options.
 	ApplyToGet(*GetOptions)
@@ -134,6 +164,56 @@ func (o *ApplyOptions) ApplyToApply(lo *ApplyOptions) {
 func (o *ApplyOptions) ApplyOptions(opts []ApplyOption) *ApplyOptions {
 	for _, opt := range opts {
 		opt.ApplyToApply(o)
+	}
+	return o
+}
+
+type CommitOption interface {
+	// ApplyToGet applies this configuration to the given get options.
+	ApplyToCommit(*CommitOptions)
+}
+
+var _ CommitOption = &CommitOptions{}
+
+type CommitOptions struct {
+	Proxy types.NamespacedName
+	Push  bool
+}
+
+func (o *CommitOptions) ApplyToCommit(lo *CommitOptions) {
+	lo.Proxy = o.Proxy
+	lo.Push = o.Push
+}
+
+// ApplyOptions applies the given get options on these options,
+// and then returns itself (for convenient chaining).
+func (o *CommitOptions) ApplyOptions(opts []CommitOption) *CommitOptions {
+	for _, opt := range opts {
+		opt.ApplyToCommit(o)
+	}
+	return o
+}
+
+type PushOption interface {
+	// ApplyToGet applies this configuration to the given get options.
+	ApplyToPush(*PushOptions)
+}
+
+var _ PushOption = &PushOptions{}
+
+type PushOptions struct {
+	Proxy types.NamespacedName
+}
+
+func (o *PushOptions) ApplyToPush(lo *PushOptions) {
+	lo.Proxy = o.Proxy
+}
+
+// ApplyOptions applies the given get options on these options,
+// and then returns itself (for convenient chaining).
+func (o *PushOptions) ApplyOptions(opts []PushOption) *PushOptions {
+	for _, opt := range opts {
+		opt.ApplyToPush(o)
 	}
 	return o
 }
