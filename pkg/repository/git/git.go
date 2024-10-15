@@ -53,6 +53,42 @@ func IsGitRepo(path string) bool {
 	return true
 }
 
+func Open2(ctx context.Context, path, url string) (*git.Repository, error) {
+	online := CheckOnline(ctx)
+	cleanup := ""
+	defer func() {
+		if cleanup != "" {
+			os.RemoveAll(cleanup)
+		}
+	}()
+	repo, err := git.PlainOpen(path)
+	if err == git.ErrRepositoryNotExists {
+		if !online {
+			return nil, NewFatalError("offline, repo does not exist")
+		}
+		// Repository does not exist, perform a clone
+		repo, err := cloneAll(ctx, path, url)
+		if err != nil {
+			return nil, NewFatalError(fmt.Sprintf("failed to cloning repo: %v", err))
+		}
+		cleanup = ""
+		return repo, nil
+	} else if err != nil {
+		return nil, NewFatalError(fmt.Sprintf("failed to open existing repo: %v", err))
+	}
+
+	if !online {
+		return repo, NewWarningError("offline, could nt fetch latest updates")
+	}
+	if err := fetchAll(ctx, repo); err != nil {
+		return nil, NewFatalError(fmt.Sprintf("failed to fetch latest updates: %v", err))
+	}
+	if err := resetToRemoteHead(ctx, repo, MainBranch.BranchInRemote()); err != nil {
+		return nil, NewFatalError(fmt.Sprintf("failed to reset to remote head: %v", err))
+	}
+	return repo, nil
+}
+
 // Open open the git repo and either clones or fecthes the remote info
 func Open(ctx context.Context, path string, url, refName string) (*git.Repository, *object.Commit, error) {
 	cleanup := ""
@@ -84,7 +120,7 @@ func Open(ctx context.Context, path string, url, refName string) (*git.Repositor
 	commit, err := ResolveToCommit(repo, refName)
 	if err != nil {
 		// Commit is not present, fetch it
-		if err := fetchUpdates(ctx, repo); err != nil {
+		if err := fetchAll(ctx, repo); err != nil {
 			return nil, nil, err
 		}
 		commit, err := ResolveToCommit(repo, refName)
@@ -127,7 +163,7 @@ func cloneAll(ctx context.Context, path, url string) (*git.Repository, error) {
 	return repo, err
 }
 
-func fetchUpdates(ctx context.Context, repo *git.Repository) error {
+func fetchAll(ctx context.Context, repo *git.Repository) error {
 	log := log.FromContext(ctx)
 	// Fetch all branches and tags from the remote
 	fetchOptions := &git.FetchOptions{

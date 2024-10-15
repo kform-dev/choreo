@@ -21,6 +21,8 @@ import (
 
 	"github.com/kform-dev/choreo/pkg/proto/choreopb"
 	"github.com/kform-dev/choreo/pkg/server/choreo"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 func New(choreo choreo.Choreo) choreopb.ChoreoServer {
@@ -40,4 +42,32 @@ func (r *srv) Get(ctx context.Context, req *choreopb.Get_Request) (*choreopb.Get
 
 func (r *srv) Apply(ctx context.Context, req *choreopb.Apply_Request) (*choreopb.Apply_Response, error) {
 	return r.choreo.Apply(ctx, req)
+}
+
+func (r *srv) Commit(ctx context.Context, req *choreopb.Commit_Request) (*choreopb.Commit_Response, error) {
+	rsp, err := r.choreo.Get(ctx, &choreopb.Get_Request{})
+	if err != nil {
+		return &choreopb.Commit_Response{}, err
+	}
+	if !rsp.Status {
+		return &choreopb.Commit_Response{}, status.Error(codes.Unavailable, "choreo not ready to handle request")
+	}
+	if rsp.ChoreoContext.Production {
+		return &choreopb.Commit_Response{}, status.Error(codes.Unavailable, "choreo in production does not allow for commits")
+	}
+	return r.choreo.GetRootChoreoInstance().CommitWorktree(req.Message)
+}
+
+func (r *srv) Push(ctx context.Context, _ *choreopb.Push_Request) (*choreopb.Push_Response, error) {
+	rsp, err := r.choreo.Get(ctx, &choreopb.Get_Request{})
+	if err != nil {
+		return &choreopb.Push_Response{}, err
+	}
+	if !rsp.Status {
+		return &choreopb.Push_Response{}, status.Error(codes.Unavailable, "choreo not ready to handle request")
+	}
+	if rsp.ChoreoContext.Production {
+		return &choreopb.Push_Response{}, status.Error(codes.Unavailable, "choreo in production does not allow for commits")
+	}
+	return r.choreo.GetRootChoreoInstance().PushBranch(rsp.ChoreoContext.Branch)
 }

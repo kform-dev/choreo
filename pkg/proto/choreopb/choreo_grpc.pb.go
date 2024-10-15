@@ -24,6 +24,9 @@ const _ = grpc.SupportPackageIsVersion7
 type ChoreoClient interface {
 	Get(ctx context.Context, in *Get_Request, opts ...grpc.CallOption) (*Get_Response, error)
 	Apply(ctx context.Context, in *Apply_Request, opts ...grpc.CallOption) (*Apply_Response, error)
+	// rpc Watch (Watch.Request) returns (stream Watch.Response) {}
+	Commit(ctx context.Context, in *Commit_Request, opts ...grpc.CallOption) (*Commit_Response, error)
+	Push(ctx context.Context, in *Push_Request, opts ...grpc.CallOption) (*Push_Response, error)
 }
 
 type choreoClient struct {
@@ -52,12 +55,33 @@ func (c *choreoClient) Apply(ctx context.Context, in *Apply_Request, opts ...grp
 	return out, nil
 }
 
+func (c *choreoClient) Commit(ctx context.Context, in *Commit_Request, opts ...grpc.CallOption) (*Commit_Response, error) {
+	out := new(Commit_Response)
+	err := c.cc.Invoke(ctx, "/choreopb.Choreo/Commit", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *choreoClient) Push(ctx context.Context, in *Push_Request, opts ...grpc.CallOption) (*Push_Response, error) {
+	out := new(Push_Response)
+	err := c.cc.Invoke(ctx, "/choreopb.Choreo/Push", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // ChoreoServer is the server API for Choreo service.
 // All implementations must embed UnimplementedChoreoServer
 // for forward compatibility
 type ChoreoServer interface {
 	Get(context.Context, *Get_Request) (*Get_Response, error)
 	Apply(context.Context, *Apply_Request) (*Apply_Response, error)
+	// rpc Watch (Watch.Request) returns (stream Watch.Response) {}
+	Commit(context.Context, *Commit_Request) (*Commit_Response, error)
+	Push(context.Context, *Push_Request) (*Push_Response, error)
 	mustEmbedUnimplementedChoreoServer()
 }
 
@@ -70,6 +94,12 @@ func (UnimplementedChoreoServer) Get(context.Context, *Get_Request) (*Get_Respon
 }
 func (UnimplementedChoreoServer) Apply(context.Context, *Apply_Request) (*Apply_Response, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Apply not implemented")
+}
+func (UnimplementedChoreoServer) Commit(context.Context, *Commit_Request) (*Commit_Response, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Commit not implemented")
+}
+func (UnimplementedChoreoServer) Push(context.Context, *Push_Request) (*Push_Response, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Push not implemented")
 }
 func (UnimplementedChoreoServer) mustEmbedUnimplementedChoreoServer() {}
 
@@ -120,6 +150,42 @@ func _Choreo_Apply_Handler(srv interface{}, ctx context.Context, dec func(interf
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Choreo_Commit_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(Commit_Request)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ChoreoServer).Commit(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/choreopb.Choreo/Commit",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ChoreoServer).Commit(ctx, req.(*Commit_Request))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Choreo_Push_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(Push_Request)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ChoreoServer).Push(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/choreopb.Choreo/Push",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ChoreoServer).Push(ctx, req.(*Push_Request))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Choreo_ServiceDesc is the grpc.ServiceDesc for Choreo service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -134,6 +200,14 @@ var Choreo_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "Apply",
 			Handler:    _Choreo_Apply_Handler,
+		},
+		{
+			MethodName: "Commit",
+			Handler:    _Choreo_Commit_Handler,
+		},
+		{
+			MethodName: "Push",
+			Handler:    _Choreo_Push_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

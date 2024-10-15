@@ -14,30 +14,31 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package applycmd
+package pushcmd
 
 import (
 	"context"
 
 	"github.com/kform-dev/choreo/pkg/cli/genericclioptions"
 	"github.com/kform-dev/choreo/pkg/client/go/choreoclient"
-	"github.com/kform-dev/choreo/pkg/proto/choreopb"
+	"github.com/kform-dev/choreo/pkg/client/go/util"
 	"github.com/spf13/cobra"
 	//docs "github.com/kform-dev/kform/internal/docs/generated/applydocs"
 )
 
-func GetCommand(ctx context.Context, flags *genericclioptions.ConfigFlags) *cobra.Command {
-	return NewRunner(flags).Command
+func GetCommand(ctx context.Context, f util.Factory, streams *genericclioptions.IOStreams) *cobra.Command {
+	return NewRunner(f, streams).Command
 }
 
 // NewRunner returns a command runner.
-func NewRunner(flags *genericclioptions.ConfigFlags) *Runner {
+func NewRunner(f util.Factory, streams *genericclioptions.IOStreams) *Runner {
 	r := &Runner{
-		ConfigFlags: flags,
+		factory: f,
+		streams: streams,
 	}
 	cmd := &cobra.Command{
-		Use:  "apply URL DIR REF BRANCH [flags]",
-		Args: cobra.MinimumNArgs(3),
+		Use: "push [flags]",
+		//Args: cobra.ExactArgs(1),
 		//Short:   docs.InitShort,
 		//Long:    docs.InitShort + "\n" + docs.InitLong,
 		//Example: docs.InitExamples,
@@ -49,33 +50,20 @@ func NewRunner(flags *genericclioptions.ConfigFlags) *Runner {
 }
 
 type Runner struct {
-	Command     *cobra.Command
-	ConfigFlags *genericclioptions.ConfigFlags
+	Command *cobra.Command
+	factory util.Factory
+	streams *genericclioptions.IOStreams
 }
 
 func (r *Runner) runE(cmd *cobra.Command, args []string) error {
 	ctx := cmd.Context()
 
-	client, err := r.ConfigFlags.ToChoreoClient()
-	if err != nil {
-		return err
-	}
-	defer client.Close()
-
-	choreoCtx := &choreopb.ChoreoContext{
-		Production: true,
-		Url:        args[0],
-		Directory:  args[1],
-		Ref:        args[2],
-	}
-	if len(args) > 3 {
-		choreoCtx.Production = false
-		choreoCtx.Branch = args[3]
-	}
-	if err := client.Apply(ctx, choreoCtx, &choreoclient.ApplyOptions{
-		Proxy: r.ConfigFlags.ToProxy(),
+	choreoClient := r.factory.GetChoreoClient()
+	if err := choreoClient.Push(ctx, &choreoclient.PushOptions{
+		Proxy: r.factory.GetProxy(),
 	}); err != nil {
 		return err
 	}
+
 	return nil
 }

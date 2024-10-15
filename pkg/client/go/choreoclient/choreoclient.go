@@ -68,3 +68,9 @@ func (r *choreoclient) Get(ctx context.Context, in *choreopb.Get_Request, opts .
 func (r *choreoclient) Apply(ctx context.Context, in *choreopb.Apply_Request, opts ...grpc.CallOption) (*choreopb.Apply_Response, error) {
 	return r.client.Apply(ctx, in, opts...)
 }
+func (r *choreoclient) Commit(ctx context.Context, in *choreopb.Commit_Request, opts ...grpc.CallOption) (*choreopb.Commit_Response, error) {
+	return r.client.Commit(ctx, in, opts...)
+}
+func (r *choreoclient) Push(ctx context.Context, in *choreopb.Push_Request, opts ...grpc.CallOption) (*choreopb.Push_Response, error) {
+	return r.client.Push(ctx, in, opts...)
+}
