@@ -47,6 +47,8 @@ func NewRunner(ctx context.Context, f util.Factory, streams *genericclioptions.I
 		RunE: r.runE,
 	}
 
+	//cmd.Flags().BoolVarP(&r.showChoreoAPIs, "show-choreoAPIs", "i", false, "Enable displaying internal choreo api resources")
+
 	r.Command = cmd
 	return r
 }

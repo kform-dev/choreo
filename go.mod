@@ -32,11 +32,11 @@ require (
 	golang.org/x/sync v0.8.0
 	google.golang.org/grpc v1.67.1
 	google.golang.org/protobuf v1.35.1
-	k8s.io/api v0.32.0-alpha.1
+	k8s.io/api v0.31.1
 	k8s.io/apiextensions-apiserver v0.31.1
-	k8s.io/apimachinery v0.32.0-alpha.1
+	k8s.io/apimachinery v0.31.1
 	k8s.io/apiserver v0.31.1
-	k8s.io/client-go v0.32.0-alpha.1
+	k8s.io/client-go v0.31.1
 	k8s.io/kube-openapi v0.0.0-20240827152857-f7e401e7b4c2
 	k8s.io/utils v0.0.0-20240711033017-18e509b52bc8
 	sigs.k8s.io/controller-runtime v0.19.0
@@ -85,6 +85,7 @@ require (
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.20.0 // indirect
 	github.com/hashicorp/hcl v1.0.0 // indirect
 	github.com/henderiw/apiserver-builder v0.0.3 // indirect
+	github.com/imdario/mergo v0.3.16 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/jbenet/go-context v0.0.0-20150711004518-d14ea06fba99 // indirect
 	github.com/josharian/intern v1.0.0 // indirect
