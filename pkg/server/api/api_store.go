@@ -30,27 +30,39 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 )
 
-// NewAPIResourceStore stores
-// gvk -> multiple storages
-// embedded API(s) are stored twice
-// internal/dynamic API(s) can only be stored once
 func NewAPIStore() *APIStore {
 	return &APIStore{
-		memory.NewStore[*ResourceContext](func() *ResourceContext { return &ResourceContext{} }),
+		memory.NewStore(func() *ResourceContext { return &ResourceContext{} }),
 	}
 }
 
 type ResourceContext struct {
-	*discoverypb.APIResource
-	Storage rest.Storage
-	CRD     *apiextensionsv1.CustomResourceDefinition
+	Internal *discoverypb.APIResource
+	External *discoverypb.APIResource
+	Storage  rest.Storage
+	CRD      *apiextensionsv1.CustomResourceDefinition
 }
 
-func (r *ResourceContext) GVK() schema.GroupVersionKind {
+func (r *ResourceContext) GV() schema.GroupKind {
+	return schema.GroupKind{
+		Group: r.External.Group,
+		Kind:  r.External.Kind,
+	}
+}
+
+func (r *ResourceContext) ExternalGVK() schema.GroupVersionKind {
 	return schema.GroupVersionKind{
-		Group:   r.Group,
-		Version: r.Version,
-		Kind:    r.Kind,
+		Group:   r.External.Group,
+		Version: r.External.Version,
+		Kind:    r.External.Kind,
+	}
+}
+
+func (r *ResourceContext) InternalGVK() schema.GroupVersionKind {
+	return schema.GroupVersionKind{
+		Group:   r.Internal.Group,
+		Version: r.Internal.Version,
+		Kind:    r.Internal.Kind,
 	}
 }
 
@@ -59,20 +71,20 @@ type APIStore struct {
 	store.Storer[*ResourceContext]
 }
 
-func (r APIStore) Apply(gvk schema.GroupVersionKind, rctx *ResourceContext) error {
-	gvkKey := store.ToKey(gvk.String())
-	return r.Storer.Apply(gvkKey, rctx)
+func (r APIStore) Apply(gk schema.GroupKind, rctx *ResourceContext) error {
+	gkKey := store.ToKey(gk.String())
+	return r.Storer.Apply(gkKey, rctx)
 }
 
-func (r APIStore) Delete(gvk schema.GroupVersionKind) error {
-	gvkKey := store.ToKey(gvk.String())
-	return r.Storer.Delete(gvkKey)
+func (r APIStore) Delete(gk schema.GroupKind) error {
+	gkKey := store.ToKey(gk.String())
+	return r.Storer.Delete(gkKey)
 }
 
 func (r *APIStore) GetAPIResources() []*discoverypb.APIResource {
 	apiResources := []*discoverypb.APIResource{}
 	r.List(func(k store.Key, rctx *ResourceContext) {
-		apiResources = append(apiResources, rctx.APIResource)
+		apiResources = append(apiResources, rctx.External)
 	})
 
 	sort.Slice(apiResources, func(i, j int) bool {
@@ -83,29 +95,38 @@ func (r *APIStore) GetAPIResources() []*discoverypb.APIResource {
 }
 
 func (r *APIStore) Has(gvk schema.GroupVersionKind) bool {
-	gvkKey := store.ToKey(gvk.String())
-	_, err := r.Storer.Get(gvkKey)
-	return err == nil
+	gkKey := store.ToKey(gvk.GroupKind().String())
+	rctx, err := r.Storer.Get(gkKey)
+	if err != nil {
+		return false
+	}
+	if rctx.External.Kind == gvk.Kind {
+		return true
+	}
+	if rctx.Internal.Kind == gvk.Kind {
+		return true
+	}
+	return false
 }
 
-func (r *APIStore) Get(gvk schema.GroupVersionKind) (*ResourceContext, error) {
-	gvkKey := store.ToKey(gvk.String())
-	return r.Storer.Get(gvkKey)
+func (r *APIStore) Get(gk schema.GroupKind) (*ResourceContext, error) {
+	gkKey := store.ToKey(gk.String())
+	return r.Storer.Get(gkKey)
 }
 
-func (r *APIStore) GetStorage(gvk schema.GroupVersionKind) (rest.Storage, error) {
-	gvkKey := store.ToKey(gvk.String())
-	resctx, err := r.Storer.Get(gvkKey)
+func (r *APIStore) GetStorage(gk schema.GroupKind) (rest.Storage, error) {
+	gkKey := store.ToKey(gk.String())
+	resctx, err := r.Storer.Get(gkKey)
 	if err != nil {
 		return nil, err
 	}
 	return resctx.Storage, nil
 }
 
-func (r *APIStore) GetGVKSet() sets.Set[schema.GroupVersionKind] {
+func (r *APIStore) GetExternalGVKSet() sets.Set[schema.GroupVersionKind] {
 	gvkset := sets.New[schema.GroupVersionKind]()
 	r.List(func(k store.Key, rc *ResourceContext) {
-		gvkset.Insert(rc.GVK())
+		gvkset.Insert(rc.ExternalGVK())
 	})
 	return gvkset
 }

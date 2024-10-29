@@ -90,7 +90,7 @@ message Create {
         string proxyName = 1;
         string proxyNamespace = 2;
         string branch = 3;
-        bool dryRun = 4;
+        repeated string dryRun = 4;
         string trace = 5;
         string origin = 6; 
         //bool allowCreate = 1;
@@ -111,7 +111,7 @@ message Update {
         string proxyName = 1;
         string proxyNamespace = 2;
         string branch = 3;
-        bool dryRun = 4;
+        repeated string dryRun = 4;
         string trace = 5;
         string origin = 6; 
         //bool allowCreate = 1;
@@ -132,7 +132,7 @@ message Apply {
         string proxyName = 1;
         string proxyNamespace = 2;
         string branch = 3;
-        bool dryRun =4;
+        repeated string dryRun = 4;
         string fieldManager = 5;
         bool force = 6;
         string trace = 7;
@@ -153,7 +153,7 @@ message Delete {
         string proxyName = 1;
         string proxyNamespace = 2;
         string branch = 3;
-        bool dryRun = 4;
+        repeated string dryRun = 4;
         ExpressionSelector exprSelector = 5;
         string trace = 6;
         string origin = 7; 

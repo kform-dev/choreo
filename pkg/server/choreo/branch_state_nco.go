@@ -43,7 +43,7 @@ func (r *NotCheckedOut) Activate(ctx context.Context, branchCtx *BranchCtx) erro
 		Flags:        r.Choreo.flags,
 		Client:       rootChoreoInstance.GetAPIClient(),
 		APIStore:     branchCtx.APIStore,
-		InternalGVKs: rootChoreoInstance.GetAPIStore().GetGVKSet(),
+		InternalGVKs: rootChoreoInstance.GetAPIStore().GetExternalGVKSet(),
 		PathInRepo:   rootChoreoInstance.GetPathInRepo(), // required for the commit read
 		DBPath:       rootChoreoInstance.GetDBPath(),
 	}

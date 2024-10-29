@@ -34,7 +34,6 @@ func (r *storage) Apply(ctx context.Context, new runtime.Unstructured, opts ...r
 	o.ApplyOptions(opts)
 
 	log := log.FromContext(ctx)
-	log.Debug("apply")
 
 	if o.FieldManager == "" {
 		return nil, status.Errorf(codes.InvalidArgument, "cannot apply a resource with an empty fieldmanager")
@@ -48,6 +47,9 @@ func (r *storage) Apply(ctx context.Context, new runtime.Unstructured, opts ...r
 	if err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "cannot access objectMeta err: %s", err.Error())
 	}
+
+	u := &unstructured.Unstructured{Object: new.UnstructuredContent()}
+	log.Debug("apply choreoapiserver", "apiVersion", u.GetAPIVersion(), "kind", u.GetKind(), "name", u.GetName())
 
 	old, err := r.Get(ctx, newObjectMeta.GetName(), &rest.GetOptions{
 		ShowManagedFields: true,

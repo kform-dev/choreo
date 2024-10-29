@@ -120,7 +120,7 @@ func (r *InputLoader) Load(ctx context.Context, reader pkgio.Reader[*yaml.RNode]
 
 func (r *InputLoader) Clean(ctx context.Context) error {
 	var errm error
-	for _, gvk := range r.APIStore.GetGVKSet().UnsortedList() {
+	for _, gvk := range r.APIStore.GetExternalGVKSet().UnsortedList() {
 		// dont look at internal apis
 		if r.InternalAPISet.Has(gvk) {
 			continue

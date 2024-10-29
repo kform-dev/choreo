@@ -19,6 +19,7 @@ package registry
 import (
 	"context"
 
+	"github.com/kuidio/kuid/pkg/registry/options"
 	structuralschema "k8s.io/apiextensions-apiserver/pkg/apiserver/schema"
 	"k8s.io/apiextensions-apiserver/pkg/apiserver/schema/cel"
 	"k8s.io/apiextensions-apiserver/pkg/apiserver/schema/cel/model"
@@ -39,7 +40,7 @@ func NewStrategy(
 	schemaValidator, statusSchemaValidator apiextensionsvalidation.SchemaValidator,
 	structuralSchema *structuralschema.Structural,
 	defaulter runtime.ObjectDefaulter,
-	preparator APIPrepator,
+	invoker options.BackendInvoker,
 ) strategy {
 	return strategy{
 		namespaceScoped: namespaceScoped,
@@ -51,7 +52,7 @@ func NewStrategy(
 			schemaValidator:       schemaValidator,
 			statusSchemaValidator: statusSchemaValidator,
 		},
-		preparator:       preparator,
+		invoker:          invoker,
 		structuralSchema: structuralSchema,
 		celValidator:     cel.NewValidator(structuralSchema, true, celconfig.PerCallLimit),
 	}
@@ -62,16 +63,16 @@ type strategy struct {
 	gvk              schema.GroupVersionKind
 	defaulter        runtime.ObjectDefaulter
 	validator        apiValidator
-	preparator       APIPrepator
+	invoker          options.BackendInvoker
 	structuralSchema *structuralschema.Structural
 	celValidator     *cel.Validator
 }
 
-func (r strategy) PrepareForCreate(ctx context.Context, obj runtime.Unstructured) error {
-	if r.preparator != nil {
-		return r.preparator.PrepareForCreate(ctx, obj)
+func (r strategy) InvokeCreate(ctx context.Context, obj runtime.Object, recursion bool) (runtime.Object, error) {
+	if r.invoker != nil {
+		return r.invoker.InvokeCreate(ctx, obj, recursion)
 	}
-	return nil
+	return obj, nil
 }
 
 func (r strategy) ValidateCreate(ctx context.Context, obj runtime.Unstructured) field.ErrorList {
@@ -97,11 +98,11 @@ func (r strategy) ValidateCreate(ctx context.Context, obj runtime.Unstructured) 
 	return errs
 }
 
-func (r strategy) PrepareForUpdate(ctx context.Context, obj, old runtime.Unstructured) error {
-	if r.preparator != nil {
-		return r.preparator.PrepareForUpdate(ctx, obj, old)
+func (r strategy) InvokeUpdate(ctx context.Context, obj runtime.Object, recursion bool) (runtime.Object, error) {
+	if r.invoker != nil {
+		return r.invoker.InvokeUpdate(ctx, obj, recursion)
 	}
-	return nil
+	return obj, nil
 }
 
 func (r strategy) ValidateUpdate(ctx context.Context, obj, old runtime.Unstructured) field.ErrorList {
@@ -140,11 +141,11 @@ func (r strategy) ValidateUpdate(ctx context.Context, obj, old runtime.Unstructu
 	return errs
 }
 
-func (r strategy) PrepareForDelete(ctx context.Context, obj runtime.Unstructured) error {
-	if r.preparator != nil {
-		return r.preparator.PrepareForDelete(ctx, obj)
+func (r strategy) InvokeDelete(ctx context.Context, obj runtime.Object, recursion bool) (runtime.Object, error) {
+	if r.invoker != nil {
+		return r.invoker.InvokeDelete(ctx, obj, recursion)
 	}
-	return nil
+	return obj, nil
 }
 
 // OpenAPIv3 type/maxLength/maxItems/MaxProperties/required/enum violation/wrong type field validation failures are viewed as blocking err for CEL validation

@@ -29,6 +29,7 @@ import (
 	"google.golang.org/grpc/status"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
@@ -47,13 +48,23 @@ func (r *storage) Delete(ctx context.Context, name string, opts ...rest.DeleteOp
 		return nil, err // apierror context is already added
 	}
 
+	u := &unstructured.Unstructured{Object: old.UnstructuredContent()}
+	log.Info("delete choreoapiserver", "apiVersion", u.GetAPIVersion(), "kind", u.GetKind(), "name", u.GetName())
+
 	oldObjectMeta, err := meta.Accessor(old)
 	if err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "cannot access objectMeta err: %s", err.Error())
 	}
 
-	if err := r.deleteStrategy.PrepareForDelete(ctx, old); err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, "validation delete preparation failed: %v", err)
+	recursion := false
+	if len(o.DryRun) == 1 && o.DryRun[0] == "recursion" {
+		recursion = true
+		o.DryRun = []string{}
+	}
+
+	_, err = r.deleteStrategy.InvokeDelete(ctx, old, recursion)
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "invoke synchronous delete failed: %v", err)
 	}
 
 	pendingFinalizers := len(oldObjectMeta.GetFinalizers()) != 0

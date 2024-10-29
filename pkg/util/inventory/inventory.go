@@ -93,25 +93,24 @@ func (inv Inventory) Build(ctx context.Context, client resourceclient.Client, ap
 			u, _ := o.(*unstructured.Unstructured)
 
 			objRef := object.GetObjectRefFromUnstructured(u)
-
 			if _, exists := inv[objRef]; !exists {
 				inv[objRef] = &treeNode{
 					Children: []*treeNode{},
 				}
 			}
-			treenode := inv[objRef]
-			treenode.Resource = u
-			treenode.ChoreoAPI = apiResource.ChoreoAPI
+			inv[objRef].Resource = u
+			inv[objRef].ChoreoAPI = apiResource.ChoreoAPI
 
 			for _, ref := range u.GetOwnerReferences() {
-				objRef := object.GetObjectRefFromOwnerRef(u.GetNamespace(), ref)
-				if _, exists := inv[objRef]; !exists {
-					inv[objRef] = &treeNode{
+				ownerObjRef := object.GetObjectRefFromOwnerRef(ref)
+				if _, exists := inv[ownerObjRef]; !exists {
+					inv[ownerObjRef] = &treeNode{
 						Children: []*treeNode{},
 					}
 				}
-				inv[objRef].Children = append(inv[objRef].Children, treenode)
+				inv[ownerObjRef].Children = append(inv[ownerObjRef].Children, inv[objRef])
 			}
+
 			return nil
 		})
 	}

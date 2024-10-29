@@ -63,7 +63,7 @@ func (r *CheckedOut) loadAPIs(ctx context.Context, branchCtx *BranchCtx) error {
 		Client:       r.Client,
 		APIStore:     branchCtx.APIStore,
 		Branch:       branchCtx.Branch,
-		InternalGVKs: rootChoreoInstance.GetAPIStore().GetGVKSet(),
+		InternalGVKs: rootChoreoInstance.GetAPIStore().GetExternalGVKSet(),
 		RepoPath:     rootChoreoInstance.GetRepoPath(),
 		PathInRepo:   rootChoreoInstance.GetPathInRepo(),
 		DBPath:       rootChoreoInstance.GetDBPath(),
@@ -97,7 +97,7 @@ func (r *CheckedOut) loadAPIFromUpstreamRefs(ctx context.Context, branchCtx *Bra
 			Flags:        r.Choreo.flags,
 			Client:       childChoreoInstance.GetAPIClient(),
 			APIStore:     apiStore,
-			InternalGVKs: childChoreoInstance.GetAPIStore().GetGVKSet(),
+			InternalGVKs: childChoreoInstance.GetAPIStore().GetExternalGVKSet(),
 			PathInRepo:   childChoreoInstance.GetPathInRepo(), // required for the commit read
 			DBPath:       rootChoreoInstance.GetDBPath(),
 		}
@@ -131,11 +131,11 @@ func (r *CheckedOut) LoadData(ctx context.Context, branchCtx *BranchCtx) error {
 		Flags:          r.Choreo.flags,
 		Client:         r.Client,
 		Branch:         branchCtx.Branch,
-		GVKs:           branchCtx.APIStore.GetGVKSet().UnsortedList(),
+		GVKs:           branchCtx.APIStore.GetExternalGVKSet().UnsortedList(),
 		RepoPth:        rootChoreoInstance.GetRepoPath(),
 		PathInRepo:     rootChoreoInstance.GetPathInRepo(),
 		APIStore:       branchCtx.APIStore,
-		InternalAPISet: rootChoreoInstance.GetAPIStore().GetGVKSet(),
+		InternalAPISet: rootChoreoInstance.GetAPIStore().GetExternalGVKSet(),
 	}
 	if err := dataloader.Load(ctx); err != nil {
 		return err
@@ -149,7 +149,7 @@ func (r *CheckedOut) LoadData(ctx context.Context, branchCtx *BranchCtx) error {
 			PathInRepo:              childChoreoInstance.GetPathInRepo(),
 			Client:                  r.Client,
 			Branch:                  branchCtx.Branch,
-			ChildGVKSet:             childChoreoInstance.GetAPIStore().GetGVKSet(),
+			ChildGVKSet:             childChoreoInstance.GetAPIStore().GetExternalGVKSet(),
 			UpstreamAnnotationValue: childChoreoInstance.GetAnnotationVal(),
 		}
 		if err := loader.Load(ctx, childChoreoInstance.GetCommit()); err != nil {

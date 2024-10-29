@@ -28,7 +28,6 @@ import (
 	"github.com/kform-dev/choreo/pkg/server/choreo/crdloader"
 	"github.com/kform-dev/kform/pkg/pkgio"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/kustomize/kyaml/yaml"
 )
 
@@ -62,7 +61,7 @@ func (r *APILoaderInternal) Load(ctx context.Context) error {
 	return errm
 }
 
-func (r *APILoaderInternal) loadAPIs(ctx context.Context, reader pkgio.Reader[*yaml.RNode], backends map[schema.GroupVersion]*crdloader.BackendConfig, choreoAPI bool) error {
+func (r *APILoaderInternal) loadAPIs(ctx context.Context, reader pkgio.Reader[*yaml.RNode], backends map[string]*crdloader.BackendConfig, choreoAPI bool) error {
 	log := log.FromContext(ctx)
 	if reader == nil {
 		// a nil reader means the path does not exist
@@ -88,7 +87,7 @@ func (r *APILoaderInternal) loadAPIs(ctx context.Context, reader pkgio.Reader[*y
 				errm = errors.Join(errm, err)
 				return
 			}
-			if err := r.APIStore.Apply(resctx.GVK(), resctx); err != nil {
+			if err := r.APIStore.Apply(resctx.GV(), resctx); err != nil {
 				errm = errors.Join(errm, err)
 				return
 			}

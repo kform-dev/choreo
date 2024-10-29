@@ -19,9 +19,11 @@ package resource
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 
 	"github.com/henderiw/logger/log"
 	"github.com/kform-dev/choreo/pkg/proto/resourcepb"
+	"github.com/kform-dev/choreo/pkg/server/api"
 	"github.com/kform-dev/choreo/pkg/server/apiserver/rest"
 	"github.com/kform-dev/choreo/pkg/server/apiserver/watch"
 	"github.com/kform-dev/choreo/pkg/server/choreo"
@@ -30,6 +32,7 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/peer"
 	"google.golang.org/grpc/status"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
 func New(choreo choreo.Choreo) resourcepb.ResourceServer {
@@ -58,22 +61,28 @@ func (r *srv) Get(ctx context.Context, req *resourcepb.Get_Request) (*resourcepb
 
 	log.Debug("get", "apiVersion", u.GetAPIVersion(), "kind", u.GetKind(), "name", u.GetName())
 
-	storage, err := r.getStorage(bctx, u)
+	rctx, err := r.getAPIContext(bctx, u)
 	if err != nil {
 		return &resourcepb.Get_Response{}, err
 	}
+	convertToInternal(rctx, u)
+
 	// invoke storage
-	obj, err := storage.Get(ctx, u.GetName(), &rest.GetOptions{
+	obj, err := rctx.Storage.Get(ctx, u.GetName(), &rest.GetOptions{
 		ShowManagedFields: req.Options.ShowManagedField,
 		Trace:             req.Options.Trace,
 		Origin:            req.Options.Origin,
 		Commit:            bctx.State.GetCommit(),
 	})
 	if err != nil {
+		fmt.Println("get error", err)
 		return &resourcepb.Get_Response{}, err
 	}
 
-	b, err := json.Marshal(obj.UnstructuredContent())
+	u = &unstructured.Unstructured{Object: obj.UnstructuredContent()}
+	convertFromInternal(rctx, u)
+
+	b, err := json.Marshal(u.Object)
 	if err != nil {
 		return &resourcepb.Get_Response{}, status.Errorf(codes.Internal, "err: %s", err.Error())
 	}
@@ -101,13 +110,14 @@ func (r *srv) List(ctx context.Context, req *resourcepb.List_Request) (*resource
 
 	log.Debug("list", "apiVersion", u.GetAPIVersion(), "kind", u.GetKind(), "name", u.GetName(), "options", req.Options)
 
-	storage, err := r.getStorage(bctx, u)
+	rctx, err := r.getAPIContext(bctx, u)
 	if err != nil {
 		return &resourcepb.List_Response{}, err
 	}
+	convertToInternal(rctx, u)
 
 	// invoke storage
-	obj, err := storage.List(ctx, &rest.ListOptions{
+	obj, err := rctx.Storage.List(ctx, &rest.ListOptions{
 		Selector:          selector,
 		ShowManagedFields: req.Options.ShowManagedField,
 		Trace:             req.Options.Trace,
@@ -118,7 +128,14 @@ func (r *srv) List(ctx context.Context, req *resourcepb.List_Request) (*resource
 		return &resourcepb.List_Response{}, err
 	}
 
-	b, err := json.Marshal(obj.UnstructuredContent())
+	if !obj.IsList() {
+		return &resourcepb.List_Response{}, status.Errorf(codes.Internal, "expecting a list")
+	}
+	ul := &unstructured.UnstructuredList{}
+	ul.SetUnstructuredContent(obj.UnstructuredContent())
+	convertListFromInternal(rctx, ul)
+
+	b, err := json.Marshal(ul)
 	if err != nil {
 		return &resourcepb.List_Response{}, status.Errorf(codes.Internal, "err: %s", err.Error())
 	}
@@ -143,17 +160,18 @@ func (r *srv) Apply(ctx context.Context, req *resourcepb.Apply_Request) (*resour
 
 	log.Debug("apply", "apiVersion", u.GetAPIVersion(), "kind", u.GetKind(), "name", u.GetName(), "fieldmanager", req.Options.FieldManager, "force", req.Options.Force)
 
-	storage, err := r.getStorage(bctx, u)
+	rctx, err := r.getAPIContext(bctx, u)
 	if err != nil {
 		return &resourcepb.Apply_Response{}, err
 	}
+	convertToInternal(rctx, u)
 
 	dryrun := req.Options.DryRun
 	if req.Options.Origin == "choreoctl" {
-		dryrun = true
+		dryrun = []string{"choreoctl"}
 	}
 
-	obj, err := storage.Apply(ctx, u, &rest.ApplyOptions{
+	obj, err := rctx.Storage.Apply(ctx, u, &rest.ApplyOptions{
 		DryRun:       dryrun,
 		FieldManager: req.Options.FieldManager,
 		Force:        req.Options.Force,
@@ -169,8 +187,9 @@ func (r *srv) Apply(ctx context.Context, req *resourcepb.Apply_Request) (*resour
 			return &resourcepb.Apply_Response{}, status.Errorf(codes.Internal, "err: %s", err.Error())
 		}
 	}
-
-	b, err := json.Marshal(obj.UnstructuredContent())
+	u = &unstructured.Unstructured{Object: obj.UnstructuredContent()}
+	convertFromInternal(rctx, u)
+	b, err := json.Marshal(u.Object)
 	if err != nil {
 		return &resourcepb.Apply_Response{}, status.Errorf(codes.Internal, "err: %s", err.Error())
 	}
@@ -192,11 +211,12 @@ func (r *srv) Create(ctx context.Context, req *resourcepb.Create_Request) (*reso
 
 	log.Debug("create", "apiVersion", u.GetAPIVersion(), "kind", u.GetKind(), "name", u.GetName())
 
-	storage, err := r.getStorage(bctx, u)
+	rctx, err := r.getAPIContext(bctx, u)
 	if err != nil {
 		return &resourcepb.Create_Response{}, err
 	}
-	obj, err := storage.Create(ctx, u, &rest.CreateOptions{
+	convertToInternal(rctx, u)
+	obj, err := rctx.Storage.Create(ctx, u, &rest.CreateOptions{
 		DryRun: req.Options.DryRun,
 		Trace:  req.Options.Trace,
 		Origin: req.Options.Origin,
@@ -205,7 +225,9 @@ func (r *srv) Create(ctx context.Context, req *resourcepb.Create_Request) (*reso
 		return &resourcepb.Create_Response{}, err
 	}
 
-	b, err := json.Marshal(obj.UnstructuredContent())
+	u = &unstructured.Unstructured{Object: obj.UnstructuredContent()}
+	convertFromInternal(rctx, u)
+	b, err := json.Marshal(u.Object)
 	if err != nil {
 		return &resourcepb.Create_Response{}, status.Errorf(codes.Internal, "err: %s", err.Error())
 	}
@@ -227,11 +249,12 @@ func (r *srv) Update(ctx context.Context, req *resourcepb.Update_Request) (*reso
 
 	log.Debug("update", "apiVersion", u.GetAPIVersion(), "kind", u.GetKind(), "name", u.GetName())
 
-	storage, err := r.getStorage(bctx, u)
+	rctx, err := r.getAPIContext(bctx, u)
 	if err != nil {
 		return &resourcepb.Update_Response{}, err
 	}
-	obj, err := storage.Update(ctx, u, &rest.UpdateOptions{
+	convertToInternal(rctx, u)
+	obj, err := rctx.Storage.Update(ctx, u, &rest.UpdateOptions{
 		DryRun: req.Options.DryRun,
 		Trace:  req.Options.Trace,
 		Origin: req.Options.Origin,
@@ -240,7 +263,9 @@ func (r *srv) Update(ctx context.Context, req *resourcepb.Update_Request) (*reso
 		return &resourcepb.Update_Response{}, err
 	}
 
-	b, err := json.Marshal(obj.UnstructuredContent())
+	u = &unstructured.Unstructured{Object: obj.UnstructuredContent()}
+	convertFromInternal(rctx, u)
+	b, err := json.Marshal(u.Object)
 	if err != nil {
 		return &resourcepb.Update_Response{}, status.Errorf(codes.Internal, "err: %s", err.Error())
 	}
@@ -262,16 +287,17 @@ func (r *srv) Delete(ctx context.Context, req *resourcepb.Delete_Request) (*reso
 
 	log.Debug("delete", "apiVersion", u.GetAPIVersion(), "kind", u.GetKind(), "name", u.GetName())
 
-	storage, err := r.getStorage(bctx, u)
+	rctx, err := r.getAPIContext(bctx, u)
 	if err != nil {
 		return &resourcepb.Delete_Response{}, err
 	}
+	convertToInternal(rctx, u)
 
 	dryrun := req.Options.DryRun
 	if req.Options.Origin == "choreoctl" {
-		dryrun = true
+		dryrun = []string{"choreoctl"}
 	}
-	if _, err := storage.Delete(ctx, u.GetName(), &rest.DeleteOptions{
+	if _, err := rctx.Storage.Delete(ctx, u.GetName(), &rest.DeleteOptions{
 		DryRun: dryrun,
 		Trace:  req.Options.Trace,
 		Origin: req.Options.Origin,
@@ -314,14 +340,15 @@ func (r *srv) Watch(req *resourcepb.Watch_Request, stream resourcepb.Resource_Wa
 
 	log.Debug("watch", "apiVersion", u.GetAPIVersion(), "kind", u.GetKind(), "options", req.Options)
 
-	storage, err := r.getStorage(bctx, u)
+	rctx, err := r.getAPIContext(bctx, u)
 	if err != nil {
 		return status.Errorf(codes.Internal, "err: %s", err.Error())
 	}
+	convertToInternal(rctx, u)
 
 	ctx, cancel := context.WithCancel(stream.Context())
 	defer cancel()
-	wi, err := storage.Watch(ctx, &rest.ListOptions{
+	wi, err := rctx.Storage.Watch(ctx, &rest.ListOptions{
 		Watch:    false,
 		Selector: selector,
 		Trace:    req.Options.Trace,
@@ -331,7 +358,7 @@ func (r *srv) Watch(req *resourcepb.Watch_Request, stream resourcepb.Resource_Wa
 		return err
 	}
 
-	go r.watch(ctx, wi, stream, cancel)
+	go r.watch(ctx, rctx, wi, stream, cancel)
 
 	// context got cancelled -. proxy got stopped
 	<-ctx.Done()
@@ -339,7 +366,7 @@ func (r *srv) Watch(req *resourcepb.Watch_Request, stream resourcepb.Resource_Wa
 	return nil
 }
 
-func (r *srv) watch(ctx context.Context, wi watch.Interface, clientStream resourcepb.Resource_WatchServer, cancel func()) {
+func (r *srv) watch(ctx context.Context, rctx *api.ResourceContext, wi watch.Interface, clientStream resourcepb.Resource_WatchServer, cancel func()) {
 	log := log.FromContext(ctx)
 
 	resultCh := wi.ResultChan()
@@ -375,7 +402,10 @@ func (r *srv) watch(ctx context.Context, wi watch.Interface, clientStream resour
 				return
 			}
 			log.Debug("grpc watch send event", "eventType", watchEvent.Type.String(), "gvk", gvk)
-			b, err := json.Marshal(watchEvent.Object.UnstructuredContent())
+
+			u := &unstructured.Unstructured{Object: watchEvent.Object.UnstructuredContent()}
+			convertFromInternal(rctx, u)
+			b, err := json.Marshal(u.Object)
 			if err != nil {
 				log.Error("grpc watch failed to marshal object", "error", err.Error())
 			}

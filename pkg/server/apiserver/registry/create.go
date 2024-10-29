@@ -18,6 +18,7 @@ package registry
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/henderiw/logger/log"
 	"github.com/henderiw/store"
@@ -37,7 +38,7 @@ func (r *storage) Create(ctx context.Context, obj runtime.Unstructured, opts ...
 	o.ApplyOptions(opts)
 
 	log := log.FromContext(ctx)
-	log.Debug("create")
+	log.Debug("create choreoapiserver")
 
 	objectMeta, err := meta.Accessor(obj)
 	if err != nil {
@@ -52,15 +53,26 @@ func (r *storage) Create(ctx context.Context, obj runtime.Unstructured, opts ...
 		return nil, status.Errorf(codes.InvalidArgument, "validation create failed: %v", errs)
 	}
 
-	if err := r.createStrategy.PrepareForCreate(ctx, obj); err != nil {
-		log.Error("validation create preparation failed", "obj", obj, "error", err)
-		return nil, status.Errorf(codes.InvalidArgument, "validation create preparation failed: %v", err)
+	recursion := false
+	if len(o.DryRun) == 1 && o.DryRun[0] == "recursion" {
+		recursion = true
+		o.DryRun = []string{}
 	}
+
+	robj, err := r.createStrategy.InvokeCreate(ctx, obj, recursion)
+	if err != nil {
+		log.Error("invoke synchronous create failed", "obj", obj, "error", err)
+		return nil, status.Errorf(codes.InvalidArgument, "invoke synchronous create failed: %v", err)
+	}
+	if obj.GetObjectKind().GroupVersionKind().Kind == "IPIndex" {
+		fmt.Println("create, after invoke, obj\n", obj)
+	}
+	obj = robj.(runtime.Unstructured)
 
 	// namespace is ignore, name is assumed to be always present
 	key := objectMeta.GetName()
 
-	if o.DryRun {
+	if len(o.DryRun) > 0 {
 		return obj, nil
 	}
 
