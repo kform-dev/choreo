@@ -22,6 +22,7 @@ import (
 	"fmt"
 
 	"github.com/kform-dev/choreo/pkg/cli/genericclioptions"
+	"github.com/kform-dev/kform/pkg/fsys"
 	//"k8s.io/apimachinery/pkg/util/sets"
 )
 
@@ -32,6 +33,9 @@ type DevLoader struct {
 }
 
 func (r *DevLoader) Load(ctx context.Context) error {
+	if err := fsys.EnsureDir(ctx, []string{r.Path, *r.Flags.InputPath}...); err != nil {
+		return err
+	}
 	var errm error
 	if err := r.loadReconcilers(ctx); err != nil {
 		errm = errors.Join(errm, fmt.Errorf("cannot load reconcilers, err: %v", err))

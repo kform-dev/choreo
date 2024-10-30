@@ -19,6 +19,7 @@ package starlark
 import (
 	"context"
 	"fmt"
+	"reflect"
 	"time"
 
 	"github.com/henderiw/iputil"
@@ -163,14 +164,14 @@ func (r *reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 	return r.handleResult(ctx, u, v)
 }
 
-func (r *reconciler) handleResult(ctx context.Context, u *unstructured.Unstructured, v starlark.Value) (reconcile.Result, error) {
+func (r *reconciler) handleResult(ctx context.Context, oldu *unstructured.Unstructured, v starlark.Value) (reconcile.Result, error) {
 	log := log.FromContext(ctx)
-	result, err := convertReconcileResult(v)
+	newu, result, err := convertReconcileResult(v)
 	if err != nil {
 		return reconcile.Result{}, fmt.Errorf("starlark reconciler %s cannot convert result: %s", r.name, err.Error())
 	}
 	if result.Fatal {
-		if uerr := r.updateForResourceStatus(ctx, u, result.Message); uerr != nil {
+		if uerr := r.updateForResourceStatus(ctx, newu, oldu, result.Message); uerr != nil {
 			return reconcile.Result{}, fmt.Errorf("starlark reconciler cannot update resource: err: %v, orig fatal error: %s", uerr, result.Message)
 		}
 		return reconcile.Result{}, fmt.Errorf(result.Message)
@@ -181,7 +182,7 @@ func (r *reconciler) handleResult(ctx context.Context, u *unstructured.Unstructu
 	}
 	if result.Message != "" {
 		log.Debug("reconcile failed", "msg", result.Message)
-		if uerr := r.updateForResourceStatus(ctx, u, result.Message); uerr != nil {
+		if uerr := r.updateForResourceStatus(ctx, newu, oldu, result.Message); uerr != nil {
 			return reconcile.Result{Requeue: true, RequeueAfter: requeue, Message: result.Message},
 				fmt.Errorf("starlark reconciler cannot update resource: err: %v, orig error: %s", uerr, result.Message)
 		}
@@ -191,25 +192,25 @@ func (r *reconciler) handleResult(ctx context.Context, u *unstructured.Unstructu
 	if err := r.resources.Apply(ctx); err != nil {
 		return reconcile.Result{}, fmt.Errorf("starlark reconciler %s apply resources failed, err: %s", r.name, err.Error())
 	}
-	if uerr := r.updateForResourceStatus(ctx, u, ""); uerr != nil {
+	if uerr := r.updateForResourceStatus(ctx, newu, oldu, ""); uerr != nil {
 		return reconcile.Result{}, fmt.Errorf("starlark reconciler %s cannot update resource: err: %v", r.name, uerr)
 	}
 	return reconcile.Result{}, nil
 }
 
-func (r *reconciler) updateForResourceStatus(ctx context.Context, u *unstructured.Unstructured, msg string) error {
+func (r *reconciler) updateForResourceStatus(ctx context.Context, newu, u *unstructured.Unstructured, msg string) error {
 	// removes the fields that are not managed by this reconciler based on the managedFields info in the resource
 	// done before conditions are set
+	if newStatus, ok := newu.Object["status"]; ok {
+		u.Object["status"] = newStatus
+	}
 	object.PruneUnmanagedFields(u, r.name)
 	object.SetFinalizer(u, r.name)
-	fmt.Println("updateForResourceStatus", r.name, r.conditionType)
 	if r.conditionType != nil {
-		fmt.Println("updateForResourceStatus", r.name, r.conditionType)
 		object.SetCondition(u.Object, *r.conditionType, msg)
 	}
 
 	// update the for resource with latest changes
-	fmt.Println("updateForResourceStatus", u)
 	if err := r.client.Apply(ctx, u, &resourceclient.ApplyOptions{
 		FieldManager: r.name,
 		Branch:       r.branch,
@@ -226,17 +227,26 @@ type ReconcileResult struct {
 	Fatal        bool
 }
 
-func convertReconcileResult(v starlark.Value) (*ReconcileResult, error) {
+func convertReconcileResult(v starlark.Value) (*unstructured.Unstructured, *ReconcileResult, error) {
 	result, err := util.StarlarkValueToMap(v)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
+	}
+
+	objVal, ok := result["obj"].(map[string]any)
+	if !ok {
+		//fmt.Printf("obj: %v", result["obj"])
+		return nil, nil, fmt.Errorf("reconcileResult obj is not map[string]any, got: %v", reflect.TypeOf(result["obj"]).Name())
+	}
+	u := &unstructured.Unstructured{
+		Object: objVal,
 	}
 
 	reconcileResult := &ReconcileResult{}
 	if v, ok := result["requeue"]; ok {
 		vv, ok := v.(bool)
 		if !ok {
-			return nil, fmt.Errorf("reconcileResult requeue is not a bool, got %T", v)
+			return nil, nil, fmt.Errorf("reconcileResult requeue is not a bool, got %T", v)
 		}
 		reconcileResult.Requeue = vv
 
@@ -244,14 +254,14 @@ func convertReconcileResult(v starlark.Value) (*ReconcileResult, error) {
 	if v, ok := result["requeueAfter"]; ok {
 		vv, ok := v.(int64)
 		if !ok {
-			return nil, fmt.Errorf("reconcileResult requeueAfter is not a int64, got %T", v)
+			return nil, nil, fmt.Errorf("reconcileResult requeueAfter is not a int64, got %T", v)
 		}
 		reconcileResult.RequeueAfter = vv
 	}
 	if v, ok := result["fatal"]; ok {
 		vv, ok := v.(bool)
 		if !ok {
-			return nil, fmt.Errorf("reconcileResult fatal is not a bool, got %T", v)
+			return nil, nil, fmt.Errorf("reconcileResult fatal is not a bool, got %T", v)
 		}
 		reconcileResult.Fatal = vv
 
@@ -259,16 +269,17 @@ func convertReconcileResult(v starlark.Value) (*ReconcileResult, error) {
 	if v, ok := result["error"]; ok {
 		vv, ok := v.(string)
 		if !ok {
-			return nil, fmt.Errorf("reconcileResult error is not a string, got %T", v)
+			return nil, nil, fmt.Errorf("reconcileResult error is not a string, got %T", v)
 		}
 		reconcileResult.Message = vv
 	}
-	return reconcileResult, nil
+	return u, reconcileResult, nil
 }
 
-func reconcileResult(requeue bool, requeueAfter int64, err error, fatal bool) *starlark.Dict {
+func reconcileResult(obj starlark.Value, requeue bool, requeueAfter int64, err error, fatal bool) *starlark.Dict {
 	// Prepare the result dict
 	result := starlark.NewDict(0)
+	result.SetKey(starlark.String("obj"), obj)
 	if err != nil {
 		result.SetKey(starlark.String("fatal"), starlark.Bool(fatal))
 		result.SetKey(starlark.String("error"), starlark.String(err.Error()))
@@ -297,14 +308,15 @@ func result(resource starlark.Value, err error, fatal bool) *starlark.Dict {
 }
 
 func (r *reconciler) reconcileResult(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
-	//var obj starlark.Value
+	var obj starlark.Value
 	var requeue starlark.Bool
 	var requeueAfter starlark.Int
 	var msg starlark.String
 	var fatal starlark.Bool
 
-	if err := starlark.UnpackArgs("reconcile_result", args, nil, "requeue", &requeue, "requeueAfter", &requeueAfter, "msg", &msg, "fatal", &fatal); err != nil {
+	if err := starlark.UnpackArgs("reconcile_result", args, nil, "obj", &obj, "requeue", &requeue, "requeueAfter", &requeueAfter, "msg", &msg, "fatal", &fatal); err != nil {
 		return reconcileResult(
+				obj,
 				bool(requeue),
 				util.StarlarkIntToInt64(requeueAfter),
 				fmt.Errorf("error: %s, msg: %s", err.Error(), msg.GoString()),
@@ -315,7 +327,17 @@ func (r *reconciler) reconcileResult(thread *starlark.Thread, fn *starlark.Built
 	/*
 		u, err := util.StarlarkValueToUnstructured(obj)
 		if err != nil {
+			fmt.Printf("reconcileResult %s cannot convert obj to unstructured, err: %v", r.name, err)
+		} else {
+			fmt.Printf("reconcileResult %s data: %v", r.name, u)
+		}
+	*/
+
+	/*
+		u, err := util.StarlarkValueToUnstructured(obj)
+		if err != nil {
 			return reconcileResult(
+					nil,
 					bool(requeue),
 					util.StarlarkIntToInt64(requeueAfter),
 					fmt.Errorf("error: %s, msg: %s", err.Error(), msg.GoString()),
@@ -357,6 +379,7 @@ func (r *reconciler) reconcileResult(thread *starlark.Thread, fn *starlark.Built
 	if msg.GoString() != "" {
 		err := fmt.Errorf("reconcile failed %s", msg.GoString())
 		return reconcileResult(
+				obj,
 				bool(requeue),
 				util.StarlarkIntToInt64(requeueAfter),
 				err,
@@ -365,6 +388,7 @@ func (r *reconciler) reconcileResult(thread *starlark.Thread, fn *starlark.Built
 	}
 
 	return reconcileResult(
+			obj,
 			bool(requeue),
 			util.StarlarkIntToInt64(requeueAfter),
 			nil,
