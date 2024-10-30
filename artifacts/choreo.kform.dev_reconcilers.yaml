@@ -50,6 +50,10 @@ spec:
                   type: string
                 description: Code supporting the reconciler
                 type: object
+              conditionType:
+                description: ConditionType defines the condition used by this reconciler
+                  to reflect the status of its operation
+                type: string
               for:
                 description: For defines the resource and business logic of the reconciler
                   for this Reconciler.

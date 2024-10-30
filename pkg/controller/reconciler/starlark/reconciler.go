@@ -43,11 +43,12 @@ import (
 func NewReconcilerFn(client resourceclient.Client, reconcileConfig *choreov1alpha1.Reconciler, libs *unstructured.UnstructuredList, branch string) reconcile.TypedReconcilerFn {
 	return func() (reconcile.TypedReconciler, error) {
 		r := &reconciler{
-			name:   reconcileConfig.Name,
-			client: client,
-			forgvk: reconcileConfig.GetForGVK(),
-			owns:   reconcileConfig.GetOwnsGVKs(),
-			branch: branch,
+			name:          reconcileConfig.Name,
+			client:        client,
+			conditionType: reconcileConfig.Spec.ConditionType,
+			forgvk:        reconcileConfig.GetForGVK(),
+			owns:          reconcileConfig.GetOwnsGVKs(),
+			branch:        branch,
 		}
 
 		// Setup built-in functions
@@ -97,6 +98,7 @@ type reconciler struct {
 	name                string
 	startlarkReconciler starlark.StringDict
 	client              resourceclient.Client
+	conditionType       *string
 	forgvk              schema.GroupVersionKind
 	owns                sets.Set[schema.GroupVersionKind]
 	branch              string
@@ -106,7 +108,7 @@ type reconciler struct {
 }
 
 func (r *reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reconcile.Result, error) {
-	log := log.FromContext(ctx)
+	//log := log.FromContext(ctx)
 	// bad practice but allows to reuse the context
 	r.ctx = ctx
 	// get the resource
@@ -123,29 +125,33 @@ func (r *reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		// stop the reconcile loop since the object dissapeared
 		return reconcile.Result{}, nil
 	}
-	//u = u.DeepCopy()
 
-	/*
-		match := false
-		if r.name == "infra.kuid.dev_node_if-si-ni" || r.name == "infra.kuid.dev_node_bgp" {
-			match = true
+	// reinitialize the resource on each reconcile
+	r.resources = resources.New(r.name, r.client, u, r.owns, r.branch)
+	if u.GetDeletionTimestamp() != nil {
+		if err := r.resources.Delete(ctx); err != nil {
+			return reconcile.Result{}, fmt.Errorf("starlark reconciler %s cannot delete child resource, err: %s", r.name, err.Error())
 		}
-		if match {
-			condition := object.GetCondition(u.Object, "IPClaimready")
-			fmt.Println(r.name, req.Name, "reconciler", "ipclaimready condition before", condition["status"], condition["message"])
-		}
-	*/
+		object.DeleteFinalizer(u, r.name)
 
+		// removes the fields that are not managed by this reconciler based on the managedFields info in the resource
+		// done before conditions are set
+		object.PruneUnmanagedFields(u, r.name)
+		if err := r.client.Apply(ctx, u, &resourceclient.ApplyOptions{
+			FieldManager: r.name,
+			Branch:       r.branch,
+		}); err != nil {
+			return reconcile.Result{}, fmt.Errorf("starlark reconciler %s cannot set finalizer, err: %s", r.name, err.Error())
+		}
+		return reconcile.Result{}, nil
+	}
+
+	// call the python code; it will call various hooks we build
+	// returns an error message
 	obj, err := util.UnstructuredToStarlarkValue(u)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
-
-	// reinitialize the resource on each reconcile
-	r.resources = resources.New(r.name, r.client, u, r.owns, r.branch)
-
-	// call the python code; it will call various hooks we build
-	// returns an error message
 	reconciler := r.startlarkReconciler["reconcile"]
 	thread := &starlark.Thread{Name: "main"}
 	v, err := starlark.Call(thread, reconciler, starlark.Tuple{starlark.Value(obj)}, nil)
@@ -154,12 +160,19 @@ func (r *reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		return reconcile.Result{}, fmt.Errorf("starlark execution runtime failure: %s", err.Error())
 	}
 
+	return r.handleResult(ctx, u, v)
+}
+
+func (r *reconciler) handleResult(ctx context.Context, u *unstructured.Unstructured, v starlark.Value) (reconcile.Result, error) {
+	log := log.FromContext(ctx)
 	result, err := convertReconcileResult(v)
 	if err != nil {
-		return reconcile.Result{}, fmt.Errorf("starlark execution cannot convert result: %s", err.Error())
+		return reconcile.Result{}, fmt.Errorf("starlark reconciler %s cannot convert result: %s", r.name, err.Error())
 	}
-
 	if result.Fatal {
+		if uerr := r.updateForResourceStatus(ctx, u, result.Message); uerr != nil {
+			return reconcile.Result{}, fmt.Errorf("starlark reconciler cannot update resource: err: %v, orig fatal error: %s", uerr, result.Message)
+		}
 		return reconcile.Result{}, fmt.Errorf(result.Message)
 	}
 	var requeue time.Duration
@@ -168,17 +181,42 @@ func (r *reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 	}
 	if result.Message != "" {
 		log.Debug("reconcile failed", "msg", result.Message)
-		return reconcile.Result{
-			Requeue:      true,
-			RequeueAfter: requeue,
-			Message:      result.Message,
-		}, nil
+		if uerr := r.updateForResourceStatus(ctx, u, result.Message); uerr != nil {
+			return reconcile.Result{Requeue: true, RequeueAfter: requeue, Message: result.Message},
+				fmt.Errorf("starlark reconciler cannot update resource: err: %v, orig error: %s", uerr, result.Message)
+		}
+		return reconcile.Result{Requeue: true, RequeueAfter: requeue, Message: result.Message}, nil
+	}
+	// this is the happy path, we apply the child resources to the api
+	if err := r.resources.Apply(ctx); err != nil {
+		return reconcile.Result{}, fmt.Errorf("starlark reconciler %s apply resources failed, err: %s", r.name, err.Error())
+	}
+	if uerr := r.updateForResourceStatus(ctx, u, ""); uerr != nil {
+		return reconcile.Result{}, fmt.Errorf("starlark reconciler %s cannot update resource: err: %v", r.name, uerr)
+	}
+	return reconcile.Result{}, nil
+}
+
+func (r *reconciler) updateForResourceStatus(ctx context.Context, u *unstructured.Unstructured, msg string) error {
+	// removes the fields that are not managed by this reconciler based on the managedFields info in the resource
+	// done before conditions are set
+	object.PruneUnmanagedFields(u, r.name)
+	object.SetFinalizer(u, r.name)
+	fmt.Println("updateForResourceStatus", r.name, r.conditionType)
+	if r.conditionType != nil {
+		fmt.Println("updateForResourceStatus", r.name, r.conditionType)
+		object.SetCondition(u.Object, *r.conditionType, msg)
 	}
 
-	return reconcile.Result{
-		Requeue:      result.Requeue,
-		RequeueAfter: requeue,
-	}, nil
+	// update the for resource with latest changes
+	fmt.Println("updateForResourceStatus", u)
+	if err := r.client.Apply(ctx, u, &resourceclient.ApplyOptions{
+		FieldManager: r.name,
+		Branch:       r.branch,
+	}); err != nil {
+		return fmt.Errorf("starlark reconciler %s cannot set finalizer, err: %s", r.name, err.Error())
+	}
+	return nil
 }
 
 type ReconcileResult struct {
@@ -259,14 +297,13 @@ func result(resource starlark.Value, err error, fatal bool) *starlark.Dict {
 }
 
 func (r *reconciler) reconcileResult(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
-	var obj starlark.Value
+	//var obj starlark.Value
 	var requeue starlark.Bool
 	var requeueAfter starlark.Int
-	var conditionType starlark.String
 	var msg starlark.String
 	var fatal starlark.Bool
 
-	if err := starlark.UnpackArgs("reconcile_result", args, nil, "obj", &obj, "requeue", &requeue, "requeueAfter", &requeueAfter, "conditionType", &conditionType, "msg", &msg, "fatal", &fatal); err != nil {
+	if err := starlark.UnpackArgs("reconcile_result", args, nil, "requeue", &requeue, "requeueAfter", &requeueAfter, "msg", &msg, "fatal", &fatal); err != nil {
 		return reconcileResult(
 				bool(requeue),
 				util.StarlarkIntToInt64(requeueAfter),
@@ -275,60 +312,47 @@ func (r *reconciler) reconcileResult(thread *starlark.Thread, fn *starlark.Built
 			nil
 	}
 
-	u, err := util.StarlarkValueToUnstructured(obj)
-	if err != nil {
-		return reconcileResult(
-				bool(requeue),
-				util.StarlarkIntToInt64(requeueAfter),
-				fmt.Errorf("error: %s, msg: %s", err.Error(), msg.GoString()),
-				true),
-			nil
-	}
+	/*
+		u, err := util.StarlarkValueToUnstructured(obj)
+		if err != nil {
+			return reconcileResult(
+					bool(requeue),
+					util.StarlarkIntToInt64(requeueAfter),
+					fmt.Errorf("error: %s, msg: %s", err.Error(), msg.GoString()),
+					true),
+				nil
+		}
+	*/
 
-	// removes the fields that are not managed by this reconciler based on the managedFields info in the resource
-	// done before conditions are set
-	object.PruneUnmanagedFields(u, r.name)
+	/*
+		// removes the fields that are not managed by this reconciler based on the managedFields info in the resource
+		// done before conditions are set
+		object.PruneUnmanagedFields(u, r.name)
 
-	if conditionType != "" {
-		/*
-			uobj := &unstructured.Unstructured{Object: u.UnstructuredContent()}
-			reqname := uobj.GetName()
-			if r.name == "infra.kuid.dev_node_id" || r.name == "infra.kuid.dev_node_if-si-ni" || r.name == "infra.kuid.dev_node_bgp" {
-				c := object.GetCondition(u.UnstructuredContent(), "IPClaimReady")
-				fmt.Println(r.name, reqname, "reconcile", "ipclaimready condition after", fmt.Sprintf("%v", c["status"]), fmt.Sprintf("%v", c["message"]))
+
+
+		if err := r.client.Apply(r.ctx, u, &resourceclient.ApplyOptions{
+			FieldManager: r.name,
+			Origin:       r.name,
+			Branch:       r.branch,
+		}); err != nil {
+			if grpcerrors.IsNotFound(err) {
+				// for not found we dont return fatal -> other we do
+				return reconcileResult(
+						bool(requeue),
+						util.StarlarkIntToInt64(requeueAfter),
+						err,
+						false),
+					nil
 			}
-		*/
-		object.SetCondition(u.UnstructuredContent(), conditionType.GoString(), msg.GoString())
-		/*
-			if r.name == "infra.kuid.dev_node_id" || r.name == "infra.kuid.dev_node_if-si-ni" || r.name == "infra.kuid.dev_node_bgp" {
-				c := object.GetCondition(u.UnstructuredContent(), "IPClaimReady")
-				fmt.Println(r.name, reqname, "reconcile", "ipclaimready condition after", fmt.Sprintf("%v", c["status"]), fmt.Sprintf("%v", c["message"]))
-
-			}
-		*/
-	}
-
-	if err := r.client.Apply(r.ctx, u, &resourceclient.ApplyOptions{
-		FieldManager: r.name,
-		Origin:       r.name,
-		Branch:       r.branch,
-	}); err != nil {
-		if grpcerrors.IsNotFound(err) {
-			// for not found we dont return fatal -> other we do
 			return reconcileResult(
 					bool(requeue),
 					util.StarlarkIntToInt64(requeueAfter),
 					err,
-					false),
+					true),
 				nil
 		}
-		return reconcileResult(
-				bool(requeue),
-				util.StarlarkIntToInt64(requeueAfter),
-				err,
-				true),
-			nil
-	}
+	*/
 
 	if msg.GoString() != "" {
 		err := fmt.Errorf("reconcile failed %s", msg.GoString())

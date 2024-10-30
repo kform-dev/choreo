@@ -256,6 +256,8 @@ func GetCondition(obj map[string]interface{}, conditionType string) map[string]a
 
 }
 
+// SetCondition updates the condition; when msg is an empty string the
+// condition is interpreted as ready, otherwise failed
 func SetCondition(obj map[string]interface{}, conditionType, msg string) {
 	if obj == nil {
 		obj = map[string]any{}

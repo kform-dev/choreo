@@ -4,11 +4,6 @@ go 1.23.0
 
 toolchain go1.23.2
 
-//replace github.com/henderiw/apiserver-builder => github.com/henderiw/apiserver-builder v0.0.1
-replace github.com/kuidio/kuid => /Users/henderiw/code/kuidio/kuid
-
-replace github.com/henderiw/store => /Users/henderiw/code/tmp/store
-
 require (
 	github.com/adrg/xdg v0.5.0
 	github.com/flosch/pongo2/v6 v6.0.0
@@ -19,9 +14,9 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/henderiw/iputil v0.0.0-20231218081610-37f78ad9c81c
 	github.com/henderiw/logger v0.0.0-20230911123436-8655829b1abe
-	github.com/henderiw/store v0.0.2-0.20241020093537-5a92d3e14a02
+	github.com/henderiw/store v0.0.2-0.20241030044529-f6baff74eab3
 	github.com/kform-dev/kform v0.0.16-0.20241029050934-f462791a4045
-	github.com/kuidio/kuid v0.0.8-0.20241029083905-509e46e5a98a
+	github.com/kuidio/kuid v0.0.8-0.20241030070053-17bc7b6f6501
 	github.com/pkg/errors v0.9.1
 	github.com/rivo/tview v0.0.0-20240818110301-fd649dbf1223
 	github.com/spf13/cobra v1.8.1

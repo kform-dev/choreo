@@ -199,6 +199,8 @@ github.com/henderiw/iputil v0.0.0-20231218081610-37f78ad9c81c h1:nFnCNyRV1Ej/zqV
 github.com/henderiw/iputil v0.0.0-20231218081610-37f78ad9c81c/go.mod h1:PrPJdVAwtl5tL323wykHZ5L/b7tfJJsjhegza/wq4fQ=
 github.com/henderiw/logger v0.0.0-20230911123436-8655829b1abe h1:+R53KH7fW+pmqlfSYVTCGPn8pj6gqBGcQ0nq7L1h8+g=
 github.com/henderiw/logger v0.0.0-20230911123436-8655829b1abe/go.mod h1:KNMXpSG8v0BAfIh5rZL4hgow3pBWNbkmmb28x9C5s+Y=
+github.com/henderiw/store v0.0.2-0.20241030044529-f6baff74eab3 h1:/akPyTNVwB58j5vf0HPqTgsaTmeRGO2v5pnC2dHXJhk=
+github.com/henderiw/store v0.0.2-0.20241030044529-f6baff74eab3/go.mod h1:BS0axsmGORgxlBKcdl9T+oxhWEyTwSpb4ZyIqulQ2Bc=
 github.com/imdario/mergo v0.3.16 h1:wwQJbIsHYGMUyLSPrEq1CT16AhnhNJQ51+4fdHUnCl4=
 github.com/imdario/mergo v0.3.16/go.mod h1:WBLT9ZmE3lPoWsEzCh9LPo3TiwVN+ZKEjmz+hD27ysY=
 github.com/inconshreveable/mousetrap v1.1.0 h1:wN+x4NVGpMsO7ErUn/mUI3vEoE6Jt13X2s0bqwp9tc8=
@@ -229,6 +231,8 @@ github.com/kr/pty v1.1.1/go.mod h1:pFQYn66WHrOpPYNljwOMqo10TkYh1fy3cYio2l3bCsQ=
 github.com/kr/text v0.1.0/go.mod h1:4Jbv+DJW3UT/LiOwJeYQe1efqtUx/iVham/4vfdArNI=
 github.com/kr/text v0.2.0 h1:5Nx0Ya0ZqY2ygV366QzturHI13Jq95ApcVaJBhpS+AY=
 github.com/kr/text v0.2.0/go.mod h1:eLer722TekiGuMkidMxC/pM04lWEeraHUUmBw8l2grE=
+github.com/kuidio/kuid v0.0.8-0.20241030070053-17bc7b6f6501 h1:05owRsdwoKjdLVlGpZFtlUGNyOsvgPfW/OgvlPd7L1s=
+github.com/kuidio/kuid v0.0.8-0.20241030070053-17bc7b6f6501/go.mod h1:wi+BSP3HgYqzs/6uRCCO8RNJzMviG4VoIHpcdR88K/s=
 github.com/kylelemons/godebug v0.0.0-20170820004349-d65d576e9348/go.mod h1:B69LEHPfb2qLo0BaaOLcbitczOKLWTsrBG9LczfCD4k=
 github.com/kylelemons/godebug v1.1.0 h1:RPNrshWIDI6G2gRW9EHilWtl7Z6Sb1BR0xunSBf0SNc=
 github.com/kylelemons/godebug v1.1.0/go.mod h1:9/0rRGxNHcop5bhtWyNeEfOS8JIWk580+fNqagV/RAw=

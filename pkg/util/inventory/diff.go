@@ -33,8 +33,21 @@ func diff2(beforeu, afteru *unstructured.Unstructured) (string, error) {
 	//var reporter DiffReporter
 	//cmp.Equal(beforeu.Object, afteru.Object, cmp.Reporter(&reporter))
 	//return reporter.String(), nil
-	diff := cmp.Diff(beforeu.Object, afteru.Object)
+	beforeByte, err := yaml.Marshal(beforeu)
+	if err != nil {
+		return "", err
+	}
+	afterByte, err := yaml.Marshal(afteru)
+	if err != nil {
+		return "", err
+	}
+	diff := cmp.Diff(beforeByte, afterByte)
 	return diff, nil
+
+	/*
+		diff := cmp.Diff(beforeu.Object, afteru.Object)
+		return diff, nil
+	*/
 }
 
 // DiffReporter is a simple custom reporter that only records differences
