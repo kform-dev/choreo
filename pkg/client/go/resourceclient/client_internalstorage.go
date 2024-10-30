@@ -261,11 +261,11 @@ func (r *internal) getStorage(u *unstructured.Unstructured) (rest.Storage, error
 	if err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "invalid apiVersion, err: %s", err.Error())
 	}
-	gvk := gv.WithKind(u.GetKind())
+	gk := schema.GroupKind{Group: gv.Group, Kind: u.GetKind()}
 
-	resctx, err := r.apistore.Get(gvk)
+	resctx, err := r.apistore.Get(gk)
 	if err != nil {
-		return nil, fmt.Errorf("gvk %s not found, %v", gvk.String(), err)
+		return nil, fmt.Errorf("gvk %s not found, %v", gk.String(), err)
 	}
 
 	return resctx.Storage, nil

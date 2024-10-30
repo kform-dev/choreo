@@ -256,6 +256,8 @@ func GetCondition(obj map[string]interface{}, conditionType string) map[string]a
 
 }
 
+// SetCondition updates the condition; when msg is an empty string the
+// condition is interpreted as ready, otherwise failed
 func SetCondition(obj map[string]interface{}, conditionType, msg string) {
 	if obj == nil {
 		obj = map[string]any{}
@@ -349,17 +351,19 @@ func GetObjectRefFromUnstructured(u *unstructured.Unstructured) corev1.ObjectRef
 	return corev1.ObjectReference{
 		APIVersion: u.GetObjectKind().GroupVersionKind().GroupVersion().String(),
 		Kind:       u.GetObjectKind().GroupVersionKind().Kind,
-		Namespace:  u.GetNamespace(),
-		Name:       u.GetName(),
+		//Namespace:  u.GetNamespace(),
+		Name: u.GetName(),
+		UID:  u.GetUID(),
 	}
 }
 
-func GetObjectRefFromOwnerRef(namespace string, ownref metav1.OwnerReference) corev1.ObjectReference {
+func GetObjectRefFromOwnerRef(ownref metav1.OwnerReference) corev1.ObjectReference {
 	return corev1.ObjectReference{
 		APIVersion: ownref.APIVersion,
 		Kind:       ownref.Kind,
-		Namespace:  namespace,
-		Name:       ownref.Name,
+		//Namespace:  namespace,
+		Name: ownref.Name,
+		UID:  ownref.UID,
 	}
 }
 

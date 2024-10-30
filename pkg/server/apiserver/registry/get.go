@@ -34,7 +34,7 @@ func (r *storage) Get(ctx context.Context, name string, opts ...rest.GetOption) 
 	o.ApplyOptions(opts)
 
 	log := log.FromContext(ctx).With("name", name)
-	log.Debug("get")
+	log.Debug("get choreoapiserver")
 
 	obj, err := r.storage.Get(store.ToKey(name), &store.GetOptions{Commit: o.Commit})
 	if err != nil {

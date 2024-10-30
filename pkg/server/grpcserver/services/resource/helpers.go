@@ -18,7 +18,7 @@ package resource
 
 import (
 	"github.com/henderiw/store"
-	"github.com/kform-dev/choreo/pkg/server/apiserver/rest"
+	"github.com/kform-dev/choreo/pkg/server/api"
 	"github.com/kform-dev/choreo/pkg/server/choreo"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -41,16 +41,39 @@ func (r *srv) getBranchContext(branch string) (*choreo.BranchCtx, error) {
 	return bctx, nil
 }
 
-func (r *srv) getStorage(bctx *choreo.BranchCtx, u *unstructured.Unstructured) (rest.Storage, error) {
+func (r *srv) getAPIContext(bctx *choreo.BranchCtx, u *unstructured.Unstructured) (*api.ResourceContext, error) {
 	gv, err := schema.ParseGroupVersion(u.GetAPIVersion())
 	if err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "invalid apiVersion, err: %s", err.Error())
 	}
-	gvk := gv.WithKind(u.GetKind())
+	//gvk := gv.WithKind(u.GetKind())
+	gk := schema.GroupKind{Group: gv.Group, Kind: u.GetKind()}
 
-	rctx, err := bctx.APIStore.Get(gvk)
+	rctx, err := bctx.APIStore.Get(gk)
 	if err != nil {
-		return nil, status.Errorf(codes.Unavailable, "gvk %s not registered", gvk.String())
+		return nil, status.Errorf(codes.Unavailable, "gvk %s not registered", gk.String())
 	}
-	return rctx.Storage, nil
+	return rctx, nil
+}
+
+func convertToInternal(rctx *api.ResourceContext, u *unstructured.Unstructured) {
+	if rctx.Internal != nil {
+		u.SetAPIVersion(schema.GroupVersion{Group: rctx.Internal.Group, Version: rctx.Internal.Version}.String())
+	}
+}
+
+func convertFromInternal(rctx *api.ResourceContext, u *unstructured.Unstructured) {
+	if rctx.Internal != nil {
+		u.SetAPIVersion(schema.GroupVersion{Group: rctx.External.Group, Version: rctx.External.Version}.String())
+	}
+}
+
+func convertListFromInternal(rctx *api.ResourceContext, ul *unstructured.UnstructuredList) {
+	if rctx.Internal != nil {
+		ul.SetAPIVersion(schema.GroupVersion{Group: rctx.External.Group, Version: rctx.External.Version}.String())
+		for i, item := range ul.Items {
+			item.SetAPIVersion(schema.GroupVersion{Group: rctx.External.Group, Version: rctx.External.Version}.String())
+			ul.Items[i] = item
+		}
+	}
 }

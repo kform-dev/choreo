@@ -18,6 +18,7 @@ package registry
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/henderiw/logger/log"
 	"github.com/henderiw/store"
@@ -37,7 +38,7 @@ func (r *storage) Update(ctx context.Context, new runtime.Unstructured, opts ...
 	o.ApplyOptions(opts)
 
 	log := log.FromContext(ctx)
-	log.Debug("update")
+	log.Debug("update choreoapiserver")
 
 	newObjectMeta, err := meta.Accessor(new)
 	if err != nil {
@@ -53,7 +54,8 @@ func (r *storage) Update(ctx context.Context, new runtime.Unstructured, opts ...
 
 }
 
-func (r *storage) update(ctx context.Context, new, old runtime.Unstructured, _ *rest.UpdateOptions) (runtime.Unstructured, error) {
+func (r *storage) update(ctx context.Context, new, old runtime.Unstructured, o *rest.UpdateOptions) (runtime.Unstructured, error) {
+
 	newObjectMeta, err := meta.Accessor(new)
 	if err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "cannot access objectMeta err: %s", err.Error())
@@ -68,8 +70,20 @@ func (r *storage) update(ctx context.Context, new, old runtime.Unstructured, _ *
 		return nil, status.Errorf(codes.InvalidArgument, "validation failed: %v", errs)
 	}
 
-	if err := r.updateStrategy.PrepareForUpdate(ctx, new, old); err != nil {
+	recursion := false
+	if len(o.DryRun) == 1 && o.DryRun[0] == "recursion" {
+		recursion = true
+		o.DryRun = []string{}
+	}
+
+	robj, err := r.updateStrategy.InvokeUpdate(ctx, new, recursion)
+	if err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "cannot prepare for update err: %s", err.Error())
+	}
+	new = robj.(runtime.Unstructured)
+	if new.GetObjectKind().GroupVersionKind().Kind == "IPIndex" {
+		fmt.Println("update, after invoke, old\n", old)
+		fmt.Println("update, after invoke, new\n", new)
 	}
 
 	// if the resourceVersion mismatch we dont allow the update to go through, since this can lead to
@@ -99,8 +113,10 @@ func (r *storage) update(ctx context.Context, new, old runtime.Unstructured, _ *
 	if apiequality.Semantic.DeepEqual(copiednew, copiedold) {
 		return new, nil
 	}
-	//fmt.Println("upgate, deepequal, old\n", copiedold)
-	//fmt.Println("upgate, deepequal, new\n", copiedobj)
+	if new.GetObjectKind().GroupVersionKind().Kind == "IPIndex" {
+		fmt.Println("update, deepequal, old\n", copiedold)
+		fmt.Println("update, deepequal, new\n", copiednew)
+	}
 	UpdateResourceVersion(newObjectMeta, oldObjectMeta)
 
 	// there is a change in the object, check if the spec is equal or not

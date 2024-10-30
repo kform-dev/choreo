@@ -130,7 +130,7 @@ var _ CreateOption = &CreateOptions{}
 type CreateOptions struct {
 	Trace  string
 	Origin string
-	DryRun bool
+	DryRun []string
 	Branch string
 	Proxy  types.NamespacedName
 }
@@ -163,7 +163,7 @@ var _ UpdateOption = &UpdateOptions{}
 type UpdateOptions struct {
 	Trace  string
 	Origin string
-	DryRun bool
+	DryRun []string
 	Branch string
 	Proxy  types.NamespacedName
 }
@@ -195,7 +195,7 @@ var _ DeleteOption = &DeleteOptions{}
 type DeleteOptions struct {
 	Trace  string
 	Origin string
-	DryRun bool
+	DryRun []string
 	Branch string
 	Proxy  types.NamespacedName
 }
@@ -227,7 +227,7 @@ var _ ApplyOption = &ApplyOptions{}
 type ApplyOptions struct {
 	Trace        string
 	Origin       string
-	DryRun       bool
+	DryRun       []string
 	FieldManager string
 	Force        bool
 	Branch       string

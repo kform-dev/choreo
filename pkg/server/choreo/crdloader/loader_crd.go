@@ -18,12 +18,16 @@ package crdloader
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"regexp"
+	"strconv"
 
 	"github.com/kform-dev/choreo/pkg/proto/discoverypb"
 	"github.com/kform-dev/choreo/pkg/server/api"
 	"github.com/kform-dev/choreo/pkg/server/apiserver/registry"
 	"github.com/kform-dev/choreo/pkg/server/apiserver/rest"
+	"github.com/kuidio/kuid/pkg/registry/options"
 	apiextensionsinternal "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	structuralschema "k8s.io/apiextensions-apiserver/pkg/apiserver/schema"
@@ -39,16 +43,36 @@ import (
 )
 
 // loadCRD loads the storage version of the CRD. if no storage version is supplied this call will fail
-func LoadCRD(ctx context.Context, pathInRepo, dbpath string, crd *apiextensionsv1.CustomResourceDefinition, internalAPIs map[schema.GroupVersion]*BackendConfig, choreoAPI bool) (*api.ResourceContext, error) {
+func LoadCRD(ctx context.Context, pathInRepo, dbpath string, crd *apiextensionsv1.CustomResourceDefinition, internalAPIs map[string]*BackendConfig, choreoAPI bool) (*api.ResourceContext, error) {
 	if internalAPIs == nil {
-		internalAPIs = map[schema.GroupVersion]*BackendConfig{}
+		internalAPIs = map[string]*BackendConfig{}
 	}
 
-	version := ""
+	rctx := &api.ResourceContext{}
+	var errm error
 	for _, v := range crd.Spec.Versions {
+		internal := true
+		//version := runtime.APIVersionInternal
+		version := v.Name
+		_, _, _, ok := parseKubeVersion(v.Name)
+		if ok {
+
+			internal = false
+		}
+
+		//fmt.Println("version", ok, version, internal, v.Name, majorVersion, minorVersion, vType)
+		gv := schema.GroupVersion{Group: crd.Spec.Group, Version: version}
+		gvk := gv.WithKind(crd.Spec.Names.Kind)
+		// strange the LIST is empty when unmarshaling
+		gvklist := gv.WithKind(crd.Spec.Names.Kind + "List")
+		//gvklist := gv.WithKind(crd.Spec.Names.ListKind)
 		// we only use the storage version indicated in the crd to perform the validation
 		if v.Storage {
-			version = v.Name
+			if rctx.Storage != nil {
+				errm = errors.Join(errm, fmt.Errorf("invalid crd %s, a crd can only have 1 storage, got storage version %s", crd.Name, v.Name))
+				continue
+			}
+
 			val := v.Schema
 
 			var structuralSchema *structuralschema.Structural
@@ -56,15 +80,18 @@ func LoadCRD(ctx context.Context, pathInRepo, dbpath string, crd *apiextensionsv
 			internalValidationSchema := &apiextensionsinternal.CustomResourceValidation{}
 			if val != nil {
 				if err := apiextensionsv1.Convert_v1_CustomResourceValidation_To_apiextensions_CustomResourceValidation(val, internalValidationSchema, nil); err != nil {
-					return nil, fmt.Errorf("invalid crd %s failed converting validation to internal %v", crd.Name, err)
+					errm = errors.Join(errm, fmt.Errorf("invalid crd %s failed converting validation to internal %v", crd.Name, err))
+					continue
 				}
 				s, err := structuralschema.NewStructural(internalValidationSchema.OpenAPIV3Schema)
 				if !crd.Spec.PreserveUnknownFields && err != nil {
-					return nil, fmt.Errorf("invalid crd %s, failed converting schema to structural", crd.Name)
+					errm = errors.Join(errm, fmt.Errorf("invalid crd %s, failed converting schema to structural", crd.Name))
+					continue
 				}
 				if !crd.Spec.PreserveUnknownFields {
 					if err := structuraldefaulting.PruneDefaults(s); err != nil {
-						return nil, fmt.Errorf("invalid crd %s, failed to prune defaults", crd.Name)
+						errm = errors.Join(errm, fmt.Errorf("invalid crd %s, failed to prune defaults", crd.Name))
+						continue
 					}
 				}
 				structuralSchema = s
@@ -74,20 +101,23 @@ func LoadCRD(ctx context.Context, pathInRepo, dbpath string, crd *apiextensionsv
 			staticOpenAPISpec := make(map[string]*spec.Schema)
 			openAPIModels, err := buildOpenAPIModelsForApply(staticOpenAPISpec, crd)
 			if err != nil {
-				return nil, fmt.Errorf("error building openapi models for %s: %v", crd.Name, err)
+				errm = errors.Join(errm, fmt.Errorf("invalid crd %s, failed building openapi models: %v", crd.Name, err))
+				continue
 			}
 
 			var typeConverter managedfields.TypeConverter = managedfields.NewDeducedTypeConverter()
 			if len(openAPIModels) > 0 {
 				typeConverter, err = managedfields.NewTypeConverter(openAPIModels, crd.Spec.PreserveUnknownFields)
 				if err != nil {
-					return nil, err
+					errm = errors.Join(errm, fmt.Errorf("invalid crd %s, failed getting type convertor: %v", crd.Name, err))
+					continue
 				}
 			}
 
 			schemaValidator, _, err := apiservervalidation.NewSchemaValidator(internalSchemaProps)
 			if err != nil {
-				return nil, err
+				errm = errors.Join(errm, fmt.Errorf("invalid crd %s, failed getting schema validator: %v", crd.Name, err))
+				continue
 			}
 
 			var statusSpec *apiextensionsinternal.CustomResourceSubresourceStatus
@@ -95,22 +125,19 @@ func LoadCRD(ctx context.Context, pathInRepo, dbpath string, crd *apiextensionsv
 			if v.Subresources != nil && v.Subresources.Status != nil {
 				statusSpec = &apiextensionsinternal.CustomResourceSubresourceStatus{}
 				if err := apiextensionsv1.Convert_v1_CustomResourceSubresourceStatus_To_apiextensions_CustomResourceSubresourceStatus(v.Subresources.Status, statusSpec, nil); err != nil {
-					return nil, fmt.Errorf("failed converting CRD status subresource to internal version: %v", err)
+					errm = errors.Join(errm, fmt.Errorf("invalid crd %s, failed converting CRD status subresource to internal version: %v", crd.Name, err))
+					continue
 				}
 				if internalValidationSchema.OpenAPIV3Schema != nil && internalValidationSchema.OpenAPIV3Schema.Properties != nil {
 					if statusSchema, ok := internalValidationSchema.OpenAPIV3Schema.Properties["status"]; ok {
 						statusValidator, _, err = apiservervalidation.NewSchemaValidator(&statusSchema)
 						if err != nil {
-							return nil, err
+							errm = errors.Join(errm, fmt.Errorf("invalid crd %s, failed getting schema validator: %v", crd.Name, err))
+							continue
 						}
 					}
 				}
 			}
-			gv := schema.GroupVersion{Group: crd.Spec.Group, Version: version}
-			gvk := gv.WithKind(crd.Spec.Names.Kind)
-			// strange the LIST is empty when unmarshaling
-			gvklist := gv.WithKind(crd.Spec.Names.Kind + "List")
-			//gvklist := gv.WithKind(crd.Spec.Names.ListKind)
 
 			defaulter := unstructuredDefaulter{structuralSchema: structuralSchema}
 			creator := unstructuredCreator{}
@@ -135,16 +162,16 @@ func LoadCRD(ctx context.Context, pathInRepo, dbpath string, crd *apiextensionsv
 			}
 
 			var strategy rest.Strategy
-			var preparatorFn registry.APIPrepator
-			if backendConfig, exists := internalAPIs[gv]; exists {
+			var invoker options.BackendInvoker
+			if backendConfig, exists := internalAPIs[crd.Spec.Group]; exists {
 				if crd.Spec.Names.Kind == backendConfig.ClaimKind {
-					preparatorFn = backendConfig.ClaimPreparator
+					invoker = backendConfig.ClaimInvoker
 				}
 				if crd.Spec.Names.Kind == backendConfig.IndexKind {
-					preparatorFn = backendConfig.IndexPreparator
+					invoker = backendConfig.IndexInvoker
 				}
 			}
-			if preparatorFn != nil {
+			if invoker != nil {
 				strategy = registry.NewStrategy(
 					crd.Spec.Scope == apiextensionsv1.NamespaceScoped, // namespaced
 					gvk,
@@ -152,7 +179,7 @@ func LoadCRD(ctx context.Context, pathInRepo, dbpath string, crd *apiextensionsv
 					statusValidator,
 					structuralSchema,
 					defaulter,
-					preparatorFn, // this is to handle the internal api resources
+					invoker, // this is to handle the internal api resources using synchronous calls
 				)
 			} else {
 				strategy = registry.NewStrategy(
@@ -187,22 +214,53 @@ func LoadCRD(ctx context.Context, pathInRepo, dbpath string, crd *apiextensionsv
 				strategy,
 				fieldManager,
 			)
-			return &api.ResourceContext{
-				APIResource: &discoverypb.APIResource{
-					Group:      gv.Group,
-					Version:    gv.Version,
-					Kind:       crd.Spec.Names.Kind,
-					ListKind:   crd.Spec.Names.ListKind,
-					Resource:   crd.Spec.Names.Plural,
-					Namespaced: crd.Spec.Scope == apiextensionsv1.NamespaceScoped,
-					Categories: crd.Spec.Names.Categories,
-					ChoreoAPI:  choreoAPI,
-				},
-				Storage: storage,
-			}, nil
+
+			rctx.Storage = storage
+			apiresource := &discoverypb.APIResource{
+				Group:      gv.Group,
+				Version:    gv.Version,
+				Kind:       crd.Spec.Names.Kind,
+				ListKind:   crd.Spec.Names.ListKind,
+				Resource:   crd.Spec.Names.Plural,
+				Namespaced: crd.Spec.Scope == apiextensionsv1.NamespaceScoped,
+				Categories: crd.Spec.Names.Categories,
+				ChoreoAPI:  choreoAPI,
+			}
+			if internal {
+				rctx.Internal = apiresource
+			} else {
+				rctx.External = apiresource
+			}
+		} else {
+			// no storage version
+			if internal {
+				errm = errors.Join(errm, fmt.Errorf("invalid crd %s, an internal version %s need to be a storage version", crd.Name, v.Name))
+				continue
+			}
+			if rctx.External != nil {
+				errm = errors.Join(errm, fmt.Errorf("invalid crd %s, a crd can only have 1 external version, got %s", crd.Name, v.Name))
+				continue
+			}
+			rctx.External = &discoverypb.APIResource{
+				Group:      gv.Group,
+				Version:    gv.Version,
+				Kind:       crd.Spec.Names.Kind,
+				ListKind:   crd.Spec.Names.ListKind,
+				Resource:   crd.Spec.Names.Plural,
+				Namespaced: crd.Spec.Scope == apiextensionsv1.NamespaceScoped,
+				Categories: crd.Spec.Names.Categories,
+				ChoreoAPI:  choreoAPI,
+			}
 		}
 	}
-	return nil, fmt.Errorf("invalid crd %s, no storage version", crd.Name)
+	if rctx.Storage == nil {
+		errm = errors.Join(errm, fmt.Errorf("invalid crd %s, no storage version", crd.Name))
+	}
+	if rctx.External == nil {
+		errm = errors.Join(errm, fmt.Errorf("invalid crd %s, no external version", crd.Name))
+	}
+	return rctx, errm
+
 }
 
 // buildOpenAPIModelsForApply constructs openapi models from any validation schemas specified in the custom resource,
@@ -243,4 +301,42 @@ func buildOpenAPIModelsForApply(staticOpenAPISpec map[string]*spec.Schema, crd *
 		return nil, err
 	}
 	return mergedOpenAPI.Components.Schemas, nil
+}
+
+type versionType int
+
+const (
+	// Bigger the version type number, higher priority it is
+	versionTypeAlpha versionType = iota
+	versionTypeBeta
+	versionTypeGA
+)
+
+var kubeVersionRegex = regexp.MustCompile("^v([\\d]+)(?:(alpha|beta)([\\d]+))?$")
+
+func parseKubeVersion(v string) (majorVersion int, vType versionType, minorVersion int, ok bool) {
+	var err error
+	submatches := kubeVersionRegex.FindStringSubmatch(v)
+	if len(submatches) != 4 {
+		return 0, 0, 0, false
+	}
+	switch submatches[2] {
+	case "alpha":
+		vType = versionTypeAlpha
+	case "beta":
+		vType = versionTypeBeta
+	case "":
+		vType = versionTypeGA
+	default:
+		return 0, 0, 0, false
+	}
+	if majorVersion, err = strconv.Atoi(submatches[1]); err != nil {
+		return 0, 0, 0, false
+	}
+	if vType != versionTypeGA {
+		if minorVersion, err = strconv.Atoi(submatches[3]); err != nil {
+			return 0, 0, 0, false
+		}
+	}
+	return majorVersion, vType, minorVersion, true
 }

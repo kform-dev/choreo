@@ -178,10 +178,12 @@ func (r *run) load(ctx context.Context, bctx *BranchCtx) error {
 	if err := inv.Build(ctx, r.client, apiResources, &inventory.BuildOptions{
 		ShowManagedField: true,
 		Branch:           bctx.Branch,
-		ShowChoreoAPIs:   true,
+		ShowChoreoAPIs:   false, // TO CHANGE
 	}); err != nil {
 		return status.Errorf(codes.Internal, "err: %s", err.Error())
 	}
+
+	inv.Print()
 	var errm error
 	garbageSet := inv.CollectGarbage()
 	for _, ref := range garbageSet.UnsortedList() {
@@ -190,11 +192,14 @@ func (r *run) load(ctx context.Context, bctx *BranchCtx) error {
 		u.SetName(ref.Name)
 		u.SetNamespace(ref.Namespace)
 
+		//fmt.Println("delete garbage", u.GetAPIVersion(), u.GetKind(), u.GetName())
+
 		if err := r.client.Delete(ctx, u, &resourceclient.DeleteOptions{
 			Branch: bctx.Branch,
 		}); err != nil {
 			errm = errors.Join(errm, err)
 		}
+
 	}
 	if errm != nil {
 		return errm

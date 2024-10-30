@@ -46,16 +46,19 @@ type Strategy interface {
 
 type CreateStrategy interface {
 	ValidateCreate(ctx context.Context, obj runtime.Unstructured) field.ErrorList
-	PrepareForCreate(ctx context.Context, obj runtime.Unstructured) error
+	// called when async procedure is implemented by the storage layer
+	InvokeCreate(ctx context.Context, obj runtime.Object, recursion bool) (runtime.Object, error)
 }
 
 type UpdateStrategy interface {
 	ValidateUpdate(ctx context.Context, obj, old runtime.Unstructured) field.ErrorList
-	PrepareForUpdate(ctx context.Context, obj, old runtime.Unstructured) error
+	// called when async procedure is implemented by the storage layer
+	InvokeUpdate(ctx context.Context, obj runtime.Object, recursion bool) (runtime.Object, error)
 }
 
 type DeleteStrategy interface {
-	PrepareForDelete(ctx context.Context, obj runtime.Unstructured) error
+	// called when async procedure is implemented by the storage layer
+	InvokeDelete(ctx context.Context, obj runtime.Object, recursion bool) (runtime.Object, error)
 }
 
 type GetOption interface {
@@ -137,7 +140,7 @@ var _ CreateOption = &CreateOptions{}
 type CreateOptions struct {
 	Trace  string
 	Origin string
-	DryRun bool
+	DryRun []string
 }
 
 func (o *CreateOptions) ApplyToCreate(lo *CreateOptions) {
@@ -165,7 +168,7 @@ var _ UpdateOption = &UpdateOptions{}
 type UpdateOptions struct {
 	Trace  string
 	Origin string
-	DryRun bool
+	DryRun []string
 }
 
 func (o *UpdateOptions) ApplyToUpdate(lo *UpdateOptions) {
@@ -193,7 +196,7 @@ var _ DeleteOption = &DeleteOptions{}
 type DeleteOptions struct {
 	Trace  string
 	Origin string
-	DryRun bool
+	DryRun []string
 }
 
 func (o *DeleteOptions) ApplyToDelete(lo *DeleteOptions) {
@@ -221,7 +224,7 @@ var _ ApplyOption = &ApplyOptions{}
 type ApplyOptions struct {
 	Trace        string
 	Origin       string
-	DryRun       bool
+	DryRun       []string
 	FieldManager string
 	Force        bool
 }

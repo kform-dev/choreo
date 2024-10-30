@@ -125,7 +125,7 @@ func (r *srv) watch(ctx context.Context, wi watch.WatchInterface[*api.ResourceCo
 
 			rctx := watchEvent.Object
 			if err := clientStream.Send(&discoverypb.Watch_Response{
-				ApiResource: rctx.APIResource,
+				ApiResource: rctx.External,
 				EventType:   GetDiscoveryPbEventType(watchEvent.Type),
 			}); err != nil {
 				p, _ := peer.FromContext(clientStream.Context())

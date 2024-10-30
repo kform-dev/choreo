@@ -64,11 +64,11 @@ func (r *APIStoreLoader) Load(ctx context.Context, u *unstructured.Unstructured)
 	}
 
 	// dont add internal gvks to the store
-	if r.InternalGVKs.Has(resctx.GVK()) {
+	if r.InternalGVKs.Has(resctx.ExternalGVK()) {
 		return nil
 	}
 
-	if err := r.APIStore.Apply(resctx.GVK(), resctx); err != nil {
+	if err := r.APIStore.Apply(resctx.GV(), resctx); err != nil {
 		return err
 	}
 	return nil
