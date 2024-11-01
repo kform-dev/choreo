@@ -87,6 +87,10 @@ type ClientGetter interface {
 	ToProxy() types.NamespacedName
 }
 
+type ConfigFn func() *config.Config
+type ResourceClientFn func() (resourceclient.Client, error)
+type ResourceMapperFn func() (resourcemapper.Mapper, error)
+
 var _ ClientGetter = &ConfigFlags{}
 
 type ConfigFlags struct {

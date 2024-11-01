@@ -37,69 +37,67 @@ import (
 	//docs "github.com/kform-dev/kform/internal/docs/generated/applydocs"
 )
 
-func GetCommand(ctx context.Context, f util.Factory, streams *genericclioptions.IOStreams) *cobra.Command {
-	return NewRunner(ctx, f, streams).Command
-}
+func NewCmdGet(f util.Factory, streams *genericclioptions.IOStreams) *cobra.Command {
+	flags := NewGetFlags()
 
-// NewRunner returns a command runner.
-func NewRunner(ctx context.Context, f util.Factory, streams *genericclioptions.IOStreams) *Runner {
-	r := &Runner{
-		factory: f,
-		streams: streams,
-	}
 	cmd := &cobra.Command{
-		Use:   "get <RESOURCE> <NAME> <NAMESPACE>",
+		Use:   "get <RESOURCE> <NAME>",
 		Short: "get resource",
 		Args:  cobra.MinimumNArgs(1),
 		//Short:   docs.InitShort,
 		//Long:    docs.InitShort + "\n" + docs.InitLong,
 		//Example: docs.InitExamples,
-		RunE: r.runE,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			ctx := cmd.Context()
+			o, err := flags.ToOptions(cmd, f, streams)
+			if err != nil {
+				return err
+			}
+			if err := o.Validate(args); err != nil {
+				return err
+			}
+			return o.Run(ctx, args)
+		},
 	}
-
-	r.Command = cmd
-	return r
+	flags.AddFlags(cmd)
+	return cmd
 }
 
-type Runner struct {
-	Command *cobra.Command
-	factory util.Factory
-	streams *genericclioptions.IOStreams
+type GetFlags struct {
+	Streams *genericclioptions.IOStreams
 }
 
-func (r *Runner) runE(cmd *cobra.Command, args []string) error {
-	ctx := cmd.Context()
+// NewGetFlags determines which flags will be added to the command
+// The defaults are determined here
+func NewGetFlags() *GetFlags {
+	return &GetFlags{}
+}
 
-	o := &Options{
-		Factory: r.factory,
-		Streams: r.streams,
+// AddFlags add flags tp the command
+func (r *GetFlags) AddFlags(cmd *cobra.Command) {
+}
+
+// ToOptions renders the options based on the flags that were set and will be the base context used to run the command
+func (r *GetFlags) ToOptions(cmd *cobra.Command, f util.Factory, streams *genericclioptions.IOStreams) (*GetOptions, error) {
+	options := &GetOptions{
+		Factory: f,
+		Streams: streams,
 		Output:  cmd.Flags().Lookup(genericclioptions.FlagOutputFormat).Value.String(),
 	}
-	if err := o.Complete(ctx); err != nil {
-		return err
-	}
-	if err := o.Validate(ctx); err != nil {
-		return err
-	}
-	return o.Run(ctx, args)
+	return options, nil
 }
 
-type Options struct {
+type GetOptions struct {
 	Factory util.Factory
 	Streams *genericclioptions.IOStreams
 	Output  string
 }
 
-// Complete adapts from the command line args and validates them
-func (r *Options) Complete(ctx context.Context) error {
+func (r *GetOptions) Validate(args []string) error {
 	return nil
 }
 
-func (r *Options) Validate(ctx context.Context) error {
-	return nil
-}
-
-func (r *Options) Run(ctx context.Context, args []string) error {
+func (r *GetOptions) Run(ctx context.Context, args []string) error {
 	// args is always len == 1
 	parts := strings.SplitN(args[0], ".", 2)
 	if len(parts) != 2 {
@@ -143,7 +141,7 @@ func (r *Options) Run(ctx context.Context, args []string) error {
 	return r.parseOutput(u)
 }
 
-func (r *Options) parseOutput(obj runtime.Unstructured) error {
+func (r *GetOptions) parseOutput(obj runtime.Unstructured) error {
 	w := r.Streams.Out
 	switch r.Output {
 	case "completion":

@@ -71,13 +71,10 @@ func (r *Completion) compGetResource(cmd *cobra.Command, resourceName string, to
 	ctx := cmd.Context()
 	buf := new(bytes.Buffer)
 
-	o := &getcmd.Options{
+	o := &getcmd.GetOptions{
 		Factory: r.Factory,
 		Streams: &genericclioptions.IOStreams{In: os.Stdin, Out: buf, ErrOut: io.Discard},
 		Output:  "completion",
-	}
-	if err := o.Complete(ctx); err != nil {
-		return []string{}
 	}
 	// Ignore errors as the output may still be valid
 	o.Run(ctx, []string{resourceName})

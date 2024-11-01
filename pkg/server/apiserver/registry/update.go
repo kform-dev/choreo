@@ -18,7 +18,6 @@ package registry
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/henderiw/logger/log"
 	"github.com/henderiw/store"
@@ -81,10 +80,6 @@ func (r *storage) update(ctx context.Context, new, old runtime.Unstructured, o *
 		return nil, status.Errorf(codes.InvalidArgument, "cannot prepare for update err: %s", err.Error())
 	}
 	new = robj.(runtime.Unstructured)
-	if new.GetObjectKind().GroupVersionKind().Kind == "IPIndex" {
-		fmt.Println("update, after invoke, old\n", old)
-		fmt.Println("update, after invoke, new\n", new)
-	}
 
 	// if the resourceVersion mismatch we dont allow the update to go through, since this can lead to
 	// inconsistencies
@@ -112,10 +107,6 @@ func (r *storage) update(ctx context.Context, new, old runtime.Unstructured, o *
 	object.RemoveManagedFieldsFromUnstructured(ctx, copiednew)
 	if apiequality.Semantic.DeepEqual(copiednew, copiedold) {
 		return new, nil
-	}
-	if new.GetObjectKind().GroupVersionKind().Kind == "IPIndex" {
-		fmt.Println("update, deepequal, old\n", copiedold)
-		fmt.Println("update, deepequal, new\n", copiednew)
 	}
 	UpdateResourceVersion(newObjectMeta, oldObjectMeta)
 

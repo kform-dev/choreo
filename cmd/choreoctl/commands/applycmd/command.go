@@ -18,63 +18,132 @@ package applycmd
 
 import (
 	"context"
+	"errors"
+	"fmt"
 
 	"github.com/kform-dev/choreo/pkg/cli/genericclioptions"
+	"github.com/kform-dev/choreo/pkg/cli/resource"
 	"github.com/kform-dev/choreo/pkg/client/go/resourceclient"
 	"github.com/kform-dev/choreo/pkg/client/go/util"
 	"github.com/kform-dev/choreo/pkg/util/object"
 	"github.com/spf13/cobra"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime"
 	//docs "github.com/kform-dev/kform/internal/docs/generated/applydocs"
 )
 
-func GetCommand(ctx context.Context, f util.Factory, streams *genericclioptions.IOStreams) *cobra.Command {
-	return NewRunner(ctx, f, streams).Command
-}
+// NewCmdApply returns a cobra command.
+func NewCmdApply(f util.Factory, streams *genericclioptions.IOStreams) *cobra.Command {
+	flags := NewApplyFlags()
 
-// NewRunner returns a command runner.
-func NewRunner(ctx context.Context, f util.Factory, streams *genericclioptions.IOStreams) *Runner {
-	r := &Runner{
-		factory: f,
-		streams: streams,
-	}
 	cmd := &cobra.Command{
-		Use:   "apply PATH [flags]",
+		Use:   "apply [flags]",
 		Short: "apply resource",
-		Args:  cobra.ExactArgs(1),
+		//Args:  cobra.ExactArgs(0),
 		//Short:   docs.InitShort,
 		//Long:    docs.InitShort + "\n" + docs.InitLong,
 		//Example: docs.InitExamples,
-		RunE: r.runE,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			o, err := flags.ToOptions(cmd, f, streams)
+			if err != nil {
+				return err
+			}
+			if err := o.Validate(args); err != nil {
+				return err
+			}
+			return o.Run(cmd.Context(), args)
+		},
 	}
-
-	//cmd.Flags().BoolVarP(&r.showChoreoAPIs, "show-choreoAPIs", "i", false, "Enable displaying internal choreo api resources")
-
-	r.Command = cmd
-	return r
+	flags.AddFlags(cmd)
+	return cmd
 }
 
-type Runner struct {
-	Command *cobra.Command
-	factory util.Factory
-	streams *genericclioptions.IOStreams
+type ApplyFlags struct {
+	FileNameFlags *genericclioptions.FileNameFlags
+	Streams       *genericclioptions.IOStreams
 }
 
-func (r *Runner) runE(cmd *cobra.Command, args []string) error {
-	ctx := cmd.Context()
+// NewApplyFlags determines which flags will be added to the command
+// The defaults are determined here
+func NewApplyFlags() *ApplyFlags {
+	usage := "The files that contain the configuration to apply."
 
-	filename := args[0]
-	newu, err := object.GetUnstructuredFromFile(filename)
+	// setup command defaults
+	filenames := []string{}
+	recursive := false
+
+	return &ApplyFlags{
+		FileNameFlags: &genericclioptions.FileNameFlags{Usage: usage, Filenames: &filenames, Recursive: &recursive},
+	}
+}
+
+// AddFlags add flags tp the command
+func (r *ApplyFlags) AddFlags(cmd *cobra.Command) {
+	r.FileNameFlags.AddFlags(cmd.Flags())
+}
+
+// ToOptions renders the options based on the flags that were set and will be the base context used to run the command
+func (r *ApplyFlags) ToOptions(cmd *cobra.Command, f util.Factory, streams *genericclioptions.IOStreams) (*ApplyOptions, error) {
+	options := &ApplyOptions{
+		Factory: f,
+		Streams: streams,
+	}
+	options.FileNameOptions = r.FileNameFlags.ToOptions()
+	return options, nil
+}
+
+type ApplyOptions struct {
+	Factory         util.Factory
+	Streams         *genericclioptions.IOStreams
+	FileNameOptions resource.FilenameOptions
+}
+
+func (r *ApplyOptions) Validate(args []string) error {
+	return nil
+}
+
+func (r *ApplyOptions) Run(ctx context.Context, args []string) error {
+	infos, err := r.GetObjects()
 	if err != nil {
 		return err
 	}
+	if len(infos) == 0 {
+		return fmt.Errorf("no object passed to apply")
+	}
+	var errs error
+	for _, info := range infos {
+		ru, err := object.GetUnstructructered(info.Object)
+		if err != nil {
+			return err
+		}
+		u := &unstructured.Unstructured{
+			Object: ru.UnstructuredContent(),
+		}
+		fmt.Println("applying", u.GetAPIVersion(), u.GetKind(), u.GetName())
+		if err := r.applyOneObject(ctx, u); err != nil {
+			errs = errors.Join(errs, err)
+		}
+	}
+	return errs
+}
 
-	fieldManager := "inputfileloader"
+func (r *ApplyOptions) GetObjects() ([]*resource.Info, error) {
+	b := resource.NewBuilder(r.Factory.GetResourceMapper(), r.Factory.GetProxy(), r.Factory.GetBranch()).
+		Unstructured().
+		ContinueOnError().
+		FilenameParam(&r.FileNameOptions).
+		Flatten().
+		Do()
 
-	client := r.factory.GetResourceClient()
-	return client.Apply(ctx, newu, &resourceclient.ApplyOptions{
+	return b.Infos()
+}
+
+func (r *ApplyOptions) applyOneObject(ctx context.Context, ru runtime.Unstructured) error {
+	client := r.Factory.GetResourceClient()
+	return client.Apply(ctx, ru, &resourceclient.ApplyOptions{
 		Origin:       "choreoctl",
-		FieldManager: fieldManager,
-		Branch:       r.factory.GetBranch(),
-		Proxy:        r.factory.GetProxy(),
+		FieldManager: "inputfileloader",
+		Branch:       r.Factory.GetBranch(),
+		Proxy:        r.Factory.GetProxy(),
 	})
 }

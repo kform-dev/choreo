@@ -96,9 +96,9 @@ func GetMain(ctx context.Context) (*cobra.Command, util.Factory) {
 
 	subCmds := map[string]*cobra.Command{
 		"apiresources": apiresourcescmd.GetCommand(ctx, f, streams),
-		"get":          getcmd.GetCommand(ctx, f, streams),
-		"apply":        applycmd.GetCommand(ctx, f, streams),
-		"delete":       deletecmd.GetCommand(ctx, f, streams),
+		"get":          getcmd.NewCmdGet(f, streams),
+		"apply":        applycmd.NewCmdApply(f, streams),
+		"delete":       deletecmd.NewCmdDelete(f, streams),
 		"deps":         depscmd.GetCommand(ctx, f, streams),
 		"branch":       branchcmd.GetCommand(ctx, f, streams),
 		"run":          runcmd.GetCommand(ctx, f, streams),
