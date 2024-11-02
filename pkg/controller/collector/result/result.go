@@ -1,5 +1,6 @@
 package result
 
+/*
 import (
 	"fmt"
 	"time"
@@ -10,15 +11,16 @@ import (
 )
 
 type Result struct {
-	Operation    runnerpb.Operation
-	ReconcileID  types.UID
-	ReconcileRef ReconcileRef
-	Message      string
-	Time         time.Time
-	Elapsed      time.Duration
+	Operation      runnerpb.Operation
+	ReconcileID    types.UID
+	ReconcilerName string
+	Resource       ResourceInfo
+	Message        string
+	Time           time.Time
+	Elapsed        time.Duration
 }
 
-type ReconcileRef struct {
+type ResourceInfo struct {
 	ReconcilerName string
 	GVK            schema.GroupVersionKind
 	Req            types.NamespacedName
@@ -27,3 +29,4 @@ type ReconcileRef struct {
 func (r ReconcileRef) String() string {
 	return fmt.Sprintf("%s.%s.%s.%s", r.ReconcilerName, r.GVK.Kind, r.GVK.Group, r.Req.Name)
 }
+*/

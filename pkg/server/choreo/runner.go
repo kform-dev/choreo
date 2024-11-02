@@ -26,7 +26,6 @@ import (
 	choreov1alpha1 "github.com/kform-dev/choreo/apis/choreo/v1alpha1"
 	"github.com/kform-dev/choreo/pkg/client/go/resourceclient"
 	"github.com/kform-dev/choreo/pkg/controller/collector"
-	"github.com/kform-dev/choreo/pkg/controller/collector/result"
 	"github.com/kform-dev/choreo/pkg/controller/informers"
 	"github.com/kform-dev/choreo/pkg/controller/reconciler"
 	"github.com/kform-dev/choreo/pkg/proto/discoverypb"
@@ -67,7 +66,7 @@ type run struct {
 	cancel             context.CancelFunc
 	reconcilerConfigs  []*choreov1alpha1.Reconciler
 	libs               *unstructured.UnstructuredList
-	reconcilerResultCh chan result.Result
+	reconcilerResultCh chan *runnerpb.Result
 	runResultCh        chan *runnerpb.Once_Response
 	collector          collector.Collector
 	informerfactory    informers.InformerFactory
@@ -183,7 +182,6 @@ func (r *run) load(ctx context.Context, bctx *BranchCtx) error {
 		return status.Errorf(codes.Internal, "err: %s", err.Error())
 	}
 
-	inv.Print()
 	var errm error
 	garbageSet := inv.CollectGarbage()
 	for _, ref := range garbageSet.UnsortedList() {
@@ -248,7 +246,7 @@ func (r *run) load(ctx context.Context, bctx *BranchCtx) error {
 		return errm
 	}
 
-	r.reconcilerResultCh = make(chan result.Result)
+	r.reconcilerResultCh = make(chan *runnerpb.Result)
 	r.runResultCh = make(chan *runnerpb.Once_Response)
 	r.collector = collector.New(r.reconcilerResultCh, r.runResultCh)
 	r.informerfactory = informers.NewInformerFactory(r.client, reconcilerGVKs, bctx.Branch)

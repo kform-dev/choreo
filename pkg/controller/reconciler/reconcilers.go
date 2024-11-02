@@ -24,8 +24,8 @@ import (
 	"github.com/henderiw/store/memory"
 	choreov1alpha1 "github.com/kform-dev/choreo/apis/choreo/v1alpha1"
 	"github.com/kform-dev/choreo/pkg/client/go/resourceclient"
-	"github.com/kform-dev/choreo/pkg/controller/collector/result"
 	"github.com/kform-dev/choreo/pkg/controller/informers"
+	"github.com/kform-dev/choreo/pkg/proto/runnerpb"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
@@ -41,7 +41,7 @@ func newReconcilers(
 	informerFactory informers.InformerFactory,
 	reconcilerConfigs []*choreov1alpha1.Reconciler,
 	libs *unstructured.UnstructuredList,
-	resultCh chan result.Result,
+	resultCh chan *runnerpb.Result,
 	branchName string,
 ) (*reConcilers, error) {
 	reconcilers := memory.NewStore[Reconciler](nil)

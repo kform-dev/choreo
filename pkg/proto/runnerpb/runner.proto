@@ -19,6 +19,8 @@ syntax = "proto3";
 package runnerpb;
 option go_package = "github.com/kform-dev/choreo/pkg/proto/runnerpb";
 
+import "google/protobuf/timestamp.proto";
+
 
 service Runner {
     rpc Start (Start.Request) returns (Start.Response) {}
@@ -71,16 +73,11 @@ message Once {
     }
 
     message Response {
-        string executionTime = 1;
-        bool success = 2;
-        string reconcileRef = 3;
-        string message = 4;
-        map<string, Operations> results = 5;
-    }
-
-    message Operations {
-        // sting is the string of the operation
-        map<string, int32> operation_counts = 1;
+        bool success = 1;
+        string taskId = 2; // reconcilername + group + kind + namespace + name
+        string message = 3;
+        string executionTime = 4;
+        repeated Result results = 5;
     }
 }
 
@@ -98,6 +95,23 @@ message Load {
         string proxyName = 1;
         string proxyNamespace = 2;
     }
+}
+
+message Result {
+    string reconcilerName = 1;
+    string reconcilerUID = 2;
+    google.protobuf.Timestamp eventTime = 3;
+    Operation operation =4;
+    bool success = 5;
+    string message = 6;
+    Resource resource = 7;
+}
+
+message Resource {
+    string group = 1;
+    string kind = 2;
+    string name = 3;
+    string namespace = 4;
 }
 
 enum Operation {
