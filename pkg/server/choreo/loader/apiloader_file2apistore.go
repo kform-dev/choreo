@@ -40,7 +40,7 @@ import (
 
 // Loader to load files from fs and apply them to api and apistore
 type APILoaderFile2APIStoreAndAPI struct {
-	Flags        *genericclioptions.ConfigFlags
+	Cfg          *genericclioptions.ChoreoConfig
 	Client       resourceclient.Client
 	APIStore     *api.APIStore
 	Branch       string // not relevant in commit case
@@ -54,7 +54,7 @@ func (r *APILoaderFile2APIStoreAndAPI) LoadFromCommit(ctx context.Context, commi
 	//log := log.FromContext(ctx)
 	var errm error
 	if err := r.loadAPIs(ctx, crdloader.GetCommitFileAPICRDReader(
-		filepath.Join(r.PathInRepo, *r.Flags.CRDPath), commit)); err != nil {
+		filepath.Join(r.PathInRepo, *r.Cfg.ServerFlags.CRDPath), commit)); err != nil {
 		errm = errors.Join(errm, fmt.Errorf("cannot load api file in repo, err: %v", err))
 	}
 	return errm
@@ -80,7 +80,7 @@ func (r *APILoaderFile2APIStoreAndAPI) Load(ctx context.Context) error {
 		}
 	*/
 
-	abspath := filepath.Join(r.RepoPath, r.PathInRepo, *r.Flags.CRDPath)
+	abspath := filepath.Join(r.RepoPath, r.PathInRepo, *r.Cfg.ServerFlags.CRDPath)
 	if err := r.loadAPIs(ctx, crdloader.GetFileAPICRDReader(abspath)); err != nil {
 		errm = errors.Join(errm, fmt.Errorf("cannot load api file in repo, err: %v", err))
 	}

@@ -27,13 +27,13 @@ import (
 )
 
 type DevLoader struct {
-	Flags *genericclioptions.ConfigFlags
-	Path  string
+	Cfg  *genericclioptions.ChoreoConfig
+	Path string
 	//NewLibraries sets.Set[string] -> TBD if we need a cleaner
 }
 
 func (r *DevLoader) Load(ctx context.Context) error {
-	if err := fsys.EnsureDir(ctx, []string{r.Path, *r.Flags.InputPath}...); err != nil {
+	if err := fsys.EnsureDir(ctx, []string{r.Path, *r.Cfg.ServerFlags.InputPath}...); err != nil {
 		return err
 	}
 	var errm error

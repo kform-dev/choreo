@@ -33,7 +33,7 @@ type ChoreoInstance interface {
 	GetTempPath() string
 	GetPathInRepo() string
 	GetDBPath() string
-	GetFlags() *genericclioptions.ConfigFlags
+	GetConfig() *genericclioptions.ChoreoConfig
 	GetAPIStore() *api.APIStore // provides the internal apistore
 	GetCommit() *object.Commit
 	GetAPIClient() resourceclient.Client

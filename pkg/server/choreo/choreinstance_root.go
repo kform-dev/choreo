@@ -43,12 +43,12 @@ type Config struct {
 	Repo       repository.Repository
 	Commit     *object.Commit
 	PathInRepo string
-	Flags      *genericclioptions.ConfigFlags
+	Cfg        *genericclioptions.ChoreoConfig
 }
 
 func NewRootChoreoInstance(ctx context.Context, config *Config) (ChoreoInstance, error) {
 	r := &RootChoreoInstance{
-		flags: config.Flags,
+		cfg: config.Cfg,
 	}
 
 	if config.Repo == nil {
@@ -103,7 +103,7 @@ func getRepoFromPath(ctx context.Context, path string) (repository.Repository, s
 }
 
 type RootChoreoInstance struct {
-	flags      *genericclioptions.ConfigFlags
+	cfg        *genericclioptions.ChoreoConfig
 	repo       repository.Repository
 	pathInRepo string
 	commit     *object.Commit
@@ -129,7 +129,7 @@ func (r *RootChoreoInstance) Destroy() error {
 func (r *RootChoreoInstance) LoadInternalAPIs() error {
 	loader := loader.APILoaderInternal{
 		APIStore:   r.apiStoreInternal,
-		Flags:      r.flags,
+		Cfg:        r.cfg,
 		DBPath:     r.GetDBPath(),
 		PathInRepo: r.GetPathInRepo(),
 	}
@@ -161,11 +161,11 @@ func (r *RootChoreoInstance) GetTempPath() string {
 }
 
 func (r *RootChoreoInstance) GetDBPath() string {
-	return filepath.Join(r.repo.GetPath(), r.pathInRepo, *r.flags.DBPath)
+	return filepath.Join(r.repo.GetPath(), r.pathInRepo, *r.cfg.ServerFlags.DBPath)
 }
 
-func (r *RootChoreoInstance) GetFlags() *genericclioptions.ConfigFlags {
-	return r.flags
+func (r *RootChoreoInstance) GetConfig() *genericclioptions.ChoreoConfig {
+	return r.cfg
 }
 
 func (r *RootChoreoInstance) GetAPIStore() *api.APIStore {
@@ -180,7 +180,7 @@ func (r *RootChoreoInstance) GetAnnotationVal() string { return "" }
 
 func (r *RootChoreoInstance) CommitWorktree(msg string) (*choreopb.Commit_Response, error) {
 	msg, err := r.repo.CommitWorktree(msg, []string{
-		filepath.Join(r.pathInRepo, *r.flags.InputPath),
+		filepath.Join(r.pathInRepo, *r.cfg.ServerFlags.InputPath),
 	})
 	if err != nil {
 		return &choreopb.Commit_Response{}, status.Errorf(codes.Internal, "failed pushing branch: %v", err)

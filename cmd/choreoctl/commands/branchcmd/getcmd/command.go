@@ -29,46 +29,68 @@ import (
 	//docs "github.com/kform-dev/kform/internal/docs/generated/applydocs"
 )
 
-func GetCommand(ctx context.Context, f util.Factory, streams *genericclioptions.IOStreams) *cobra.Command {
-	return NewRunner(f, streams).Command
-}
+func NewCmdGet(f util.Factory, streams *genericclioptions.IOStreams) *cobra.Command {
+	flags := NewGetFlags()
 
-// NewRunner returns a command runner.
-func NewRunner(f util.Factory, streams *genericclioptions.IOStreams) *Runner {
-	r := &Runner{
-		factory: f,
-		streams: streams,
-	}
 	cmd := &cobra.Command{
 		Use:  "get BRANCHNAME [flags]",
 		Args: cobra.MaximumNArgs(1),
 		//Short:   docs.InitShort,
 		//Long:    docs.InitShort + "\n" + docs.InitLong,
 		//Example: docs.InitExamples,
-		RunE: r.runE,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			ctx := cmd.Context()
+			o, err := flags.ToOptions(cmd, f, streams)
+			if err != nil {
+				return err
+			}
+			if err := o.Validate(args); err != nil {
+				return err
+			}
+			return o.Run(ctx, args)
+		},
 	}
-
-	cmd.Flags().BoolVarP(&r.files, "files", "f", false, "get files")
-
-	r.Command = cmd
-	return r
+	flags.AddFlags(cmd)
+	return cmd
 }
 
-type Runner struct {
-	Command *cobra.Command
-	factory util.Factory
-	streams *genericclioptions.IOStreams
-	files   bool
+type GetFlags struct {
 }
 
-func (r *Runner) runE(cmd *cobra.Command, args []string) error {
+// The defaults are determined here
+func NewGetFlags() *GetFlags {
+	return &GetFlags{}
+}
 
-	ctx := cmd.Context()
+// AddFlags add flags tp the command
+func (r *GetFlags) AddFlags(cmd *cobra.Command) {
+}
+
+// ToOptions renders the options based on the flags that were set and will be the base context used to run the command
+func (r *GetFlags) ToOptions(cmd *cobra.Command, f util.Factory, streams *genericclioptions.IOStreams) (*GetOptions, error) {
+	options := &GetOptions{
+		Factory: f,
+		Streams: streams,
+	}
+	return options, nil
+}
+
+type GetOptions struct {
+	Factory util.Factory
+	Streams *genericclioptions.IOStreams
+	Files   bool
+}
+
+func (r *GetOptions) Validate(args []string) error {
+	return nil
+}
+
+func (r *GetOptions) Run(ctx context.Context, args []string) error {
 	log := log.FromContext(ctx)
-	branchClient := r.factory.GetBranchClient()
+	branchClient := r.Factory.GetBranchClient()
 	if len(args) == 1 {
 		branchName := args[0]
-		if r.files {
+		if r.Files {
 			rspch := branchClient.StreamFiles(ctx, branchName)
 
 			for {
@@ -79,7 +101,7 @@ func (r *Runner) runE(cmd *cobra.Command, args []string) error {
 					if !ok {
 						return nil
 					}
-					if _, err := fmt.Fprintf(r.streams.Out, "%s:\n%s", file.Name, file.Data); err != nil {
+					if _, err := fmt.Fprintf(r.Streams.Out, "%s:\n%s", file.Name, file.Data); err != nil {
 						log.Error("cannot stream to output", "err", err)
 					}
 				}
@@ -87,7 +109,7 @@ func (r *Runner) runE(cmd *cobra.Command, args []string) error {
 		}
 
 		logs, err := branchClient.Get(ctx, branchName, &branchclient.GetOptions{
-			Proxy: r.factory.GetProxy(),
+			Proxy: r.Factory.GetProxy(),
 		})
 		if err != nil {
 			return err
@@ -104,7 +126,7 @@ func (r *Runner) runE(cmd *cobra.Command, args []string) error {
 				colorReset, log.Message,
 				colorReset)
 
-			if _, err := fmt.Fprintf(r.streams.Out, "%s\n", logEntry); err != nil {
+			if _, err := fmt.Fprintf(r.Streams.Out, "%s\n", logEntry); err != nil {
 				errm = errors.Join(errm, err)
 			}
 		}
@@ -112,7 +134,7 @@ func (r *Runner) runE(cmd *cobra.Command, args []string) error {
 	}
 
 	branches, err := branchClient.List(ctx, &branchclient.ListOptions{
-		Proxy: r.factory.GetProxy(),
+		Proxy: r.Factory.GetProxy(),
 	})
 	if err != nil {
 		return err
@@ -120,12 +142,11 @@ func (r *Runner) runE(cmd *cobra.Command, args []string) error {
 
 	var errm error
 	for _, branch := range branches {
-		if _, err := fmt.Fprintf(r.streams.Out, "%s\n", branch); err != nil {
+		if _, err := fmt.Fprintf(r.Streams.Out, "%s\n", branch); err != nil {
 			errm = errors.Join(errm, err)
 		}
 	}
 	return errm
-
 }
 
 // ANSI color codes

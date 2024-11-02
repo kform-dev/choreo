@@ -39,7 +39,7 @@ import (
 
 // UpstreamLoader
 type UpstreamLoader struct {
-	Flags      *genericclioptions.ConfigFlags
+	Cfg        *genericclioptions.ChoreoConfig
 	Client     resourceclient.Client
 	Branch     string
 	RepoPath   string
@@ -48,14 +48,14 @@ type UpstreamLoader struct {
 	CallbackFn UpstreamCallBackFn
 }
 
-type UpstreamCallBackFn func(ctx context.Context, repo repository.Repository, pathInRepo string, flags *genericclioptions.ConfigFlags, commit *object.Commit, annotationVal string) error
+type UpstreamCallBackFn func(ctx context.Context, repo repository.Repository, pathInRepo string, cfg *genericclioptions.ChoreoConfig, commit *object.Commit, annotationVal string) error
 
 func (r *UpstreamLoader) Load(ctx context.Context) error {
 	gvks := []schema.GroupVersionKind{
 		choreov1alpha1.SchemeGroupVersion.WithKind(choreov1alpha1.UpstreamRefKind),
 	}
 
-	abspath := filepath.Join(r.RepoPath, r.PathInRepo, *r.Flags.RefsPath)
+	abspath := filepath.Join(r.RepoPath, r.PathInRepo, *r.Cfg.ServerFlags.RefsPath)
 
 	if !fsys.PathExists(abspath) {
 		return nil
@@ -102,7 +102,7 @@ func (r *UpstreamLoader) Load(ctx context.Context) error {
 			return
 		}
 
-		if err := r.CallbackFn(ctx, repo, upstreamRef.GetPathInRepo(), r.Flags, commit, upstreamRef.LoaderAnnotation().String()); err != nil {
+		if err := r.CallbackFn(ctx, repo, upstreamRef.GetPathInRepo(), r.Cfg, commit, upstreamRef.LoaderAnnotation().String()); err != nil {
 			errm = errors.Join(errm, fmt.Errorf("callback failed for %s from repo %s, err: %v", refName, url, err))
 			return
 		}

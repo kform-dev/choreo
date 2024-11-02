@@ -33,7 +33,7 @@ import (
 
 type APILoaderInternal struct {
 	APIStore   *api.APIStore
-	Flags      *genericclioptions.ConfigFlags
+	Cfg        *genericclioptions.ChoreoConfig
 	DBPath     string
 	PathInRepo string
 }
@@ -49,7 +49,7 @@ func (r *APILoaderInternal) Load(ctx context.Context) error {
 		errm = errors.Join(errm, fmt.Errorf("cannot load embedded apis, err: %v", err))
 	}
 	// load internal but not choreoAPIs
-	if r.Flags.InternalReconcilers != nil && *r.Flags.InternalReconcilers {
+	if r.Cfg.ServerFlags.InternalReconcilers != nil && *r.Cfg.ServerFlags.InternalReconcilers {
 		backends := crdloader.GetBackendConfig()
 		if err := r.loadAPIs(ctx, crdloader.GetInternalAPIReader(), backends, false); err != nil {
 			errm = errors.Join(errm, fmt.Errorf("cannot load internal apis, err: %v", err))

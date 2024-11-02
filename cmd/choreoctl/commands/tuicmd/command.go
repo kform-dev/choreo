@@ -19,48 +19,73 @@ package tuicmd
 import (
 	"context"
 
-	"github.com/kform-dev/choreo/cmd/tui/view2"
+	view "github.com/kform-dev/choreo/cmd/tui/view2"
 	"github.com/kform-dev/choreo/pkg/client/go/util"
 	"github.com/spf13/cobra"
 	//docs "github.com/kform-dev/kform/internal/docs/generated/applydocs"
 )
 
-func GetCommand(ctx context.Context, f util.Factory) *cobra.Command {
-	return NewRunner(ctx, f).Command
-}
+func NewCmdTUI(f util.Factory) *cobra.Command {
+	flags := NewTUIFlags()
 
-// NewRunner returns a command runner.
-func NewRunner(ctx context.Context, f util.Factory) *Runner {
-	r := &Runner{
-		factory: f,
-	}
 	cmd := &cobra.Command{
 		Use:   "tui",
 		Short: "tui resource",
-		//Args:  cobra.ExactArgs(1),
+		Args:  cobra.ExactArgs(0),
 		//Short:   docs.InitShort,
 		//Long:    docs.InitShort + "\n" + docs.InitLong,
 		//Example: docs.InitExamples,
-		RunE: r.runE,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			o, err := flags.ToOptions(cmd, f)
+			if err != nil {
+				return err
+			}
+			if err := o.Validate(args); err != nil {
+				return err
+			}
+			return o.Run(cmd.Context(), args)
+		},
 	}
-
-	cmd.Flags().Float64VarP(&r.frequency, "frequency", "f", 3.0, "refresh frequency in seconds")
-
-	r.Command = cmd
-	return r
+	flags.AddFlags(cmd)
+	return cmd
 }
 
-type Runner struct {
-	Command   *cobra.Command
-	factory   util.Factory
-	frequency float64
-	//streams *genericclioptions.IOStreams
+type TUIFlags struct {
+	tuiflags *tuiFlags
 }
 
-func (r *Runner) runE(cmd *cobra.Command, args []string) error {
-	app := view.NewApp(r.factory)
-	if err := app.Init(cmd.Context()); err != nil {
+func NewTUIFlags() *TUIFlags {
+	return &TUIFlags{
+		tuiflags: newtuiflags(),
+	}
+}
+
+func (r *TUIFlags) AddFlags(cmd *cobra.Command) {
+	r.tuiflags.AddFlags(cmd.Flags())
+}
+
+// ToOptions renders the options based on the flags that were set and will be the base context used to run the command
+func (r *TUIFlags) ToOptions(cmd *cobra.Command, f util.Factory) (*TUIOptions, error) {
+	options := &TUIOptions{
+		Factory:   f,
+		Frequency: *r.tuiflags.frequency,
+	}
+	return options, nil
+}
+
+type TUIOptions struct {
+	Factory   util.Factory
+	Frequency float64
+}
+
+func (r *TUIOptions) Validate(args []string) error {
+	return nil
+}
+
+func (r *TUIOptions) Run(ctx context.Context, args []string) error {
+	app := view.NewApp(r.Factory)
+	if err := app.Init(ctx); err != nil {
 		return err
 	}
-	return app.Run(cmd.Context())
+	return app.Run(ctx)
 }

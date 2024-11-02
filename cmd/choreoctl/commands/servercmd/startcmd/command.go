@@ -32,42 +32,70 @@ import (
 	//docs "github.com/kform-dev/kform/internal/docs/generated/applydocs"
 )
 
-func GetCommand(ctx context.Context, flags *genericclioptions.ConfigFlags) *cobra.Command {
-	return NewRunner(flags).Command
-}
+// NewCmdApply returns a cobra command.
+func NewCmdStart(cfg *genericclioptions.ChoreoConfig) *cobra.Command {
+	flags := NewStartFlags()
 
-// NewRunner returns a command runner.
-func NewRunner(flags *genericclioptions.ConfigFlags) *Runner {
-	r := &Runner{
-		ConfigFlags: flags,
-	}
 	cmd := &cobra.Command{
-		Use: "start [DIRECTORY] [flags]",
-		//Args: cobra.ExactArgs(1),
+		Use:   "start [DIRECTORY] [flags]",
+		Short: "start server",
+		//Args:  cobra.ExactArgs(1),
 		//Short:   docs.InitShort,
 		//Long:    docs.InitShort + "\n" + docs.InitLong,
 		//Example: docs.InitExamples,
-		RunE: r.runE,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			o, err := flags.ToOptions(cmd, cfg)
+			if err != nil {
+				return err
+			}
+			if err := o.Validate(args); err != nil {
+				return err
+			}
+			return o.Run(cmd.Context(), args)
+		},
 	}
-
-	r.Command = cmd
-	return r
+	flags.AddFlags(cmd)
+	return cmd
 }
 
-type Runner struct {
-	Command     *cobra.Command
-	ConfigFlags *genericclioptions.ConfigFlags
+type StartFlags struct {
 }
 
-func (r *Runner) runE(cmd *cobra.Command, args []string) error {
-	ctx := cmd.Context()
+// The defaults are determined here
+func NewStartFlags() *StartFlags {
+	return &StartFlags{}
+}
+
+// AddFlags add flags to the command
+func (r *StartFlags) AddFlags(cmd *cobra.Command) {
+}
+
+// ToOptions renders the options based on the flags that were set and will be the base context used to run the command
+func (r *StartFlags) ToOptions(cmd *cobra.Command, cfg *genericclioptions.ChoreoConfig) (*StartOptions, error) {
+	options := &StartOptions{
+		cfg:        cfg,
+		ServerName: cmd.Flags().Lookup(genericclioptions.FlagServerName).Value.String(),
+	}
+	return options, nil
+}
+
+type StartOptions struct {
+	cfg        *genericclioptions.ChoreoConfig
+	ServerName string
+}
+
+func (r *StartOptions) Validate(args []string) error {
+	return nil
+}
+
+func (r *StartOptions) Run(ctx context.Context, args []string) error {
 	log := log.FromContext(ctx)
 
-	choreo := choreo.New(r.ConfigFlags)
+	choreo := choreo.New(r.cfg)
 	// build grpc server which hosts the apiserver storage
 	grpcserver := grpcserver.New(&grpcserver.Config{
-		Name:   "choreoServer",
-		Flags:  r.ConfigFlags,
+		Name:   r.ServerName,
+		Cfg:    r.cfg,
 		Choreo: choreo,
 	})
 
@@ -79,7 +107,7 @@ func (r *Runner) runE(cmd *cobra.Command, args []string) error {
 	}()
 
 	time.Sleep(1 * time.Second)
-	if !health.IsServerReady(ctx, &health.Config{Address: *r.ConfigFlags.Address}) {
+	if !health.IsServerReady(ctx, &health.Config{Address: *r.cfg.ChoreoFlags.Address}) {
 		return fmt.Errorf("server is not ready")
 	}
 
@@ -104,37 +132,3 @@ func (r *Runner) runE(cmd *cobra.Command, args []string) error {
 	log.Debug("context concelled")
 	return nil
 }
-
-/*
-
-choreo, err := choreo.New(ctx, r.path, r.flags)
-	if err != nil {
-		return err
-	}
-	// build grpc server which hosts the apiserver storage
-	grpcserver := grpcserver.New(&grpcserver.Config{
-		Name:   r.serverName,
-		Flags:  r.flags,
-		Choreo: choreo,
-	})
-	// start the server
-	go func() {
-		err := grpcserver.Run(ctx)
-		if err != nil {
-			log.Error("grpc server failed", "err", err)
-		}
-	}()
-	if !health.IsServerReady(ctx, r.flags) {
-		return fmt.Errorf("server is not ready")
-	}
-
-	//r.repo.AddResourceClient(client)
-	ctx, cancel := context.WithCancel(ctx)
-	go choreo.Start(ctx)
-	defer cancel()
-
-	<-ctx.Done()
-	log.Debug("context concelled")
-	return nil
-
-*/

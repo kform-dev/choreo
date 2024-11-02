@@ -26,15 +26,10 @@ import (
 	//docs "github.com/kform-dev/kform/internal/docs/generated/applydocs"
 )
 
-func GetCommand(ctx context.Context, flags *genericclioptions.ConfigFlags) *cobra.Command {
-	return NewRunner(ctx, flags).Command
-}
+// NewCmdApply returns a cobra command.
+func NewCmdParse(cfg *genericclioptions.ChoreoConfig) *cobra.Command {
+	flags := NewParseFlags()
 
-// NewRunner returns a command runner.
-func NewRunner(ctx context.Context, flags *genericclioptions.ConfigFlags) *Runner {
-	r := &Runner{
-		flags: flags,
-	}
 	cmd := &cobra.Command{
 		Use:   "parse PATH [flags]",
 		Short: "parse path",
@@ -42,28 +37,51 @@ func NewRunner(ctx context.Context, flags *genericclioptions.ConfigFlags) *Runne
 		//Short:   docs.InitShort,
 		//Long:    docs.InitShort + "\n" + docs.InitLong,
 		//Example: docs.InitExamples,
-		RunE: r.runE,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			o, err := flags.ToOptions(cmd, cfg)
+			if err != nil {
+				return err
+			}
+			if err := o.Validate(args); err != nil {
+				return err
+			}
+			return o.Run(cmd.Context(), args)
+		},
 	}
-
-	r.Command = cmd
-	return r
+	flags.AddFlags(cmd)
+	return cmd
 }
 
-type Runner struct {
-	Command *cobra.Command
-	flags   *genericclioptions.ConfigFlags
+type ParseFlags struct{}
+
+func NewParseFlags() *ParseFlags { return &ParseFlags{} }
+
+func (r *ParseFlags) AddFlags(cmd *cobra.Command) {}
+
+func (r *ParseFlags) ToOptions(cmd *cobra.Command, cfg *genericclioptions.ChoreoConfig) (*ParseOptions, error) {
+	options := &ParseOptions{
+		cfg: cfg,
+	}
+	return options, nil
 }
 
-func (r *Runner) runE(cmd *cobra.Command, args []string) error {
-	ctx := cmd.Context()
+type ParseOptions struct {
+	cfg *genericclioptions.ChoreoConfig
+}
+
+func (r *ParseOptions) Validate(args []string) error {
+	return nil
+}
+
+func (r *ParseOptions) Run(ctx context.Context, args []string) error {
 	path, err := fsys.NormalizeDir(args[0])
 	if err != nil {
 		return err
 	}
 
 	loader := loader.DevLoader{
-		Path:  path,
-		Flags: r.flags,
+		Path: path,
+		Cfg:  r.cfg,
 	}
 	return loader.Load(ctx)
 }

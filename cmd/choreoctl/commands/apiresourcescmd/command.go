@@ -28,68 +28,66 @@ import (
 	//docs "github.com/kform-dev/kform/internal/docs/generated/applydocs"
 )
 
-func GetCommand(ctx context.Context, f util.Factory, streams *genericclioptions.IOStreams) *cobra.Command {
-	return NewRunner(ctx, f, streams).Command
-}
+// NewCmdApply returns a cobra command.
+func NewCmdAPIResources(f util.Factory, streams *genericclioptions.IOStreams) *cobra.Command {
+	flags := NewAPIResourcesFlags()
 
-// NewRunner returns a command runner.
-func NewRunner(ctx context.Context, f util.Factory, streams *genericclioptions.IOStreams) *Runner {
-	r := &Runner{
-		factory: f,
-		streams: streams,
-	}
 	cmd := &cobra.Command{
 		Use:   "api-resources",
 		Short: "get api resources from the resource",
+		//Args:  cobra.ExactArgs(0),
 		//Short:   docs.InitShort,
 		//Long:    docs.InitShort + "\n" + docs.InitLong,
 		//Example: docs.InitExamples,
-		RunE: r.runE,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			o, err := flags.ToOptions(cmd, f, streams)
+			if err != nil {
+				return err
+			}
+			if err := o.Validate(); err != nil {
+				return err
+			}
+			return o.Run(cmd.Context())
+		},
 	}
-
-	r.Command = cmd
-	return r
+	flags.AddFlags(cmd)
+	return cmd
 }
 
-type Runner struct {
-	Command *cobra.Command
-	factory util.Factory
-	streams *genericclioptions.IOStreams
+type APIResourcesFlags struct{}
+
+func NewAPIResourcesFlags() *APIResourcesFlags {
+	return &APIResourcesFlags{}
 }
 
-func (r *Runner) runE(cmd *cobra.Command, args []string) error {
-	ctx := cmd.Context()
+// AddFlags add flags to the command
+func (r *APIResourcesFlags) AddFlags(cmd *cobra.Command) {}
 
-	o := &Options{
-		Factory: r.factory,
-		Streams: r.streams,
+// ToOptions renders the options based on the flags that were set and will be the base context used to run the command
+func (r *APIResourcesFlags) ToOptions(cmd *cobra.Command, f util.Factory, streams *genericclioptions.IOStreams) (*APIResourcesOptions, error) {
+	options := &APIResourcesOptions{
+		Factory: f,
+		Streams: streams,
 	}
-	if err := o.Complete(ctx); err != nil {
-		return err
-	}
-	if err := o.Validate(ctx); err != nil {
-		return err
-	}
-	return o.Run(ctx)
+	return options, nil
 }
 
-type Options struct {
+type APIResourcesOptions struct {
 	Factory util.Factory
 	Streams *genericclioptions.IOStreams
 	Output  string
-	// derived parameters
 }
 
 // Complete adapts from the command line args and validates them
-func (r *Options) Complete(ctx context.Context) error {
+func (r *APIResourcesOptions) Complete() error {
 	return nil
 }
 
-func (r *Options) Validate(ctx context.Context) error {
+func (r *APIResourcesOptions) Validate() error {
 	return nil
 }
 
-func (r *Options) Run(ctx context.Context) error {
+func (r *APIResourcesOptions) Run(ctx context.Context) error {
 	branch := r.Factory.GetBranch()
 	proxy := r.Factory.GetProxy()
 

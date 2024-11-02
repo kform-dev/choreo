@@ -32,46 +32,72 @@ import (
 	//docs "github.com/kform-dev/kform/internal/docs/generated/applydocs"
 )
 
-func GetCommand(ctx context.Context, f util.Factory, streams *genericclioptions.IOStreams) *cobra.Command {
-	return NewRunner(f, streams).Command
-}
+func NewCmdList(f util.Factory, streams *genericclioptions.IOStreams) *cobra.Command {
+	flags := NewListFlags()
 
-// NewRunner returns a command runner.
-func NewRunner(f util.Factory, streams *genericclioptions.IOStreams) *Runner {
-	r := &Runner{
-		factory: f,
-		streams: streams,
-	}
 	cmd := &cobra.Command{
-		Use: "list [flags]",
-		//Args: cobra.ExactArgs(1),
+		Use:   "list [flags]",
+		Short: "list snapshots",
+		Args:  cobra.ExactArgs(1),
 		//Short:   docs.InitShort,
 		//Long:    docs.InitShort + "\n" + docs.InitLong,
 		//Example: docs.InitExamples,
-		RunE: r.runE,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			ctx := cmd.Context()
+			o, err := flags.ToOptions(cmd, f, streams)
+			if err != nil {
+				return err
+			}
+			if err := o.Validate(args); err != nil {
+				return err
+			}
+			return o.Run(ctx, args)
+		},
 	}
-
-	r.Command = cmd
-	return r
+	flags.AddFlags(cmd)
+	return cmd
 }
 
-type Runner struct {
-	Command *cobra.Command
-	factory util.Factory
-	streams *genericclioptions.IOStreams
+type ListFlags struct {
 }
 
-func (r *Runner) runE(cmd *cobra.Command, args []string) error {
-	ctx := cmd.Context()
-	w := r.streams.Out
+// The defaults are determined here
+func NewListFlags() *ListFlags {
+	return &ListFlags{}
+}
+
+// AddFlags add flags tp the command
+func (r *ListFlags) AddFlags(cmd *cobra.Command) {
+}
+
+// ToOptions renders the options based on the flags that were set and will be the base context used to run the command
+func (r *ListFlags) ToOptions(cmd *cobra.Command, f util.Factory, streams *genericclioptions.IOStreams) (*ListOptions, error) {
+	options := &ListOptions{
+		Factory: f,
+		Streams: streams,
+	}
+	return options, nil
+}
+
+type ListOptions struct {
+	Factory util.Factory
+	Streams *genericclioptions.IOStreams
+}
+
+func (r *ListOptions) Validate(args []string) error {
+	return nil
+}
+
+func (r *ListOptions) Run(ctx context.Context, args []string) error {
+	w := r.Streams.Out
 
 	ul := &unstructured.UnstructuredList{}
 	ul.SetAPIVersion(choreov1alpha1.SchemeGroupVersion.Identifier())
 	ul.SetKind(choreov1alpha1.SnapshotListKind)
 
-	snapshotClient := r.factory.GetSnapshotClient()
+	snapshotClient := r.Factory.GetSnapshotClient()
 	if err := snapshotClient.List(ctx, ul, &snapshotclient.ListOptions{
-		Proxy: r.factory.GetProxy(),
+		Proxy: r.Factory.GetProxy(),
 	}); err != nil {
 		return err
 	}

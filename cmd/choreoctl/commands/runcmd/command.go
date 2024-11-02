@@ -17,9 +17,8 @@ limitations under the License.
 package runcmd
 
 import (
-	"context"
-
 	"github.com/kform-dev/choreo/cmd/choreoctl/commands/runcmd/commitcmd"
+	"github.com/kform-dev/choreo/cmd/choreoctl/commands/runcmd/depscmd"
 	"github.com/kform-dev/choreo/cmd/choreoctl/commands/runcmd/diffcmd"
 	"github.com/kform-dev/choreo/cmd/choreoctl/commands/runcmd/listcmd"
 	"github.com/kform-dev/choreo/cmd/choreoctl/commands/runcmd/loadcmd"
@@ -32,8 +31,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// NewRunner returns a command runner.
-func GetCommand(ctx context.Context, f util.Factory, streams *genericclioptions.IOStreams) *cobra.Command {
+func NewCmdRun(f util.Factory, streams *genericclioptions.IOStreams) *cobra.Command {
 	cmd := &cobra.Command{
 		Use: "run",
 		//Short:   docs.InitShort,
@@ -52,14 +50,15 @@ func GetCommand(ctx context.Context, f util.Factory, streams *genericclioptions.
 	}
 
 	cmd.AddCommand(
-		startcmd.GetCommand(ctx, f, streams),
-		stopcmd.GetCommand(ctx, f, streams),
-		oncecmd.GetCommand(ctx, f, streams),
-		loadcmd.GetCommand(ctx, f, streams),
-		listcmd.GetCommand(ctx, f, streams),
-		diffcmd.GetCommand(ctx, f, streams),
-		commitcmd.GetCommand(ctx, f, streams),
-		pushcmd.GetCommand(ctx, f, streams),
+		commitcmd.NewCmdCommit(f, streams),
+		depscmd.NewCmdDeps(f, streams),
+		diffcmd.NewCmdDiff(f, streams),
+		listcmd.NewCmdList(f, streams),
+		loadcmd.NewCmdLoad(f, streams),
+		oncecmd.NewCmdOnce(f, streams),
+		pushcmd.NewCmdPush(f, streams),
+		startcmd.NewCmdStart(f, streams),
+		stopcmd.NewCmdStop(f, streams),
 	)
 	return cmd
 }

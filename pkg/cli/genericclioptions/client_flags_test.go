@@ -53,10 +53,9 @@ func TestToProxy(t *testing.T) {
 
 	for name, tc := range cases {
 		t.Run(name, func(t *testing.T) {
-			flags := &ConfigFlags{
-				Proxy: tc.proxy,
-			}
-			nsn := flags.ToProxy()
+			choreoCfg := NewChoreoConfig()
+			choreoCfg.ClientFlags.Proxy = tc.proxy
+			nsn := choreoCfg.ToProxy()
 			if cmp.Diff(nsn, tc.nsn) != "" {
 				t.Errorf("%s, expected %s got %s", name, tc.nsn.String(), nsn.String())
 			}

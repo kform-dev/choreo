@@ -26,40 +26,66 @@ import (
 	//docs "github.com/kform-dev/kform/internal/docs/generated/applydocs"
 )
 
-func GetCommand(ctx context.Context, f util.Factory, streams *genericclioptions.IOStreams) *cobra.Command {
-	return NewRunner(f, streams).Command
-}
+func NewCmdLoad(f util.Factory, streams *genericclioptions.IOStreams) *cobra.Command {
+	flags := NewLoadFlags()
 
-// NewRunner returns a command runner.
-func NewRunner(f util.Factory, streams *genericclioptions.IOStreams) *Runner {
-	r := &Runner{
-		factory: f,
-		streams: streams,
-	}
 	cmd := &cobra.Command{
-		Use: "once [flags]",
+		Use:   "load [flags]",
+		Short: "load data",
+		//Args:  cobra.ExactArgs(1),
 		//Short:   docs.InitShort,
 		//Long:    docs.InitShort + "\n" + docs.InitLong,
 		//Example: docs.InitExamples,
-		RunE: r.runE,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			ctx := cmd.Context()
+			o, err := flags.ToOptions(cmd, f, streams)
+			if err != nil {
+				return err
+			}
+			if err := o.Validate(args); err != nil {
+				return err
+			}
+			return o.Run(ctx, args)
+		},
 	}
-
-	r.Command = cmd
-	return r
+	flags.AddFlags(cmd)
+	return cmd
 }
 
-type Runner struct {
-	Command *cobra.Command
-	factory util.Factory
-	streams *genericclioptions.IOStreams
+type LoadFlags struct {
 }
 
-func (r *Runner) runE(cmd *cobra.Command, args []string) error {
-	ctx := cmd.Context()
+// The defaults are determined here
+func NewLoadFlags() *LoadFlags {
+	return &LoadFlags{}
+}
 
-	runnerClient := r.factory.GetRunnerClient()
+// AddFlags add flags tp the command
+func (r *LoadFlags) AddFlags(cmd *cobra.Command) {
+}
+
+// ToOptions renders the options based on the flags that were set and will be the base context used to run the command
+func (r *LoadFlags) ToOptions(cmd *cobra.Command, f util.Factory, streams *genericclioptions.IOStreams) (*LoadOptions, error) {
+	options := &LoadOptions{
+		Factory: f,
+		Streams: streams,
+	}
+	return options, nil
+}
+
+type LoadOptions struct {
+	Factory util.Factory
+	Streams *genericclioptions.IOStreams
+}
+
+func (r *LoadOptions) Validate(args []string) error {
+	return nil
+}
+
+func (r *LoadOptions) Run(ctx context.Context, args []string) error {
+	runnerClient := r.Factory.GetRunnerClient()
 	if err := runnerClient.Load(ctx, &runnerclient.LoadOptions{
-		Proxy: r.factory.GetProxy(),
+		Proxy: r.Factory.GetProxy(),
 	}); err != nil {
 		return err
 	}

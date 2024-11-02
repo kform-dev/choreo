@@ -47,7 +47,7 @@ import (
 
 type Config struct {
 	Name   string
-	Flags  *genericclioptions.ConfigFlags
+	Cfg    *genericclioptions.ChoreoConfig
 	Choreo choreoserver.Choreo
 }
 
@@ -61,10 +61,10 @@ func New(cfg *Config) *GRPCServer {
 
 	return &GRPCServer{
 		name:    cfg.Name,
-		address: *cfg.Flags.Address,
+		address: *cfg.Cfg.ChoreoFlags.Address,
 		server:  grpcServer([]grpc.ServerOption{}),
 		choreo:  cfg.Choreo,
-		flags:   cfg.Flags,
+		cfg:     cfg.Cfg,
 	}
 }
 
@@ -74,7 +74,7 @@ type GRPCServer struct {
 	cancel  context.CancelFunc
 	server  *grpc.Server
 	choreo  choreoserver.Choreo
-	flags   *genericclioptions.ConfigFlags
+	cfg     *genericclioptions.ChoreoConfig
 }
 
 func (r *GRPCServer) Stop(ctx context.Context) {

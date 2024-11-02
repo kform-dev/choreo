@@ -26,43 +26,67 @@ import (
 	//docs "github.com/kform-dev/kform/internal/docs/generated/applydocs"
 )
 
-func GetCommand(ctx context.Context, f util.Factory, streams *genericclioptions.IOStreams) *cobra.Command {
-	return NewRunner(f, streams).Command
-}
+func NewCmdMerge(f util.Factory, streams *genericclioptions.IOStreams) *cobra.Command {
+	flags := NewMergeFlags()
 
-// NewRunner returns a command runner.
-func NewRunner(f util.Factory, streams *genericclioptions.IOStreams) *Runner {
-	r := &Runner{
-		factory: f,
-		streams: streams,
-	}
 	cmd := &cobra.Command{
 		Use:  "merge SRC_BRANCHNAME DST_BRANCHNAME [flags]",
 		Args: cobra.ExactArgs(2),
 		//Short:   docs.InitShort,
 		//Long:    docs.InitShort + "\n" + docs.InitLong,
 		//Example: docs.InitExamples,
-		RunE: r.runE,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			ctx := cmd.Context()
+			o, err := flags.ToOptions(cmd, f, streams)
+			if err != nil {
+				return err
+			}
+			if err := o.Validate(args); err != nil {
+				return err
+			}
+			return o.Run(ctx, args)
+		},
 	}
-
-	r.Command = cmd
-	return r
+	flags.AddFlags(cmd)
+	return cmd
 }
 
-type Runner struct {
-	Command *cobra.Command
-	factory util.Factory
-	streams *genericclioptions.IOStreams
+type MergeFlags struct {
 }
 
-func (r *Runner) runE(cmd *cobra.Command, args []string) error {
-	ctx := cmd.Context()
+// The defaults are determined here
+func NewMergeFlags() *MergeFlags {
+	return &MergeFlags{}
+}
 
-	branchClient := r.factory.GetBranchClient()
+// AddFlags add flags tp the command
+func (r *MergeFlags) AddFlags(cmd *cobra.Command) {
+}
+
+// ToOptions renders the options based on the flags that were set and will be the base context used to run the command
+func (r *MergeFlags) ToOptions(cmd *cobra.Command, f util.Factory, streams *genericclioptions.IOStreams) (*MergeOptions, error) {
+	options := &MergeOptions{
+		Factory: f,
+		Streams: streams,
+	}
+	return options, nil
+}
+
+type MergeOptions struct {
+	Factory util.Factory
+	Streams *genericclioptions.IOStreams
+}
+
+func (r *MergeOptions) Validate(args []string) error {
+	return nil
+}
+
+func (r *MergeOptions) Run(ctx context.Context, args []string) error {
+	branchClient := r.Factory.GetBranchClient()
 	srcBranchName := args[0]
 	dstBranchName := args[1]
 	if err := branchClient.Merge(ctx, srcBranchName, dstBranchName, &branchclient.MergeOptions{
-		Proxy: r.factory.GetProxy(),
+		Proxy: r.Factory.GetProxy(),
 	}); err != nil {
 		return err
 	}

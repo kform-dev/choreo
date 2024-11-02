@@ -20,12 +20,11 @@ import (
 	"fmt"
 
 	"github.com/go-git/go-git/v5/plumbing/object"
-	"github.com/kform-dev/choreo/pkg/cli/genericclioptions"
 	"github.com/kform-dev/choreo/pkg/proto/branchpb"
 	"github.com/kform-dev/choreo/pkg/repository"
 )
 
-func New(repopath string, flags *genericclioptions.ConfigFlags) repository.Repository {
+func New(repopath string) repository.Repository {
 	return &repo{
 		repopath: repopath,
 	}

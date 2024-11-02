@@ -46,7 +46,7 @@ func (r *DataLoader) loadInput(ctx context.Context) error {
 		APIStore:       r.APIStore,
 		InternalAPISet: r.InternalAPISet,
 	}
-	if err := loader.Load(ctx, r.getInputReader(r.RepoPth, r.PathInRepo, r.Flags)); err != nil {
+	if err := loader.Load(ctx, r.getInputReader(r.RepoPth, r.PathInRepo, r.Cfg)); err != nil {
 		return err
 	}
 	if err := loader.Clean(ctx); err != nil {
@@ -56,8 +56,8 @@ func (r *DataLoader) loadInput(ctx context.Context) error {
 
 }
 
-func (r *DataLoader) getInputReader(repoPath, pathInRepo string, flags *genericclioptions.ConfigFlags) pkgio.Reader[*yaml.RNode] {
-	abspath := filepath.Join(repoPath, pathInRepo, *flags.InputPath)
+func (r *DataLoader) getInputReader(repoPath, pathInRepo string, cfg *genericclioptions.ChoreoConfig) pkgio.Reader[*yaml.RNode] {
+	abspath := filepath.Join(repoPath, pathInRepo, *cfg.ServerFlags.InputPath)
 	gvks := []schema.GroupVersionKind{}
 
 	if !fsys.PathExists(abspath) {

@@ -26,41 +26,66 @@ import (
 	//docs "github.com/kform-dev/kform/internal/docs/generated/applydocs"
 )
 
-func GetCommand(ctx context.Context, f util.Factory, streams *genericclioptions.IOStreams) *cobra.Command {
-	return NewRunner(f, streams).Command
-}
+func NewCmdStart(f util.Factory, streams *genericclioptions.IOStreams) *cobra.Command {
+	flags := NewStartFlags()
 
-// NewRunner returns a command runner.
-func NewRunner(f util.Factory, streams *genericclioptions.IOStreams) *Runner {
-	r := &Runner{
-		factory: f,
-		streams: streams,
-	}
 	cmd := &cobra.Command{
-		Use: "start [flags]",
-		//Args: cobra.ExactArgs(1),
+		Use:   "start [flags]",
+		Short: "start the reconcilers in continuous mode",
+		//Args:  cobra.ExactArgs(1),
 		//Short:   docs.InitShort,
 		//Long:    docs.InitShort + "\n" + docs.InitLong,
 		//Example: docs.InitExamples,
-		RunE: r.runE,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			ctx := cmd.Context()
+			o, err := flags.ToOptions(cmd, f, streams)
+			if err != nil {
+				return err
+			}
+			if err := o.Validate(args); err != nil {
+				return err
+			}
+			return o.Run(ctx, args)
+		},
 	}
-
-	r.Command = cmd
-	return r
+	flags.AddFlags(cmd)
+	return cmd
 }
 
-type Runner struct {
-	Command *cobra.Command
-	factory util.Factory
-	streams *genericclioptions.IOStreams
+type StartFlags struct {
 }
 
-func (r *Runner) runE(cmd *cobra.Command, args []string) error {
-	ctx := cmd.Context()
+// The defaults are determined here
+func NewStartFlags() *StartFlags {
+	return &StartFlags{}
+}
 
-	runnerClient := r.factory.GetRunnerClient()
+// AddFlags add flags tp the command
+func (r *StartFlags) AddFlags(cmd *cobra.Command) {
+}
+
+// ToOptions renders the options based on the flags that were set and will be the base context used to run the command
+func (r *StartFlags) ToOptions(cmd *cobra.Command, f util.Factory, streams *genericclioptions.IOStreams) (*StartOptions, error) {
+	options := &StartOptions{
+		Factory: f,
+		Streams: streams,
+	}
+	return options, nil
+}
+
+type StartOptions struct {
+	Factory util.Factory
+	Streams *genericclioptions.IOStreams
+}
+
+func (r *StartOptions) Validate(args []string) error {
+	return nil
+}
+
+func (r *StartOptions) Run(ctx context.Context, args []string) error {
+	runnerClient := r.Factory.GetRunnerClient()
 	if err := runnerClient.Start(ctx, &runnerclient.StartOptions{
-		Proxy: r.factory.GetProxy(),
+		Proxy: r.Factory.GetProxy(),
 	}); err != nil {
 		return err
 	}

@@ -59,7 +59,7 @@ func (r *CheckedOut) loadAPIs(ctx context.Context, branchCtx *BranchCtx) error {
 	// load api files to apistore and apiserver
 	rootChoreoInstance := r.Choreo.status.Get().RootChoreoInstance
 	loader := &loader.APILoaderFile2APIStoreAndAPI{
-		Flags:        r.Choreo.flags,
+		Cfg:          r.Choreo.cfg,
 		Client:       r.Client,
 		APIStore:     branchCtx.APIStore,
 		Branch:       branchCtx.Branch,
@@ -77,7 +77,7 @@ func (r *CheckedOut) loadAPIs(ctx context.Context, branchCtx *BranchCtx) error {
 func (r *CheckedOut) loadAPIFromUpstreamRefs(ctx context.Context, branchCtx *BranchCtx) error {
 	rootChoreoInstance := r.Choreo.status.Get().RootChoreoInstance
 	upstreamloader := loader.UpstreamLoader{
-		Flags:      r.Choreo.flags,
+		Cfg:        r.Choreo.cfg,
 		Client:     r.Client, // used to upload the upstream ref
 		Branch:     branchCtx.Branch,
 		RepoPath:   rootChoreoInstance.GetRepoPath(),
@@ -94,7 +94,7 @@ func (r *CheckedOut) loadAPIFromUpstreamRefs(ctx context.Context, branchCtx *Bra
 	for _, childChoreoInstance := range r.ChildChoreoInstances {
 		apiStore := api.NewAPIStore()
 		loader := &loader.APILoaderFile2APIStoreAndAPI{
-			Flags:        r.Choreo.flags,
+			Cfg:          r.Choreo.cfg,
 			Client:       childChoreoInstance.GetAPIClient(),
 			APIStore:     apiStore,
 			InternalGVKs: childChoreoInstance.GetAPIStore().GetExternalGVKSet(),
@@ -112,8 +112,8 @@ func (r *CheckedOut) loadAPIFromUpstreamRefs(ctx context.Context, branchCtx *Bra
 	return errm
 }
 
-func (r *CheckedOut) addChildChoreoInstance(ctx context.Context, repo repository.Repository, pathInRepo string, flags *genericclioptions.ConfigFlags, commit *object.Commit, annotationValue string) error {
-	choreoInstance, err := NewChildChoreoInstance(ctx, repo, pathInRepo, flags, commit, annotationValue)
+func (r *CheckedOut) addChildChoreoInstance(ctx context.Context, repo repository.Repository, pathInRepo string, cfg *genericclioptions.ChoreoConfig, commit *object.Commit, annotationValue string) error {
+	choreoInstance, err := NewChildChoreoInstance(ctx, repo, pathInRepo, cfg, commit, annotationValue)
 	if err != nil {
 		return err
 	}
@@ -128,7 +128,7 @@ func (r *CheckedOut) GetCommit() *object.Commit {
 func (r *CheckedOut) LoadData(ctx context.Context, branchCtx *BranchCtx) error {
 	rootChoreoInstance := r.Choreo.status.Get().RootChoreoInstance
 	dataloader := &loader.DataLoader{
-		Flags:          r.Choreo.flags,
+		Cfg:            r.Choreo.cfg,
 		Client:         r.Client,
 		Branch:         branchCtx.Branch,
 		GVKs:           branchCtx.APIStore.GetExternalGVKSet().UnsortedList(),
@@ -145,7 +145,7 @@ func (r *CheckedOut) LoadData(ctx context.Context, branchCtx *BranchCtx) error {
 	for _, childChoreoInstance := range r.ChildChoreoInstances {
 		loader := &loader.DataLoaderUpstream{
 			//UpstreamClient:          childChoreoInstance.GetAPIClient(),
-			Flags:                   r.Choreo.flags,
+			Cfg:                     r.Choreo.cfg,
 			PathInRepo:              childChoreoInstance.GetPathInRepo(),
 			Client:                  r.Client,
 			Branch:                  branchCtx.Branch,
