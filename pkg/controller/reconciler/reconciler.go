@@ -25,7 +25,6 @@ import (
 	"github.com/henderiw/logger/log"
 	choreov1alpha1 "github.com/kform-dev/choreo/apis/choreo/v1alpha1"
 	"github.com/kform-dev/choreo/pkg/client/go/resourceclient"
-	reconcileresult "github.com/kform-dev/choreo/pkg/controller/collector/result"
 	"github.com/kform-dev/choreo/pkg/controller/eventhandler"
 	"github.com/kform-dev/choreo/pkg/controller/informers"
 	"github.com/kform-dev/choreo/pkg/controller/reconcile"
@@ -34,6 +33,7 @@ import (
 	"github.com/kform-dev/choreo/pkg/controller/reconciler/starlark"
 	"github.com/kform-dev/choreo/pkg/proto/runnerpb"
 	"github.com/kform-dev/choreo/pkg/server/selector"
+	"google.golang.org/protobuf/types/known/timestamppb"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
@@ -52,7 +52,7 @@ func newReconciler(
 	informerFactory informers.InformerFactory,
 	reconcilerConfig *choreov1alpha1.Reconciler,
 	libs *unstructured.UnstructuredList,
-	resultCh chan reconcileresult.Result,
+	resultCh chan *runnerpb.Result,
 	branchName string,
 ) Reconciler {
 	r := &reconciler{
@@ -83,7 +83,7 @@ type reconciler struct {
 	maxConcurrentReconciles int
 	typedReconcilerFn       reconcile.TypedReconcilerFn
 	client                  resourceclient.Client
-	resultCh                chan reconcileresult.Result
+	resultCh                chan *runnerpb.Result
 	branchName              string
 
 	// Reconciler is a function that can be called at any time with the Name / Namespace of an object and
@@ -239,22 +239,23 @@ func (r *reconciler) reconcileHandler(ctx context.Context, req types.NamespacedN
 	ctx = r.initContext(ctx, req)
 	log := log.FromContext(ctx)
 	reconcileID := uuid.NewUUID()
-	// TODO metrics
-	reconcileRef := reconcileresult.ReconcileRef{
+
+	result := &runnerpb.Result{
 		ReconcilerName: r.name,
-		GVK:            r.forgvk,
-		Req:            req,
-	}
-	result := reconcileresult.Result{
-		Operation:    runnerpb.Operation_START,
-		ReconcileID:  reconcileID,
-		ReconcileRef: reconcileRef,
-		Time:         time.Now(),
+		ReconcilerUID:  string(reconcileID),
+		EventTime:      timestamppb.New(time.Now()),
+		Operation:      runnerpb.Operation_START,
+		Resource: &runnerpb.Resource{
+			Group:     r.forgvk.Group,
+			Kind:      r.forgvk.Kind,
+			Name:      req.Name,
+			Namespace: req.Namespace,
+		},
 	}
 
 	r.resultCh <- result
 	res, err := r.Reconcile(ctx, req)
-	result.Time = time.Now()
+	result.EventTime = timestamppb.New(time.Now())
 	switch {
 	case err != nil:
 		//if errors.Is(err, reconcile.TerminalError(nil)) {

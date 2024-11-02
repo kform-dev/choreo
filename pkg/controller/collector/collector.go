@@ -3,35 +3,49 @@ package collector
 import (
 	"context"
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/henderiw/logger/log"
-	reconcileresult "github.com/kform-dev/choreo/pkg/controller/collector/result"
 	"github.com/kform-dev/choreo/pkg/proto/runnerpb"
+	"google.golang.org/protobuf/proto"
 )
 
 type Collector interface {
 	Start(ctx context.Context, once bool)
 }
 
+type TaskID struct {
+	ReconcilerName string
+	Group          string
+	Kind           string
+	Namespace      string
+	Name           string
+}
+
+func (r TaskID) String() string {
+	return fmt.Sprintf("%s.%s.%s.%s", r.ReconcilerName, r.Kind, r.Group, r.Name)
+}
+
 func New(
-	reconcilerResultCh chan reconcileresult.Result,
+	reconcilerResultCh chan *runnerpb.Result,
 	collectorResultCh chan *runnerpb.Once_Response,
 ) Collector {
 
 	return &collector{
 		reconcilerResultCh: reconcilerResultCh,
 		collectorResultCh:  collectorResultCh,
-		work:               map[reconcileresult.ReconcileRef]time.Time{},
-		results:            map[string]*runnerpb.Once_Operations{},
+		work:               map[TaskID]time.Time{},
+		results:            []*runnerpb.Result{},
 	}
 }
 
 type collector struct {
-	reconcilerResultCh chan reconcileresult.Result
+	reconcilerResultCh chan *runnerpb.Result
 	collectorResultCh  chan *runnerpb.Once_Response
-	work               map[reconcileresult.ReconcileRef]time.Time
-	results            map[string]*runnerpb.Once_Operations
+	m                  sync.Mutex
+	work               map[TaskID]time.Time
+	results            []*runnerpb.Result
 	finishing          bool
 	done               bool
 	idle               int
@@ -93,56 +107,41 @@ func (r *collector) Start(ctx context.Context, once bool) {
 	}
 }
 
-func (r *collector) handleResult(ctx context.Context, result reconcileresult.Result) {
+func (r *collector) handleResult(ctx context.Context, result *runnerpb.Result) {
+	r.m.Lock()
+	defer r.m.Unlock()
 	log := log.FromContext(ctx)
-	ref := result.ReconcileRef
-	log.Debug("collector result", "ref", ref.String(), "op", result.Operation.String(), "time", result.Time)
-
-	if _, ok := r.results[ref.ReconcilerName]; !ok {
-		r.results[ref.ReconcilerName] = &runnerpb.Once_Operations{
-			OperationCounts: map[string]int32{},
-		}
+	cloneResult := proto.Clone(result).(*runnerpb.Result)
+	r.results = append(r.results, cloneResult)
+	taskID := TaskID{
+		ReconcilerName: result.ReconcilerName,
+		Group:          result.Resource.Group,
+		Kind:           result.Resource.Kind,
+		Namespace:      result.Resource.Namespace,
+		Name:           result.Resource.Name,
 	}
-	r.results[ref.ReconcilerName].OperationCounts[result.Operation.String()]++
-	r.processOperation(ctx, result)
-}
-
-func (r *collector) processOperation(ctx context.Context, result reconcileresult.Result) {
-	log := log.FromContext(ctx)
-	ref := result.ReconcileRef
+	log.Debug("collector result", "taskID", taskID.String(), "op", result.Operation.String(), "time", result.EventTime.AsTime().String())
 	switch result.Operation {
 	case runnerpb.Operation_ERROR:
-		startTime := r.getStartTime(ref)
-		if startTime != nil {
-			result.Elapsed = result.Time.Sub(*startTime)
-		}
-		delete(r.work, result.ReconcileRef)
-		//r.reconcileResults = append(r.reconcileResults, result)
-		log.Debug("execution failed", "ref", ref.String(), "error", result.Message)
+		delete(r.work, taskID)
+		log.Debug("execution failed", "taskID", taskID.String(), "error", result.Message)
 		// context of the error
 		r.collectorResultCh <- &runnerpb.Once_Response{
-			Success:      false,
-			ReconcileRef: ref.String(),
-			Message:      result.Message,
+			Success: false,
+			TaskId:  taskID.String(),
+			Message: result.Message,
+			Results: r.results,
 		}
 		return
 	case runnerpb.Operation_REQUEUE:
-		startTime := r.getStartTime(ref)
-		if startTime != nil {
-			result.Elapsed = result.Time.Sub(*startTime)
-		}
-		//r.reconcileResults = append(r.reconcileResults, result)
-		r.work[ref] = result.Time // this is a dummy time
-		log.Debug("execution requeue", "ref", ref.String(), "error", result.Message)
+		// this is a dummy time -> to ensure that the collector knows there is ongoing work
+		r.work[taskID] = result.EventTime.AsTime()
+		log.Debug("execution requeue", "taskID", taskID.String(), "error", result.Message)
 	case runnerpb.Operation_START:
-		r.work[ref] = result.Time
+		r.work[taskID] = result.EventTime.AsTime()
 	case runnerpb.Operation_STOP:
-		startTime := r.getStartTime(ref)
-		if startTime != nil {
-			result.Elapsed = result.Time.Sub(*startTime)
-		}
-		//r.reconcileResults = append(r.reconcileResults, result)
-		delete(r.work, result.ReconcileRef)
+		delete(r.work, taskID)
+		// this indicated the work queue is
 		if len(r.work) == 0 {
 			r.finish = time.Now()
 			r.finishing = true
@@ -155,12 +154,4 @@ func drainTicker(ticker *time.Ticker) {
 	case <-ticker.C:
 	default:
 	}
-}
-
-func (r *collector) getStartTime(ref reconcileresult.ReconcileRef) *time.Time {
-	reconcileStartTime, exists := r.work[ref]
-	if !exists {
-		return nil
-	}
-	return &reconcileStartTime
 }
