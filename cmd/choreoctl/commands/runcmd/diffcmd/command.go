@@ -31,52 +31,80 @@ import (
 	//docs "github.com/kform-dev/kform/internal/docs/generated/applydocs"
 )
 
-func GetCommand(ctx context.Context, f util.Factory, streams *genericclioptions.IOStreams) *cobra.Command {
-	return NewRunner(f, streams).Command
-}
+func NewCmdDiff(f util.Factory, streams *genericclioptions.IOStreams) *cobra.Command {
+	flags := NewDiffFlags()
 
-// NewRunner returns a command runner.
-func NewRunner(f util.Factory, streams *genericclioptions.IOStreams) *Runner {
-	r := &Runner{
-		factory: f,
-		streams: streams,
-	}
 	cmd := &cobra.Command{
-		Use: "diff [flags]",
-		//Args: cobra.ExactArgs(1),
+		Use:   "diff [flags]",
+		Short: "show diff between snapshots",
+		//Args:  cobra.ExactArgs(1),
 		//Short:   docs.InitShort,
 		//Long:    docs.InitShort + "\n" + docs.InitLong,
 		//Example: docs.InitExamples,
-		RunE: r.runE,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			ctx := cmd.Context()
+			o, err := flags.ToOptions(cmd, f, streams)
+			if err != nil {
+				return err
+			}
+			if err := o.Validate(args); err != nil {
+				return err
+			}
+			return o.Run(ctx, args)
+		},
 	}
-
-	// Adding a boolean flag named "show-internal" with a default value of false and description
-	cmd.Flags().BoolVarP(&r.showChoreoAPIs, "show-choreoAPIs", "i", false, "Enable displaying internal choreo api resources")
-	cmd.Flags().BoolVarP(&r.showManagedFields, "show-managedFields", "m", false, "Enable displaying managedFields")
-	cmd.Flags().BoolVarP(&r.showDetails, "show-details", "a", false, "Enable showing details on diff")
-
-	r.Command = cmd
-	return r
+	flags.AddFlags(cmd)
+	return cmd
 }
 
-type Runner struct {
-	Command           *cobra.Command
-	factory           util.Factory
-	streams           *genericclioptions.IOStreams
-	showChoreoAPIs    bool
-	showManagedFields bool
-	showDetails       bool
+type DiffFlags struct {
+	RunOuput *genericclioptions.RunOutputFlags
 }
 
-func (r *Runner) runE(cmd *cobra.Command, args []string) error {
-	ctx := cmd.Context()
-	w := r.streams.Out
+// The defaults are determined here
+func NewDiffFlags() *DiffFlags {
+	return &DiffFlags{
+		RunOuput: genericclioptions.NewRunOutputFlags(),
+	}
+}
 
-	snapshotClient := r.factory.GetSnapshotClient()
+// AddFlags add flags tp the command
+func (r *DiffFlags) AddFlags(cmd *cobra.Command) {
+	r.RunOuput.AddFlags(cmd.Flags())
+}
+
+// ToOptions renders the options based on the flags that were set and will be the base context used to run the command
+func (r *DiffFlags) ToOptions(cmd *cobra.Command, f util.Factory, streams *genericclioptions.IOStreams) (*DiffOptions, error) {
+	options := &DiffOptions{
+		Factory:           f,
+		Streams:           streams,
+		ShowChoreoAPIs:    *r.RunOuput.ShowChoreoAPIs,
+		ShowManagedFields: *r.RunOuput.ShowManagedFields,
+		ShowDiffDetails:   *r.RunOuput.ShowDiffDetails,
+	}
+	return options, nil
+}
+
+type DiffOptions struct {
+	Factory           util.Factory
+	Streams           *genericclioptions.IOStreams
+	ShowChoreoAPIs    bool
+	ShowManagedFields bool
+	ShowDiffDetails   bool
+}
+
+func (r *DiffOptions) Validate(args []string) error {
+	return nil
+}
+
+func (r *DiffOptions) Run(ctx context.Context, args []string) error {
+	w := r.Streams.Out
+
+	snapshotClient := r.Factory.GetSnapshotClient()
 	b, err := snapshotClient.Diff(ctx, &snapshotclient.DiffOptions{
-		Proxy:             r.factory.GetProxy(),
-		ShowManagedFields: r.showManagedFields,
-		ShowChoreoAPIs:    r.showChoreoAPIs,
+		Proxy:             r.Factory.GetProxy(),
+		ShowManagedFields: r.ShowManagedFields,
+		ShowChoreoAPIs:    r.ShowChoreoAPIs,
 	})
 	if err != nil {
 		return err
@@ -101,7 +129,7 @@ func (r *Runner) runE(cmd *cobra.Command, args []string) error {
 		if _, err := fmt.Fprintf(w, "%s %s %s\n", diffItem.GetStatusSymbol(), diffItem.GetGVK().String(), diffItem.Name); err != nil {
 			errm = errors.Join(errm, err)
 		}
-		if r.showDetails && diffItem.Diff != nil {
+		if r.ShowDiffDetails && diffItem.Diff != nil {
 			if _, err := fmt.Fprintf(w, "%s\n", *diffItem.Diff); err != nil {
 				errm = errors.Join(errm, err)
 			}

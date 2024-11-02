@@ -17,15 +17,13 @@ limitations under the License.
 package devcmd
 
 import (
-	"context"
-
 	"github.com/kform-dev/choreo/cmd/choreoctl/commands/devcmd/parsecmd"
 	"github.com/kform-dev/choreo/pkg/cli/genericclioptions"
 	"github.com/spf13/cobra"
 )
 
 // NewRunner returns a command runner.
-func GetCommand(ctx context.Context, flags *genericclioptions.ConfigFlags) *cobra.Command {
+func NewCmdDev(cfg *genericclioptions.ChoreoConfig) *cobra.Command {
 	cmd := &cobra.Command{
 		Use: "dev",
 		//Short:   docs.InitShort,
@@ -44,7 +42,7 @@ func GetCommand(ctx context.Context, flags *genericclioptions.ConfigFlags) *cobr
 	}
 
 	cmd.AddCommand(
-		parsecmd.GetCommand(ctx, flags),
+		parsecmd.NewCmdParse(cfg),
 	)
 	return cmd
 }

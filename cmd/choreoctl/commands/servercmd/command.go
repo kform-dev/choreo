@@ -17,8 +17,6 @@ limitations under the License.
 package servercmd
 
 import (
-	"context"
-
 	"github.com/kform-dev/choreo/cmd/choreoctl/commands/servercmd/applycmd"
 	"github.com/kform-dev/choreo/cmd/choreoctl/commands/servercmd/getcmd"
 	"github.com/kform-dev/choreo/cmd/choreoctl/commands/servercmd/startcmd"
@@ -27,7 +25,7 @@ import (
 )
 
 // NewRunner returns a command runner.
-func GetCommand(ctx context.Context, flags *genericclioptions.ConfigFlags) *cobra.Command {
+func NewCmdServer(cfg *genericclioptions.ChoreoConfig) *cobra.Command {
 	cmd := &cobra.Command{
 		Use: "server",
 		//Short:   docs.InitShort,
@@ -46,9 +44,9 @@ func GetCommand(ctx context.Context, flags *genericclioptions.ConfigFlags) *cobr
 	}
 
 	cmd.AddCommand(
-		startcmd.GetCommand(ctx, flags),
-		getcmd.GetCommand(ctx, flags),
-		applycmd.GetCommand(ctx, flags),
+		startcmd.NewCmdStart(cfg),
+		getcmd.NewCmdGet(cfg),
+		applycmd.NewCmdApply(cfg),
 	)
 	return cmd
 }

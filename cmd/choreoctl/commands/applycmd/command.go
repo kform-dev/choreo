@@ -60,24 +60,18 @@ func NewCmdApply(f util.Factory, streams *genericclioptions.IOStreams) *cobra.Co
 
 type ApplyFlags struct {
 	FileNameFlags *genericclioptions.FileNameFlags
-	Streams       *genericclioptions.IOStreams
 }
 
 // NewApplyFlags determines which flags will be added to the command
 // The defaults are determined here
 func NewApplyFlags() *ApplyFlags {
 	usage := "The files that contain the configuration to apply."
-
-	// setup command defaults
-	filenames := []string{}
-	recursive := false
-
 	return &ApplyFlags{
-		FileNameFlags: &genericclioptions.FileNameFlags{Usage: usage, Filenames: &filenames, Recursive: &recursive},
+		FileNameFlags: genericclioptions.NewFileNameFlags(usage),
 	}
 }
 
-// AddFlags add flags tp the command
+// AddFlags add flags to the command
 func (r *ApplyFlags) AddFlags(cmd *cobra.Command) {
 	r.FileNameFlags.AddFlags(cmd.Flags())
 }
@@ -88,14 +82,14 @@ func (r *ApplyFlags) ToOptions(cmd *cobra.Command, f util.Factory, streams *gene
 		Factory: f,
 		Streams: streams,
 	}
-	options.FileNameOptions = r.FileNameFlags.ToOptions()
+	options.FileNameFlags = r.FileNameFlags
 	return options, nil
 }
 
 type ApplyOptions struct {
-	Factory         util.Factory
-	Streams         *genericclioptions.IOStreams
-	FileNameOptions resource.FilenameOptions
+	Factory       util.Factory
+	Streams       *genericclioptions.IOStreams
+	FileNameFlags *genericclioptions.FileNameFlags
 }
 
 func (r *ApplyOptions) Validate(args []string) error {
@@ -131,7 +125,7 @@ func (r *ApplyOptions) GetObjects() ([]*resource.Info, error) {
 	b := resource.NewBuilder(r.Factory.GetResourceMapper(), r.Factory.GetProxy(), r.Factory.GetBranch()).
 		Unstructured().
 		ContinueOnError().
-		FilenameParam(&r.FileNameOptions).
+		FilenameParam(&resource.FilenameOptions{Filenames: *r.FileNameFlags.Filenames, Recursive: *r.FileNameFlags.Recursive}).
 		Flatten().
 		Do()
 

@@ -31,11 +31,11 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-func NewChildChoreoInstance(ctx context.Context, repo repository.Repository, pathInRepo string, flags *genericclioptions.ConfigFlags, commit *object.Commit, annotationVal string) (ChoreoInstance, error) {
+func NewChildChoreoInstance(ctx context.Context, repo repository.Repository, pathInRepo string, cfg *genericclioptions.ChoreoConfig, commit *object.Commit, annotationVal string) (ChoreoInstance, error) {
 	r := &ChildChoreoInstance{
 		repo:          repo,
 		pathInRepo:    pathInRepo,
-		flags:         flags,
+		cfg:           cfg,
 		commit:        commit,
 		annotationVal: annotationVal,
 	}
@@ -50,7 +50,7 @@ func NewChildChoreoInstance(ctx context.Context, repo repository.Repository, pat
 }
 
 type ChildChoreoInstance struct {
-	flags         *genericclioptions.ConfigFlags
+	cfg           *genericclioptions.ChoreoConfig
 	repo          repository.Repository
 	pathInRepo    string
 	commit        *object.Commit
@@ -64,7 +64,7 @@ func (r *ChildChoreoInstance) LoadInternalAPIs() error {
 	r.apiStoreInternal = api.NewAPIStore()
 	loader := loader.APILoaderInternal{
 		APIStore:   r.apiStoreInternal,
-		Flags:      r.flags,
+		Cfg:        r.cfg,
 		DBPath:     r.GetDBPath(),
 		PathInRepo: r.GetPathInRepo(),
 	}
@@ -96,11 +96,11 @@ func (r *ChildChoreoInstance) GetTempPath() string {
 }
 
 func (r *ChildChoreoInstance) GetDBPath() string {
-	return filepath.Join(r.repo.GetPath(), r.pathInRepo, *r.flags.DBPath)
+	return filepath.Join(r.repo.GetPath(), r.pathInRepo, *r.cfg.ServerFlags.DBPath)
 }
 
-func (r *ChildChoreoInstance) GetFlags() *genericclioptions.ConfigFlags {
-	return r.flags
+func (r *ChildChoreoInstance) GetConfig() *genericclioptions.ChoreoConfig {
+	return r.cfg
 }
 
 func (r *ChildChoreoInstance) GetAPIStore() *api.APIStore {

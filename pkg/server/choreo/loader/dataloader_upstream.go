@@ -37,7 +37,7 @@ import (
 )
 
 type DataLoaderUpstream struct {
-	Flags      *genericclioptions.ConfigFlags
+	Cfg        *genericclioptions.ChoreoConfig
 	PathInRepo string
 	//UpstreamClient          resourceclient.Client // used to read data from commit from upstream repo
 	Client                  resourceclient.Client
@@ -62,7 +62,7 @@ func (r *DataLoaderUpstream) Load(ctx context.Context, commit *object.Commit) er
 func (r *DataLoaderUpstream) load(ctx context.Context, commit *object.Commit) error {
 	//log := log.FromContext(ctx)
 
-	reader := GetCommitFileReader(filepath.Join(r.PathInRepo, *r.Flags.InputPath), commit)
+	reader := GetCommitFileReader(filepath.Join(r.PathInRepo, *r.Cfg.ServerFlags.InputPath), commit)
 
 	datastore, err := reader.Read(ctx)
 	if err != nil {

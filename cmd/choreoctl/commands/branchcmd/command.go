@@ -17,8 +17,6 @@ limitations under the License.
 package branchcmd
 
 import (
-	"context"
-
 	"github.com/kform-dev/choreo/cmd/choreoctl/commands/branchcmd/checkoutcmd"
 	"github.com/kform-dev/choreo/cmd/choreoctl/commands/branchcmd/createcmd"
 	"github.com/kform-dev/choreo/cmd/choreoctl/commands/branchcmd/deletecmd"
@@ -32,7 +30,7 @@ import (
 )
 
 // NewRunner returns a command runner.
-func GetCommand(ctx context.Context, f util.Factory, streams *genericclioptions.IOStreams) *cobra.Command {
+func NewCmdBranch(f util.Factory, streams *genericclioptions.IOStreams) *cobra.Command {
 	cmd := &cobra.Command{
 		Use: "branch",
 		//Short:   docs.InitShort,
@@ -51,13 +49,13 @@ func GetCommand(ctx context.Context, f util.Factory, streams *genericclioptions.
 	}
 
 	cmd.AddCommand(
-		getcmd.GetCommand(ctx, f, streams),
-		createcmd.GetCommand(ctx, f, streams),
-		deletecmd.GetCommand(ctx, f, streams),
-		diffcmd.GetCommand(ctx, f, streams),
-		mergecmd.GetCommand(ctx, f, streams),
-		stashcmd.GetCommand(ctx, f, streams),
-		checkoutcmd.GetCommand(ctx, f, streams),
+		checkoutcmd.NewCmdCheckout(f, streams),
+		createcmd.NewCmdCreate(f, streams),
+		deletecmd.NewCmdDelete(f, streams),
+		diffcmd.NewCmdDiff(f, streams),
+		getcmd.NewCmdGet(f, streams),
+		mergecmd.NewCmdMerge(f, streams),
+		stashcmd.NewCmdStash(f, streams),
 	)
 	return cmd
 }

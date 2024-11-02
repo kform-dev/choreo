@@ -33,7 +33,7 @@ import (
 )
 
 func (r *DevLoader) getLibraryReader() pkgio.Reader[[]byte] {
-	abspath := filepath.Join(r.Path, *r.Flags.LibraryPath)
+	abspath := filepath.Join(r.Path, *r.Cfg.ServerFlags.LibraryPath)
 
 	if !fsys.PathExists(abspath) {
 		return nil
@@ -82,7 +82,7 @@ func (r *DevLoader) loadLibraries(ctx context.Context) error {
 
 		fileName := filepath.Join(
 			r.Path,
-			*r.Flags.InputPath,
+			*r.Cfg.ServerFlags.InputPath,
 			fmt.Sprintf("%s.%s.%s.yaml",
 				choreov1alpha1.SchemeGroupVersion.Group,
 				strings.ToLower(choreov1alpha1.LibraryKind),

@@ -40,7 +40,7 @@ func (r *NotCheckedOut) Activate(ctx context.Context, branchCtx *BranchCtx) erro
 	// load crds from db in apistore using the apiclient
 	rootChoreoInstance := r.Choreo.status.Get().RootChoreoInstance
 	loader := &loader.APILoaderFile2APIStoreAndAPI{
-		Flags:        r.Choreo.flags,
+		Cfg:          r.Choreo.cfg,
 		Client:       rootChoreoInstance.GetAPIClient(),
 		APIStore:     branchCtx.APIStore,
 		InternalGVKs: rootChoreoInstance.GetAPIStore().GetExternalGVKSet(),

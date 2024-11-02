@@ -26,42 +26,66 @@ import (
 	//docs "github.com/kform-dev/kform/internal/docs/generated/applydocs"
 )
 
-func GetCommand(ctx context.Context, f util.Factory, streams *genericclioptions.IOStreams) *cobra.Command {
-	return NewRunner(f, streams).Command
-}
+func NewCmdStash(f util.Factory, streams *genericclioptions.IOStreams) *cobra.Command {
+	flags := NewStashFlags()
 
-// NewRunner returns a command runner.
-func NewRunner(f util.Factory, streams *genericclioptions.IOStreams) *Runner {
-	r := &Runner{
-		factory: f,
-		streams: streams,
-	}
 	cmd := &cobra.Command{
 		Use:  "stash BRANCHNAME [flags]",
 		Args: cobra.ExactArgs(1),
 		//Short:   docs.InitShort,
 		//Long:    docs.InitShort + "\n" + docs.InitLong,
 		//Example: docs.InitExamples,
-		RunE: r.runE,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			ctx := cmd.Context()
+			o, err := flags.ToOptions(cmd, f, streams)
+			if err != nil {
+				return err
+			}
+			if err := o.Validate(args); err != nil {
+				return err
+			}
+			return o.Run(ctx, args)
+		},
 	}
-
-	r.Command = cmd
-	return r
+	flags.AddFlags(cmd)
+	return cmd
 }
 
-type Runner struct {
-	Command *cobra.Command
-	factory util.Factory
-	streams *genericclioptions.IOStreams
+type StashFlags struct {
 }
 
-func (r *Runner) runE(cmd *cobra.Command, args []string) error {
-	ctx := cmd.Context()
+// The defaults are determined here
+func NewStashFlags() *StashFlags {
+	return &StashFlags{}
+}
 
-	branchClient := r.factory.GetBranchClient()
+// AddFlags add flags tp the command
+func (r *StashFlags) AddFlags(cmd *cobra.Command) {
+}
+
+// ToOptions renders the options based on the flags that were set and will be the base context used to run the command
+func (r *StashFlags) ToOptions(cmd *cobra.Command, f util.Factory, streams *genericclioptions.IOStreams) (*StashOptions, error) {
+	options := &StashOptions{
+		Factory: f,
+		Streams: streams,
+	}
+	return options, nil
+}
+
+type StashOptions struct {
+	Factory util.Factory
+	Streams *genericclioptions.IOStreams
+}
+
+func (r *StashOptions) Validate(args []string) error {
+	return nil
+}
+
+func (r *StashOptions) Run(ctx context.Context, args []string) error {
+	branchClient := r.Factory.GetBranchClient()
 	branchName := args[0]
 	if err := branchClient.Stash(ctx, branchName, &branchclient.StashOptions{
-		Proxy: r.factory.GetProxy(),
+		Proxy: r.Factory.GetProxy(),
 	}); err != nil {
 		return err
 	}

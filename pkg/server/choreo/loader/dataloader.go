@@ -33,7 +33,7 @@ import (
 )
 
 type DataLoader struct {
-	Flags      *genericclioptions.ConfigFlags
+	Cfg        *genericclioptions.ChoreoConfig
 	Client     resourceclient.Client
 	Branch     string
 	GVKs       []schema.GroupVersionKind
@@ -47,7 +47,7 @@ type DataLoader struct {
 func (r *DataLoader) Load(ctx context.Context) error {
 	var errm error
 
-	if err := fsys.EnsureDir(ctx, r.RepoPth, r.PathInRepo, *r.Flags.InputPath); err != nil {
+	if err := fsys.EnsureDir(ctx, r.RepoPth, r.PathInRepo, *r.Cfg.ServerFlags.InputPath); err != nil {
 		return err
 	}
 

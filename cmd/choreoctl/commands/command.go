@@ -26,7 +26,6 @@ import (
 	"github.com/kform-dev/choreo/cmd/choreoctl/commands/applycmd"
 	"github.com/kform-dev/choreo/cmd/choreoctl/commands/branchcmd"
 	"github.com/kform-dev/choreo/cmd/choreoctl/commands/deletecmd.go"
-	"github.com/kform-dev/choreo/cmd/choreoctl/commands/depscmd"
 	"github.com/kform-dev/choreo/cmd/choreoctl/commands/devcmd"
 	"github.com/kform-dev/choreo/cmd/choreoctl/commands/getcmd"
 	"github.com/kform-dev/choreo/cmd/choreoctl/commands/runcmd"
@@ -72,17 +71,19 @@ func GetMain(ctx context.Context) (*cobra.Command, util.Factory) {
 		},
 	}
 	cmd.SetContext(ctx)
-	// choreo flags
 	flags := cmd.PersistentFlags()
-	choreoFlags := genericclioptions.NewConfigFlags()
-	// server
-	choreoFlags.AddServerControllerFlags(flags)
-	// client
-	choreoFlags.AddClientFlags(flags)
+	// choreo flags
+	// generic choreo + server + client flags
+	choreoConfig := genericclioptions.NewChoreoConfig()
+	choreoConfig.AddFlags(flags)
+
+	// resource flags (namespace)
+	resourceFlags := genericclioptions.NewResourceFlags()
+	resourceFlags.AddFlags(flags)
 
 	flags.AddGoFlagSet(flag.CommandLine)
 
-	f, err := util.NewFactory(choreoFlags)
+	f, err := util.NewFactory(choreoConfig)
 	if err != nil {
 		panic(err)
 	}
@@ -95,16 +96,18 @@ func GetMain(ctx context.Context) (*cobra.Command, util.Factory) {
 	registerCompletionFuncForGlobalFlags(cmd, f)
 
 	subCmds := map[string]*cobra.Command{
-		"apiresources": apiresourcescmd.GetCommand(ctx, f, streams),
-		"get":          getcmd.NewCmdGet(f, streams),
+
+		"apiresources": apiresourcescmd.NewCmdAPIResources(f, streams),
 		"apply":        applycmd.NewCmdApply(f, streams),
-		"delete":       deletecmd.NewCmdDelete(f, streams),
-		"deps":         depscmd.GetCommand(ctx, f, streams),
-		"branch":       branchcmd.GetCommand(ctx, f, streams),
-		"run":          runcmd.GetCommand(ctx, f, streams),
-		"tui":          tuicmd.GetCommand(ctx, f),
-		"server":       servercmd.GetCommand(ctx, choreoFlags),
-		"dev":          devcmd.GetCommand(ctx, choreoFlags),
+		"branch":       branchcmd.NewCmdBranch(f, streams),
+		"dev":          devcmd.NewCmdDev(choreoConfig),
+		"get":          getcmd.NewCmdGet(f, streams),
+
+		"delete": deletecmd.NewCmdDelete(f, streams),
+
+		"run":    runcmd.NewCmdRun(f, streams),
+		"tui":    tuicmd.NewCmdTUI(f),
+		"server": servercmd.NewCmdServer(choreoConfig),
 	}
 
 	for cmdName, subCmd := range subCmds {

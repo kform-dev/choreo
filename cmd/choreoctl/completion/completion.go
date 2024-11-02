@@ -43,12 +43,12 @@ func (r *Completion) compGetResourceList(cmd *cobra.Command, toComplete string) 
 	buf := new(bytes.Buffer)
 	streams := &genericclioptions.IOStreams{In: os.Stdin, Out: buf, ErrOut: io.Discard}
 
-	o := apiresourcescmd.Options{
+	o := apiresourcescmd.APIResourcesOptions{
 		Factory: r.Factory,
 		Streams: streams,
 		Output:  "name",
 	}
-	if err := o.Complete(ctx); err != nil {
+	if err := o.Complete(); err != nil {
 		return []string{}
 	}
 	o.Output = "name"
@@ -72,9 +72,9 @@ func (r *Completion) compGetResource(cmd *cobra.Command, resourceName string, to
 	buf := new(bytes.Buffer)
 
 	o := &getcmd.GetOptions{
-		Factory: r.Factory,
-		Streams: &genericclioptions.IOStreams{In: os.Stdin, Out: buf, ErrOut: io.Discard},
-		Output:  "completion",
+		Factory:      r.Factory,
+		Streams:      &genericclioptions.IOStreams{In: os.Stdin, Out: buf, ErrOut: io.Discard},
+		OutputFormat: "completion",
 	}
 	// Ignore errors as the output may still be valid
 	o.Run(ctx, []string{resourceName})

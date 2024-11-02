@@ -20,52 +20,10 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/adrg/xdg"
 	"github.com/spf13/cobra"
-	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
 )
-
-func (r *ConfigFlags) AddClientFlags(fs *pflag.FlagSet) {
-	if r == nil {
-		return
-	}
-	if r.Debug != nil {
-		fs.BoolVarP(r.Debug, flagDebug, "d", *r.Debug,
-			"enable debug mode")
-	}
-	if r.Address != nil {
-		fs.StringVar(r.Address, flagAddress, *r.Address,
-			"address the server is listing on")
-	}
-	if r.Output != nil {
-		fs.StringVarP(r.Output, FlagOutputFormat, "o", *r.Output,
-			"output is either 'json' or 'yaml'")
-	}
-	if r.MaxRcvMsg != nil {
-		fs.IntVar(r.MaxRcvMsg, flagMaxRcvMsg, *r.MaxRcvMsg,
-			"the maximum message size in bytes the client can receive")
-	}
-	if r.Timeout != nil {
-		fs.IntVar(r.Timeout, flagTimeout, *r.Timeout,
-			"gRPC dial timeout in seconds")
-	}
-	if r.Config != nil {
-		fs.StringVar(r.Config, flagConfig, *r.Config,
-			"configuration where the client context is stored")
-	}
-	if r.CacheDir != nil {
-		fs.StringVar(r.CacheDir, flagCacheDir, *r.CacheDir,
-			"cache directory where the api resource information is stored")
-	}
-	if r.Branch != nil {
-		fs.StringVarP(r.Branch, flagBranch, "b", *r.Branch,
-			"branch from which the client wants to retrieve the info")
-	}
-	if r.Proxy != nil {
-		fs.StringVarP(r.Proxy, flagProxy, "p", *r.Proxy,
-			"proxy context from which the client wants to retrieve the info")
-	}
-}
 
 // InitConfig reads in config file and ENV variables if set.
 func InitConfig(cmd *cobra.Command) error {
@@ -100,4 +58,15 @@ func InitConfig(cmd *cobra.Command) error {
 		_ = 1
 	}
 	return nil
+}
+
+func getConfigPath() string {
+	return filepath.Join(xdg.ConfigHome, defaultConfigFileSubDir)
+}
+
+// getDefaultCacheDir returns default caching directory path.
+// it first looks at KUBECACHEDIR env var if it is set, otherwise
+// it returns standard kube cache dir.
+func getDefaultCacheDir(configPath string) string {
+	return filepath.Join(configPath, "cache")
 }

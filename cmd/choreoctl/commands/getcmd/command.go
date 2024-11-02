@@ -64,33 +64,40 @@ func NewCmdGet(f util.Factory, streams *genericclioptions.IOStreams) *cobra.Comm
 }
 
 type GetFlags struct {
-	Streams *genericclioptions.IOStreams
+	ResourceOuput *genericclioptions.ResourceOutputFlags
 }
 
 // NewGetFlags determines which flags will be added to the command
 // The defaults are determined here
 func NewGetFlags() *GetFlags {
-	return &GetFlags{}
+	return &GetFlags{
+		ResourceOuput: genericclioptions.NewResourceOutputFlags(),
+	}
 }
 
 // AddFlags add flags tp the command
 func (r *GetFlags) AddFlags(cmd *cobra.Command) {
+	r.ResourceOuput.AddFlags(cmd.Flags())
 }
 
 // ToOptions renders the options based on the flags that were set and will be the base context used to run the command
 func (r *GetFlags) ToOptions(cmd *cobra.Command, f util.Factory, streams *genericclioptions.IOStreams) (*GetOptions, error) {
 	options := &GetOptions{
-		Factory: f,
-		Streams: streams,
-		Output:  cmd.Flags().Lookup(genericclioptions.FlagOutputFormat).Value.String(),
+		Factory:           f,
+		Streams:           streams,
+		OutputFormat:      *r.ResourceOuput.Output,
+		Namespace:         cmd.Flags().Lookup(genericclioptions.FlagNamespace).Value.String(),
+		ShowManagedFields: *r.ResourceOuput.ShowManagedFields,
 	}
 	return options, nil
 }
 
 type GetOptions struct {
-	Factory util.Factory
-	Streams *genericclioptions.IOStreams
-	Output  string
+	Factory           util.Factory
+	Streams           *genericclioptions.IOStreams
+	OutputFormat      string
+	Namespace         string
+	ShowManagedFields bool
 }
 
 func (r *GetOptions) Validate(args []string) error {
@@ -113,11 +120,11 @@ func (r *GetOptions) Run(ctx context.Context, args []string) error {
 		ul := &unstructured.UnstructuredList{}
 		ul.SetGroupVersionKind(gvk)
 		if err := r.Factory.GetResourceClient().List(ctx, ul, &resourceclient.ListOptions{
-			ExprSelector: &resourcepb.ExpressionSelector{},
-			//ShowManagedFields: true,
-			Origin: "choreoctl",
-			Branch: branch,
-			Proxy:  proxy,
+			ExprSelector:      &resourcepb.ExpressionSelector{},
+			ShowManagedFields: r.ShowManagedFields,
+			Origin:            "choreoctl",
+			Branch:            branch,
+			Proxy:             proxy,
 		}); err != nil {
 			return err
 		}
@@ -127,13 +134,13 @@ func (r *GetOptions) Run(ctx context.Context, args []string) error {
 	u := &unstructured.Unstructured{}
 	u.SetGroupVersionKind(gvk)
 	if err := r.Factory.GetResourceClient().Get(ctx, types.NamespacedName{
-		Namespace: "default",
+		Namespace: r.Namespace,
 		Name:      args[1],
 	}, u, &resourceclient.GetOptions{
-		//ShowManagedFields: true,
-		Origin: "choreoctl",
-		Branch: branch,
-		Proxy:  proxy,
+		ShowManagedFields: r.ShowManagedFields,
+		Origin:            "choreoctl",
+		Branch:            branch,
+		Proxy:             proxy,
 	}); err != nil {
 		return err
 	}
@@ -143,7 +150,7 @@ func (r *GetOptions) Run(ctx context.Context, args []string) error {
 
 func (r *GetOptions) parseOutput(obj runtime.Unstructured) error {
 	w := r.Streams.Out
-	switch r.Output {
+	switch r.OutputFormat {
 	case "completion":
 		if obj.IsList() {
 			us := []*unstructured.Unstructured{}
@@ -213,7 +220,7 @@ func (r *GetOptions) parseOutput(obj runtime.Unstructured) error {
 		}
 		return nil
 	default:
-		return fmt.Errorf("invalid output, supported json or yaml, got: %s", r.Output)
+		return fmt.Errorf("invalid output, supported json or yaml, got: %s", r.OutputFormat)
 	}
 
 }

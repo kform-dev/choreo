@@ -26,44 +26,70 @@ import (
 	//docs "github.com/kform-dev/kform/internal/docs/generated/applydocs"
 )
 
-func GetCommand(ctx context.Context, flags *genericclioptions.ConfigFlags) *cobra.Command {
-	return NewRunner(flags).Command
-}
+// NewCmdApply returns a cobra command.
+func NewCmdGet(cfg *genericclioptions.ChoreoConfig) *cobra.Command {
+	flags := NewGetFlags()
 
-// NewRunner returns a command runner.
-func NewRunner(flags *genericclioptions.ConfigFlags) *Runner {
-	r := &Runner{
-		ConfigFlags: flags,
-	}
 	cmd := &cobra.Command{
-		Use: "get [flags]",
-		//Args: cobra.ExactArgs(1),
+		Use:   "get [flags]",
+		Short: "get server status",
+		//Args:  cobra.ExactArgs(0),
 		//Short:   docs.InitShort,
 		//Long:    docs.InitShort + "\n" + docs.InitLong,
 		//Example: docs.InitExamples,
-		RunE: r.runE,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			o, err := flags.ToOptions(cmd, cfg)
+			if err != nil {
+				return err
+			}
+			if err := o.Validate(args); err != nil {
+				return err
+			}
+			return o.Run(cmd.Context(), args)
+		},
 	}
-
-	r.Command = cmd
-	return r
+	flags.AddFlags(cmd)
+	return cmd
 }
 
-type Runner struct {
-	Command     *cobra.Command
-	ConfigFlags *genericclioptions.ConfigFlags
+type GetFlags struct {
 }
 
-func (r *Runner) runE(cmd *cobra.Command, args []string) error {
-	ctx := cmd.Context()
+// NewApplyFlags determines which flags will be added to the command
+// The defaults are determined here
+func NewGetFlags() *GetFlags {
+	return &GetFlags{}
+}
 
-	client, err := r.ConfigFlags.ToChoreoClient()
+// AddFlags add flags to the command
+func (r *GetFlags) AddFlags(cmd *cobra.Command) {
+}
+
+// ToOptions renders the options based on the flags that were set and will be the base context used to run the command
+func (r *GetFlags) ToOptions(cmd *cobra.Command, cfg *genericclioptions.ChoreoConfig) (*GetOptions, error) {
+	options := &GetOptions{
+		cfg: cfg,
+	}
+	return options, nil
+}
+
+type GetOptions struct {
+	cfg *genericclioptions.ChoreoConfig
+}
+
+func (r *GetOptions) Validate(args []string) error {
+	return nil
+}
+
+func (r *GetOptions) Run(ctx context.Context, args []string) error {
+	client, err := r.cfg.ToChoreoClient()
 	if err != nil {
 		return err
 	}
 	defer client.Close()
 
 	rsp, err := client.Get(ctx, &choreoclient.GetOptions{
-		Proxy: r.ConfigFlags.ToProxy(),
+		Proxy: r.cfg.ToProxy(),
 	})
 	if err != nil {
 		return err

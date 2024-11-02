@@ -22,6 +22,7 @@ import (
 	"github.com/kform-dev/choreo/pkg/cli/resource"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
+	"k8s.io/utils/ptr"
 )
 
 // FileNameFlags are flags for processing files.
@@ -35,22 +36,12 @@ type FileNameFlags struct {
 	Recursive *bool
 }
 
-// ToOptions creates a new FileNameOptions struct and sets FilenameOptions based on FileNameflags
-func (o *FileNameFlags) ToOptions() resource.FilenameOptions {
-	options := resource.FilenameOptions{}
-
-	if o == nil {
-		return options
+func NewFileNameFlags(usage string) *FileNameFlags {
+	return &FileNameFlags{
+		Usage:     usage,
+		Filenames: &[]string{},
+		Recursive: ptr.To(false),
 	}
-
-	if o.Recursive != nil {
-		options.Recursive = *o.Recursive
-	}
-	if o.Filenames != nil {
-		options.Filenames = *o.Filenames
-	}
-
-	return options
 }
 
 // AddFlags binds file name flags to a given flagset

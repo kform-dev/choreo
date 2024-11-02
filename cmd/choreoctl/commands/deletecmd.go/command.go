@@ -69,12 +69,8 @@ type DeleteFlags struct {
 func NewDeleteFlags() *DeleteFlags {
 	usage := "The files that contain the resource to delete."
 
-	// setup command defaults
-	filenames := []string{}
-	recursive := false
-
 	return &DeleteFlags{
-		FileNameFlags: &genericclioptions.FileNameFlags{Usage: usage, Filenames: &filenames, Recursive: &recursive},
+		FileNameFlags: genericclioptions.NewFileNameFlags(usage),
 	}
 }
 
@@ -89,18 +85,18 @@ func (r *DeleteFlags) ToOptions(cmd *cobra.Command, f util.Factory, streams *gen
 		Factory: f,
 		Streams: streams,
 	}
-	options.FileNameOptions = r.FileNameFlags.ToOptions()
+	options.FileNameFlags = r.FileNameFlags
 	return options, nil
 }
 
 type DeleteOptions struct {
-	Factory         util.Factory
-	Streams         *genericclioptions.IOStreams
-	FileNameOptions resource.FilenameOptions
+	Factory       util.Factory
+	Streams       *genericclioptions.IOStreams
+	FileNameFlags *genericclioptions.FileNameFlags
 }
 
 func (r *DeleteOptions) Validate(args []string) error {
-	if len(args) == 1 && len(r.FileNameOptions.Filenames) == 0 {
+	if len(args) == 1 && len(*r.FileNameFlags.Filenames) == 0 {
 		return fmt.Errorf("nothing to delete, missing a resourcename or filename input (-f)")
 	}
 	return nil
@@ -135,7 +131,7 @@ func (r *DeleteOptions) GetObjects(args []string) ([]*resource.Info, error) {
 	b := resource.NewBuilder(r.Factory.GetResourceMapper(), r.Factory.GetProxy(), r.Factory.GetBranch()).
 		Unstructured().
 		ContinueOnError().
-		FilenameParam(&r.FileNameOptions).
+		FilenameParam(&resource.FilenameOptions{Filenames: *r.FileNameFlags.Filenames, Recursive: *r.FileNameFlags.Recursive}).
 		ResourceTypeOrNameArgs(args...).
 		Flatten().
 		Do()

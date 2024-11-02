@@ -53,10 +53,10 @@ type Choreo interface {
 	Destroy(obj runtime.Unstructured) error
 }
 
-func New(flags *genericclioptions.ConfigFlags) Choreo {
+func New(cfg *genericclioptions.ChoreoConfig) Choreo {
 	r := &choreo{
 		status: &Status{},
-		flags:  flags,
+		cfg:    cfg,
 	}
 	r.status.Set(Initializing())
 	r.branchStore = NewBranchStore(r)
@@ -70,7 +70,7 @@ type choreo struct {
 	branchStore *BranchStore
 	runner      Runner
 	snapshotMgr *SnapshotManager
-	flags       *genericclioptions.ConfigFlags
+	cfg         *genericclioptions.ChoreoConfig
 
 	client resourceclient.Client
 }
@@ -90,8 +90,8 @@ func (r *choreo) Apply(ctx context.Context, req *choreopb.Apply_Request) (*chore
 	if req.ChoreoContext.Path != "" {
 		// the server cannot update the local environment without stop/start the server
 		rootChoreoInstance, err := NewRootChoreoInstance(ctx, &Config{
-			Path:  req.ChoreoContext.Path,
-			Flags: r.flags,
+			Path: req.ChoreoContext.Path,
+			Cfg:  r.cfg,
 		})
 		if err != nil {
 			r.status.Set(Failed(err.Error()))
@@ -143,7 +143,7 @@ func (r *choreo) Apply(ctx context.Context, req *choreopb.Apply_Request) (*chore
 		}
 
 		rootChoreoInstance, err = NewRootChoreoInstance(ctx, &Config{
-			Flags:      r.flags,
+			Cfg:        r.cfg,
 			Path:       repoPath,
 			Repo:       repo,
 			Commit:     commit,
@@ -178,7 +178,7 @@ func (r *choreo) SnapshotManager() *SnapshotManager {
 func (r *choreo) Start(ctx context.Context) {
 	log := log.FromContext(ctx)
 	var err error
-	r.client, err = r.flags.ToResourceClient()
+	r.client, err = r.cfg.ToResourceClient()
 	if err != nil {
 		panic(err)
 	}
@@ -251,7 +251,7 @@ func (r *choreo) Store(obj runtime.Unstructured) error {
 	path := filepath.Join(
 		rootChoreoInstance.GetRepoPath(),
 		rootChoreoInstance.GetPathInRepo(),
-		*rootChoreoInstance.GetFlags().InputPath,
+		*rootChoreoInstance.GetConfig().ServerFlags.InputPath,
 		fmt.Sprintf("%s.%s.%s.yaml",
 			gv.Group,
 			strings.ToLower(u.GetKind()),
@@ -274,7 +274,7 @@ func (r *choreo) Destroy(obj runtime.Unstructured) error {
 	fileName := filepath.Join(
 		rootChoreoInstance.GetRepoPath(),
 		rootChoreoInstance.GetPathInRepo(),
-		*rootChoreoInstance.GetFlags().InputPath,
+		*rootChoreoInstance.GetConfig().ServerFlags.InputPath,
 		fmt.Sprintf("%s.%s.%s.yaml",
 			gv.Group,
 			strings.ToLower(u.GetKind()),

@@ -14,24 +14,24 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package loadcmd
+package depscmd
 
 import (
 	"context"
 
 	"github.com/kform-dev/choreo/pkg/cli/genericclioptions"
-	"github.com/kform-dev/choreo/pkg/client/go/runnerclient"
 	"github.com/kform-dev/choreo/pkg/client/go/util"
+	"github.com/kform-dev/choreo/pkg/util/inventory"
 	"github.com/spf13/cobra"
 	//docs "github.com/kform-dev/kform/internal/docs/generated/applydocs"
 )
 
-func NewCmdLoad(f util.Factory, streams *genericclioptions.IOStreams) *cobra.Command {
-	flags := NewLoadFlags()
+func NewCmdDeps(f util.Factory, streams *genericclioptions.IOStreams) *cobra.Command {
+	flags := NewDepsFlags()
 
 	cmd := &cobra.Command{
-		Use:   "load [flags]",
-		Short: "load data",
+		Use:   "deps",
+		Short: "get dependencies between resources",
 		//Args:  cobra.ExactArgs(1),
 		//Short:   docs.InitShort,
 		//Long:    docs.InitShort + "\n" + docs.InitLong,
@@ -52,42 +52,59 @@ func NewCmdLoad(f util.Factory, streams *genericclioptions.IOStreams) *cobra.Com
 	return cmd
 }
 
-type LoadFlags struct {
+type DepsFlags struct {
+	RunOuput *genericclioptions.RunOutputFlags
 }
 
 // The defaults are determined here
-func NewLoadFlags() *LoadFlags {
-	return &LoadFlags{}
+func NewDepsFlags() *DepsFlags {
+	return &DepsFlags{
+		RunOuput: genericclioptions.NewRunOutputFlags(),
+	}
 }
 
 // AddFlags add flags tp the command
-func (r *LoadFlags) AddFlags(cmd *cobra.Command) {
+func (r *DepsFlags) AddFlags(cmd *cobra.Command) {
+	r.RunOuput.AddFlags(cmd.Flags())
 }
 
 // ToOptions renders the options based on the flags that were set and will be the base context used to run the command
-func (r *LoadFlags) ToOptions(cmd *cobra.Command, f util.Factory, streams *genericclioptions.IOStreams) (*LoadOptions, error) {
-	options := &LoadOptions{
-		Factory: f,
-		Streams: streams,
+func (r *DepsFlags) ToOptions(cmd *cobra.Command, f util.Factory, streams *genericclioptions.IOStreams) (*DepsOptions, error) {
+	options := &DepsOptions{
+		Factory:        f,
+		Streams:        streams,
+		ShowChoreoAPIs: *r.RunOuput.ShowChoreoAPIs,
 	}
 	return options, nil
 }
 
-type LoadOptions struct {
-	Factory util.Factory
-	Streams *genericclioptions.IOStreams
+type DepsOptions struct {
+	Factory        util.Factory
+	Streams        *genericclioptions.IOStreams
+	ShowChoreoAPIs bool
 }
 
-func (r *LoadOptions) Validate(args []string) error {
+func (r *DepsOptions) Validate(args []string) error {
 	return nil
 }
 
-func (r *LoadOptions) Run(ctx context.Context, args []string) error {
-	runnerClient := r.Factory.GetRunnerClient()
-	if err := runnerClient.Load(ctx, &runnerclient.LoadOptions{
-		Proxy: r.Factory.GetProxy(),
+func (r *DepsOptions) Run(ctx context.Context, args []string) error {
+	branch := r.Factory.GetBranch()
+	proxy := r.Factory.GetProxy()
+
+	apiResources, err := r.Factory.GetDiscoveryClient().APIResources(ctx, proxy, branch)
+	if err != nil {
+		return err
+	}
+
+	inv := inventory.Inventory{}
+	if err := inv.Build(ctx, r.Factory.GetResourceClient(), apiResources, &inventory.BuildOptions{
+		ShowManagedField: true,
+		Branch:           branch,
+		ShowChoreoAPIs:   r.ShowChoreoAPIs,
 	}); err != nil {
 		return err
 	}
+	inv.Print()
 	return nil
 }
