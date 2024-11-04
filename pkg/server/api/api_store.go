@@ -50,6 +50,7 @@ func (r *ResourceContext) GV() schema.GroupKind {
 	}
 }
 
+// ExternalGVK return the gvk as seen by the client
 func (r *ResourceContext) ExternalGVK() schema.GroupVersionKind {
 	return schema.GroupVersionKind{
 		Group:   r.External.Group,
@@ -58,6 +59,7 @@ func (r *ResourceContext) ExternalGVK() schema.GroupVersionKind {
 	}
 }
 
+// InternalGVK return the gvk as seen by the storage layer
 func (r *ResourceContext) InternalGVK() schema.GroupVersionKind {
 	return schema.GroupVersionKind{
 		Group:   r.Internal.Group,
@@ -123,6 +125,7 @@ func (r *APIStore) GetStorage(gk schema.GroupKind) (rest.Storage, error) {
 	return resctx.Storage, nil
 }
 
+// return the gvks as seen by the client
 func (r *APIStore) GetExternalGVKSet() sets.Set[schema.GroupVersionKind] {
 	gvkset := sets.New[schema.GroupVersionKind]()
 	r.List(func(k store.Key, rc *ResourceContext) {

@@ -14,33 +14,18 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package choreo
+package instance
 
-import (
-	"context"
-	"reflect"
-)
+import "os"
 
-type Event int
-
-const (
-	Activate Event = iota
-	DeActivate
-)
-
-func (r Event) String() string {
-	switch r {
-	case Activate:
-		return "Activate"
-	case DeActivate:
-		return "DeActivate"
-	default:
-		return reflect.TypeOf(r).Name()
-	}
+func Exists(filepath string) bool {
+	_, err := os.Stat(filepath)
+	return err == nil
 }
 
-type State interface {
-	String() string
-	Activate(ctx context.Context, branchCtx *BranchCtx) error
-	DeActivate(ctx context.Context, branchCtx *BranchCtx) error
+func EnsureDir(dirname string) error {
+	if !Exists(dirname) {
+		return os.MkdirAll(dirname, 0755)
+	}
+	return nil
 }

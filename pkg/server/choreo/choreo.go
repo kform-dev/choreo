@@ -31,6 +31,7 @@ import (
 	"github.com/kform-dev/choreo/pkg/proto/choreopb"
 	"github.com/kform-dev/choreo/pkg/repository/git"
 	"github.com/kform-dev/choreo/pkg/repository/repogit"
+	"github.com/kform-dev/choreo/pkg/server/choreo/instance"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -43,7 +44,7 @@ type Choreo interface {
 	Get(ctx context.Context, req *choreopb.Get_Request) (*choreopb.Get_Response, error)
 	Apply(ctx context.Context, req *choreopb.Apply_Request) (*choreopb.Apply_Response, error)
 	Start(ctx context.Context)
-	GetRootChoreoInstance() ChoreoInstance
+	GetRootChoreoInstance() instance.ChoreoInstance
 	GetBranchStore() *BranchStore
 	Runner() Runner
 	SnapshotManager() *SnapshotManager
@@ -51,6 +52,11 @@ type Choreo interface {
 	Store(obj runtime.Unstructured) error
 	// remove resource (yaml) from the input directory
 	Destroy(obj runtime.Unstructured) error
+
+	GetClient() resourceclient.Client
+	GetContext() context.Context
+	GetStatus() *Status
+	GetConfig() *genericclioptions.ChoreoConfig
 }
 
 func New(cfg *genericclioptions.ChoreoConfig) Choreo {
@@ -73,6 +79,7 @@ type choreo struct {
 	cfg         *genericclioptions.ChoreoConfig
 
 	client resourceclient.Client
+	ctx    context.Context
 }
 
 func (r *choreo) Get(ctx context.Context, req *choreopb.Get_Request) (*choreopb.Get_Response, error) {
@@ -89,7 +96,7 @@ func (r *choreo) Apply(ctx context.Context, req *choreopb.Apply_Request) (*chore
 	log := log.FromContext(ctx)
 	if req.ChoreoContext.Path != "" {
 		// the server cannot update the local environment without stop/start the server
-		rootChoreoInstance, err := NewRootChoreoInstance(ctx, &Config{
+		rootChoreoInstance, err := instance.NewRootChoreoInstance(ctx, &instance.Config{
 			Path: req.ChoreoContext.Path,
 			Cfg:  r.cfg,
 		})
@@ -142,7 +149,7 @@ func (r *choreo) Apply(ctx context.Context, req *choreopb.Apply_Request) (*chore
 			return &choreopb.Apply_Response{}, status.Errorf(codes.Internal, "err: %s", err.Error())
 		}
 
-		rootChoreoInstance, err = NewRootChoreoInstance(ctx, &Config{
+		rootChoreoInstance, err = instance.NewRootChoreoInstance(ctx, &instance.Config{
 			Cfg:        r.cfg,
 			Path:       repoPath,
 			Repo:       repo,
@@ -163,7 +170,7 @@ func (r *choreo) GetBranchStore() *BranchStore {
 	return r.branchStore
 }
 
-func (r *choreo) GetRootChoreoInstance() ChoreoInstance {
+func (r *choreo) GetRootChoreoInstance() instance.ChoreoInstance {
 	return r.status.Get().RootChoreoInstance
 }
 
@@ -182,7 +189,8 @@ func (r *choreo) Start(ctx context.Context) {
 	if err != nil {
 		panic(err)
 	}
-	r.runner.AddResourceClientAndContext(ctx, r.client)
+	r.ctx = ctx
+	//r.runner.AddResourceClientAndContext(ctx, r.client)
 	r.branchStore.store.Start(ctx)
 	defer r.branchStore.store.Stop()
 
@@ -287,4 +295,20 @@ func (r *choreo) Destroy(obj runtime.Unstructured) error {
 func getRepoPath(url string) string {
 	replace := strings.NewReplacer("/", "-", ":", "-")
 	return filepath.Join(".", replace.Replace(url))
+}
+
+func (r *choreo) GetClient() resourceclient.Client {
+	return r.client
+}
+
+func (r *choreo) GetContext() context.Context {
+	return r.ctx
+}
+
+func (r *choreo) GetStatus() *Status {
+	return r.status
+}
+
+func (r *choreo) GetConfig() *genericclioptions.ChoreoConfig {
+	return r.cfg
 }

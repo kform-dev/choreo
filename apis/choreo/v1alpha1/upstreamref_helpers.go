@@ -16,7 +16,11 @@ limitations under the License.
 
 package v1alpha1
 
-import "github.com/kform-dev/choreo/pkg/repository/git"
+import (
+	"strings"
+
+	"github.com/kform-dev/choreo/pkg/repository/git"
+)
 
 func (r *UpstreamRef) LoaderAnnotation() LoaderAnnotation {
 	return LoaderAnnotation{
@@ -40,4 +44,10 @@ func (r *UpstreamRef) GetPathInRepo() string {
 		pathInRepo = *r.Spec.Directory
 	}
 	return pathInRepo
+}
+
+func (r *UpstreamRef) GetURLPath() string {
+	url := r.Spec.URL
+	replace := strings.NewReplacer("/", "-", ":", "-")
+	return replace.Replace(url)
 }

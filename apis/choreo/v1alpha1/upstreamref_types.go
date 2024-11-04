@@ -22,18 +22,48 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+type UpstreamRefType string
+
+const (
+	UpstreamRefType_CRD UpstreamRefType = "crd"
+	UpstreamRefType_All UpstreamRefType = "all"
+)
+
+func (r UpstreamRefType) String() string {
+	switch r {
+	case UpstreamRefType_CRD:
+		return "crd"
+	case UpstreamRefType_All:
+		return "all"
+	default:
+		return "invalid"
+	}
+}
+
 // UpstreamRefSpec defines the desired state of the UpstreamRef
 type UpstreamRefSpec struct {
+	// Type defines the type of upstream ref
+	// a api/crd type
+	// a full type
+	// +kubebuilder:validation:Enum=crd;all;
+	// +kubebuilder:default:=full
+	Type UpstreamRefType `json:"type" protobuf:"bytes,1,opt,name=type"`
+	// Priority defines the priority of the upstreamRef; used to define the sequence of execution
+	// +kubebuilder:default:=10
+	Priority int `json:"priority,omitempty" protobuf:"bytes,2,opt,name=priority"`
 	// URL specifies the base URL for a given repository for example:
 	//   `https://github.com/kubenet.dev/kubenet-catalog.git`
-	URL string `json:"url" protobuf:"bytes,1,opt,name=url"`
+	URL string `json:"url" protobuf:"bytes,3,opt,name=url"`
 	// Directory defines the name of the directory for the ref.
 	// if not present the root directory is assumed
-	Directory *string `json:"directory,omitempty" protobuf:"bytes,2,opt,name=directory"`
+	Directory *string `json:"directory,omitempty" protobuf:"bytes,4,opt,name=directory"`
 	// Ref defines the upstream reference
-	Ref UpstreamReference `json:"ref" protobuf:"bytes,3,opt,name=ref"`
+	Ref UpstreamReference `json:"ref" protobuf:"bytes,5,opt,name=ref"`
 	// Credentials defines the name of the secret that holds the credentials to connect to the upstream Ref
-	Credentials string `json:"credentials,omitempty" protobuf:"bytes,4,opt,name=credentials"`
+	Credentials string `json:"credentials,omitempty" protobuf:"bytes,6,opt,name=credentials"`
+	// Includes define the files to include
+	// Typically used for CRD upstream types
+	Includes []string `json:"includes,omitempty" protobuf:"bytes,7,opt,name=includes"`
 }
 
 type UpstreamReference struct {

@@ -20,8 +20,6 @@ import (
 	"context"
 
 	"github.com/kform-dev/choreo/pkg/cli/genericclioptions"
-	"github.com/kform-dev/choreo/pkg/server/choreo/loader"
-	"github.com/kform-dev/kform/pkg/fsys"
 	"github.com/spf13/cobra"
 	//docs "github.com/kform-dev/kform/internal/docs/generated/applydocs"
 )
@@ -74,14 +72,18 @@ func (r *ParseOptions) Validate(args []string) error {
 }
 
 func (r *ParseOptions) Run(ctx context.Context, args []string) error {
-	path, err := fsys.NormalizeDir(args[0])
-	if err != nil {
-		return err
-	}
+	/*
+		path, err := fsys.NormalizeDir(args[0])
+		if err != nil {
+			return err
+		}
 
-	loader := loader.DevLoader{
-		Path: path,
-		Cfg:  r.cfg,
-	}
-	return loader.Load(ctx)
+		loader := loader.DevLoader{
+			SrcPath: path,
+			DstPath: path,
+			Cfg:     r.cfg,
+		}
+		return loader.Load(ctx)
+	*/
+	return nil
 }

@@ -14,10 +14,11 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package choreo
+package instance
 
 import (
 	"github.com/go-git/go-git/v5/plumbing/object"
+	choreov1alpha1 "github.com/kform-dev/choreo/apis/choreo/v1alpha1"
 	"github.com/kform-dev/choreo/pkg/cli/genericclioptions"
 	"github.com/kform-dev/choreo/pkg/client/go/resourceclient"
 	"github.com/kform-dev/choreo/pkg/proto/choreopb"
@@ -26,6 +27,10 @@ import (
 )
 
 type ChoreoInstance interface {
+	GetChoreoInstanceName() string
+	InitChildren()
+	AddChildChoreoInstance(ChoreoInstance) error
+	GetChildren() []ChoreoInstance
 	GetName() string
 	GetRepo() repository.Repository
 	GetRepoPath() string
@@ -34,11 +39,23 @@ type ChoreoInstance interface {
 	GetPathInRepo() string
 	GetDBPath() string
 	GetConfig() *genericclioptions.ChoreoConfig
-	GetAPIStore() *api.APIStore // provides the internal apistore
+	GetInternalAPIStore() *api.APIStore // provides the internal apistore, only relevant for rootInstance
 	GetCommit() *object.Commit
 	GetAPIClient() resourceclient.Client
 	GetAnnotationVal() string
 	Destroy() error
 	CommitWorktree(msg string) (*choreopb.Commit_Response, error)
 	PushBranch(branch string) (*choreopb.Push_Response, error)
+	GetUpstreamRef() *choreov1alpha1.UpstreamRef
+	IsRootInstance() bool
+
+	InitAPIs()
+	GetAPIs() *api.APIStore
+	AddAPIS(*api.APIStore)
+	InitLibraries()
+	GetLibraries() []*choreov1alpha1.Library
+	AddLibraries(...*choreov1alpha1.Library)
+	InitReconcilers()
+	GetReconcilers() []*choreov1alpha1.Reconciler
+	AddReconcilers(...*choreov1alpha1.Reconciler)
 }

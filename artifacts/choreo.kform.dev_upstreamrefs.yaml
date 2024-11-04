@@ -51,6 +51,18 @@ spec:
                   Directory defines the name of the directory for the ref.
                   if not present the root directory is assumed
                 type: string
+              includes:
+                description: |-
+                  Includes define the files to include
+                  Typically used for CRD upstream types
+                items:
+                  type: string
+                type: array
+              priority:
+                default: 10
+                description: Priority defines the priority of the upstreamRef; used
+                  to define the sequence of execution
+                type: integer
               ref:
                 description: Ref defines the upstream reference
                 properties:
@@ -67,6 +79,16 @@ spec:
                 - name
                 - type
                 type: object
+              type:
+                default: full
+                description: |-
+                  Type defines the type of upstream ref
+                  a api/crd type
+                  a full type
+                enum:
+                - crd
+                - all
+                type: string
               url:
                 description: |-
                   URL specifies the base URL for a given repository for example:
@@ -74,6 +96,7 @@ spec:
                 type: string
             required:
             - ref
+            - type
             - url
             type: object
         type: object

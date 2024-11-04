@@ -41,7 +41,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 )
 
-func NewReconcilerFn(client resourceclient.Client, reconcileConfig *choreov1alpha1.Reconciler, libs *unstructured.UnstructuredList, branch string) reconcile.TypedReconcilerFn {
+func NewReconcilerFn(client resourceclient.Client, reconcileConfig *choreov1alpha1.Reconciler, libraries []*choreov1alpha1.Library, branch string) reconcile.TypedReconcilerFn {
 	return func() (reconcile.TypedReconciler, error) {
 		r := &reconciler{
 			name:          reconcileConfig.Name,
@@ -74,7 +74,7 @@ func NewReconcilerFn(client resourceclient.Client, reconcileConfig *choreov1alph
 		}
 
 		// cache deals with library loading
-		cache := newCache(libs)
+		cache := newCache(libraries)
 		cc := new(cycleChecker)
 
 		thread := &starlark.Thread{

@@ -107,25 +107,34 @@ func (r *OnceOptions) Run(ctx context.Context, args []string) error {
 	if rsp != nil {
 		if !rsp.Success {
 			// failed
-			fmt.Println("execution failed", rsp.TaskId, rsp.Message)
+			fmt.Println("execution failed")
+			for _, result := range rsp.Results {
+				if !result.Success {
+					fmt.Println("  reaon", result.TaskId, result.Message)
+				}
+
+			}
 			return nil
 		}
-		if len(rsp.Results) > 0 {
-			fmt.Println("execution success, time(msec)", rsp.Results[len(rsp.Results)-1].EventTime.AsTime().Sub(rsp.Results[0].EventTime.AsTime()))
+		for _, result := range rsp.Results {
+			if len(result.Results) > 0 {
+				fmt.Println("execution success, time(msec)", result.Results[len(result.Results)-1].EventTime.AsTime().Sub(result.Results[0].EventTime.AsTime()))
+			}
+			switch r.ResultOutputFormat {
+			case "reconciler":
+				printReconcilerResultSummary(calculateReconcilerSummary(result))
+			case "resource":
+				printReconcilerResourceResultSummary(calculateReconcilerResourceSummary(result))
+			case "raw":
+				printResultRaw(result)
+			}
 		}
-		switch r.ResultOutputFormat {
-		case "reconciler":
-			printReconcilerResultSummary(calculateReconcilerSummary(rsp))
-		case "resource":
-			printReconcilerResourceResultSummary(calculateReconcilerResourceSummary(rsp))
-		case "raw":
-			printResultRaw(rsp)
-		}
+
 	}
 	return nil
 }
 
-func getReconcilers(rsp *runnerpb.Once_Response) []string {
+func getReconcilers(rsp *runnerpb.Once_Result) []string {
 	reconcilers := []string{}
 	for _, result := range rsp.Results {
 		reconcilers = append(reconcilers, result.ReconcilerName)
@@ -145,7 +154,7 @@ func NewOperations() Operations {
 	}
 }
 
-func calculateReconcilerSummary(rsp *runnerpb.Once_Response) map[string]Operations {
+func calculateReconcilerSummary(rsp *runnerpb.Once_Result) map[string]Operations {
 	reconcilers := getReconcilers(rsp)
 	reconcilerOperations := make(map[string]Operations, len(reconcilers))
 	for _, result := range rsp.Results {
@@ -157,7 +166,7 @@ func calculateReconcilerSummary(rsp *runnerpb.Once_Response) map[string]Operatio
 	return reconcilerOperations
 }
 
-func getReconcilerResource(result *runnerpb.Result) ReconcilerResource {
+func getReconcilerResource(result *runnerpb.ReconcileResult) ReconcilerResource {
 	return ReconcilerResource{
 		Reconcilername: result.ReconcilerName,
 		Group:          result.Resource.Group,
@@ -179,7 +188,7 @@ func (r ReconcilerResource) ResourceNameString() string {
 	return fmt.Sprintf("%s.%s.%s.%s", r.Group, r.Kind, r.Namespace, r.Name)
 }
 
-func calculateReconcilerResourceSummary(rsp *runnerpb.Once_Response) map[ReconcilerResource]Operations {
+func calculateReconcilerResourceSummary(rsp *runnerpb.Once_Result) map[ReconcilerResource]Operations {
 	//reconcilerResourceSet := getReconcilerResourceSet(rsp)
 	reconcilerOperations := make(map[ReconcilerResource]Operations, 0)
 	for _, result := range rsp.Results {
@@ -192,7 +201,7 @@ func calculateReconcilerResourceSummary(rsp *runnerpb.Once_Response) map[Reconci
 	return reconcilerOperations
 }
 
-func printResultRaw(rsp *runnerpb.Once_Response) {
+func printResultRaw(rsp *runnerpb.Once_Result) {
 	timeFormat := "2006-01-02 15:04:05.000000 UTC"
 	rows := make([][]string, 0)
 	for _, result := range rsp.Results {

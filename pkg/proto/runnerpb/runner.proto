@@ -74,10 +74,16 @@ message Once {
 
     message Response {
         bool success = 1;
-        string taskId = 2; // reconcilername + group + kind + namespace + name
-        string message = 3;
-        string executionTime = 4;
-        repeated Result results = 5;
+        repeated Result results = 2;
+    }
+
+    message Result {
+        string reconcilerRunner = 1;
+        bool success = 2;
+        string taskId = 3; // reconcilername + group + kind + namespace + name when failed
+        string message = 4;
+        string executionTime = 5;
+        repeated ReconcileResult results = 6;
     }
 }
 
@@ -97,7 +103,7 @@ message Load {
     }
 }
 
-message Result {
+message ReconcileResult {
     string reconcilerName = 1;
     string reconcilerUID = 2;
     google.protobuf.Timestamp eventTime = 3;

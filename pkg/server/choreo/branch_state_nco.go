@@ -18,11 +18,9 @@ package choreo
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/go-git/go-git/v5/plumbing/object"
 	"github.com/kform-dev/choreo/pkg/client/go/resourceclient"
-	"github.com/kform-dev/choreo/pkg/server/choreo/loader"
 )
 
 var _ State = &NotCheckedOut{}
@@ -36,21 +34,6 @@ type NotCheckedOut struct {
 func (r *NotCheckedOut) String() string { return "NotCheckedOut" }
 
 func (r *NotCheckedOut) Activate(ctx context.Context, branchCtx *BranchCtx) error {
-	// the internal apis are already loaded
-	// load crds from db in apistore using the apiclient
-	rootChoreoInstance := r.Choreo.status.Get().RootChoreoInstance
-	loader := &loader.APILoaderFile2APIStoreAndAPI{
-		Cfg:          r.Choreo.cfg,
-		Client:       rootChoreoInstance.GetAPIClient(),
-		APIStore:     branchCtx.APIStore,
-		InternalGVKs: rootChoreoInstance.GetAPIStore().GetExternalGVKSet(),
-		PathInRepo:   rootChoreoInstance.GetPathInRepo(), // required for the commit read
-		DBPath:       rootChoreoInstance.GetDBPath(),
-	}
-	if err := loader.LoadFromCommit(ctx, branchCtx.State.GetCommit()); err != nil {
-		return err
-	}
-
 	// this starts the watchermanager goroutine for the watch to work
 	branchCtx.APIStore.Start(ctx)
 	return nil
@@ -60,12 +43,4 @@ func (r *NotCheckedOut) DeActivate(_ context.Context, branchCtx *BranchCtx) erro
 	// this stops the watchermanager goroutine
 	branchCtx.APIStore.Stop()
 	return nil
-}
-
-func (r *NotCheckedOut) GetCommit() *object.Commit {
-	return r.Commit
-}
-
-func (r *NotCheckedOut) LoadData(_ context.Context, branchCtx *BranchCtx) error {
-	return fmt.Errorf("loading data in a non checkedout branch %s is not supported", branchCtx.Branch)
 }

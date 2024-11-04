@@ -21,7 +21,6 @@ import (
 	"errors"
 	"fmt"
 	"path/filepath"
-	"strings"
 
 	"github.com/go-git/go-git/v5/plumbing/object"
 	"github.com/henderiw/store"
@@ -30,6 +29,7 @@ import (
 	"github.com/kform-dev/choreo/pkg/client/go/resourceclient"
 	"github.com/kform-dev/choreo/pkg/repository"
 	"github.com/kform-dev/choreo/pkg/repository/repogit"
+	"github.com/kform-dev/choreo/pkg/server/choreo/instance"
 	uobject "github.com/kform-dev/choreo/pkg/util/object"
 	"github.com/kform-dev/kform/pkg/fsys"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -39,6 +39,7 @@ import (
 
 // UpstreamLoader
 type UpstreamLoader struct {
+	Parent     instance.ChoreoInstance
 	Cfg        *genericclioptions.ChoreoConfig
 	Client     resourceclient.Client
 	Branch     string
@@ -48,7 +49,7 @@ type UpstreamLoader struct {
 	CallbackFn UpstreamCallBackFn
 }
 
-type UpstreamCallBackFn func(ctx context.Context, repo repository.Repository, pathInRepo string, cfg *genericclioptions.ChoreoConfig, commit *object.Commit, annotationVal string) error
+type UpstreamCallBackFn func(ctx context.Context, parentName string, repo repository.Repository, upstreamRef *choreov1alpha1.UpstreamRef, cfg *genericclioptions.ChoreoConfig, commit *object.Commit, annotationVal string) error
 
 func (r *UpstreamLoader) Load(ctx context.Context) error {
 	gvks := []schema.GroupVersionKind{
@@ -66,18 +67,18 @@ func (r *UpstreamLoader) Load(ctx context.Context) error {
 		return err
 	}
 
-	var errm error
+	var errs error
 	datastore.List(func(k store.Key, rn *yaml.RNode) {
 		upstreamRef := &choreov1alpha1.UpstreamRef{}
 		if err := syaml.Unmarshal([]byte(rn.MustString()), upstreamRef); err != nil {
-			errm = errors.Join(errm, fmt.Errorf("invalid upstreamref %s, err: %v", k.Name, err))
+			errs = errors.Join(errs, fmt.Errorf("invalid upstreamref %s, err: %v", k.Name, err))
 			return
 		}
 		// upload the upstream to the apiserver
 		//r.NewChoreoRef.Insert(k.Name)
 		obj, err := uobject.GetUnstructructered(upstreamRef)
 		if err != nil {
-			errm = errors.Join(errm, fmt.Errorf("cannot unmarshal %s, err: %v", k.Name, err))
+			errs = errors.Join(errs, fmt.Errorf("cannot unmarshal %s, err: %v", k.Name, err))
 			return
 		}
 
@@ -86,26 +87,30 @@ func (r *UpstreamLoader) Load(ctx context.Context) error {
 			Branch:       r.Branch,
 			FieldManager: ManagedFieldManagerInput,
 		}); err != nil {
-			errm = errors.Join(errm, fmt.Errorf("cannot apply upstream ref %s, err: %v", k.Name, err))
+			errs = errors.Join(errs, fmt.Errorf("cannot apply upstream ref %s, err: %v", k.Name, err))
 			return
 		}
 
-		url := upstreamRef.Spec.URL
-		replace := strings.NewReplacer("/", "-", ":", "-")
-		childRepoPath := filepath.Join(r.TempDir, replace.Replace(url))
-
+		childRepoPath := filepath.Join(r.TempDir, upstreamRef.GetURLPath())
 		refName := upstreamRef.GetPlumbingReference()
+		url := upstreamRef.Spec.URL
 
 		repo, commit, err := repogit.NewUpstreamRepo(ctx, childRepoPath, url, refName)
 		if err != nil {
-			errm = errors.Join(errm, fmt.Errorf("cannot open repo %s, err: %v", url, err))
+			errs = errors.Join(errs, fmt.Errorf("cannot open repo %s, err: %v", url, err))
 			return
 		}
 
-		if err := r.CallbackFn(ctx, repo, upstreamRef.GetPathInRepo(), r.Cfg, commit, upstreamRef.LoaderAnnotation().String()); err != nil {
-			errm = errors.Join(errm, fmt.Errorf("callback failed for %s from repo %s, err: %v", refName, url, err))
+		childInstance, err := instance.NewChildChoreoInstance(ctx, repo, upstreamRef, r.Cfg, commit, upstreamRef.LoaderAnnotation().String())
+		if err != nil {
+			errs = errors.Join(errs, fmt.Errorf("cannot create child choreo instance for %s from repo %s, err: %v", refName, url, err))
+			return
+		}
+
+		if err := r.Parent.AddChildChoreoInstance(childInstance); err != nil {
+			errs = errors.Join(errs, err)
 			return
 		}
 	})
-	return errm
+	return errs
 }

@@ -49,31 +49,16 @@ type BranchCtx struct {
 	State    State
 	Branch   string
 	APIStore *api.APIStore
-	//APIResourceStore *api.APIResourceStore
-	//Reconciler       Reconciler
 }
 
 func (r *BranchStore) Update(ctx context.Context, branches []*branchpb.BranchObject) error {
 	var errm error
 	for _, branchObj := range branches {
 		var newState State
-		newState = &CheckedOut{
-			Choreo:               r.choreo,
-			Client:               r.choreo.client,
-			ChildChoreoInstances: []ChoreoInstance{},
-		}
+		newState = &CheckedOut{}
 
 		if !branchObj.CheckedOut {
-			commit, err := r.choreo.status.Get().RootChoreoInstance.GetRepo().GetBranchCommit(branchObj.Name)
-			if err != nil {
-				errm = errors.Join(errm, err)
-				continue
-			}
-			newState = &NotCheckedOut{
-				Commit: commit,
-				Choreo: r.choreo,
-				Client: r.choreo.client,
-			}
+			newState = &NotCheckedOut{}
 		}
 
 		if err := r.update(ctx, branchObj.Name, newState); err != nil {
@@ -100,7 +85,7 @@ func (r *BranchStore) update(ctx context.Context, branch string, newState State)
 
 	// import the internal apis for storage purpose
 	apiStore := api.NewAPIStore()
-	apiStore.Import(r.choreo.status.Get().RootChoreoInstance.GetAPIStore())
+	apiStore.Import(r.choreo.status.Get().RootChoreoInstance.GetInternalAPIStore())
 
 	newBranchCtx := &BranchCtx{
 		State:    newState,
@@ -179,13 +164,15 @@ func (r *BranchStore) GetCheckedOut() (*BranchCtx, error) {
 	return bctx, nil
 }
 
-func (r *BranchStore) LoadData(ctx context.Context, branch string) error {
+/*
+func (r *BranchStore) Load(ctx context.Context, branch string) error {
 	bctx, err := r.store.Get(store.ToKey(branch))
 	if err != nil {
 		return err
 	}
-	return bctx.State.LoadData(ctx, bctx)
+	return bctx.State.Load(ctx, bctx)
 }
+*/
 
 func (r *BranchStore) WatchBranches(ctx context.Context, opts ...store.ListOption) (watch.WatchInterface[*BranchCtx], error) {
 	return r.store.Watch(ctx, opts...)
@@ -201,4 +188,8 @@ func (r *BranchStore) WatchAPIResources(ctx context.Context, opts ...resourcecli
 	}
 
 	return branchCtx.APIStore.Watch(ctx, &store.ListOptions{})
+}
+
+func (r *BranchStore) UpdateBranchCtx(branchCtx *BranchCtx) error {
+	return r.store.Apply(store.ToKey(branchCtx.Branch), branchCtx)
 }

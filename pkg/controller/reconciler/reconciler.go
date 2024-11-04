@@ -34,7 +34,6 @@ import (
 	"github.com/kform-dev/choreo/pkg/proto/runnerpb"
 	"github.com/kform-dev/choreo/pkg/server/selector"
 	"google.golang.org/protobuf/types/known/timestamppb"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/uuid"
@@ -51,8 +50,8 @@ func newReconciler(
 	client resourceclient.Client,
 	informerFactory informers.InformerFactory,
 	reconcilerConfig *choreov1alpha1.Reconciler,
-	libs *unstructured.UnstructuredList,
-	resultCh chan *runnerpb.Result,
+	libraries []*choreov1alpha1.Library,
+	resultCh chan *runnerpb.ReconcileResult,
 	branchName string,
 ) Reconciler {
 	r := &reconciler{
@@ -67,7 +66,7 @@ func newReconciler(
 	r.addEventHandlerToInformerFactory(reconcilerConfig.DeepCopy(), informerFactory)
 
 	var err error
-	r.typedReconcilerFn, err = getTypeReconcilerFn(reconcilerConfig, libs, client, branchName)
+	r.typedReconcilerFn, err = getTypeReconcilerFn(reconcilerConfig, libraries, client, branchName)
 	if err != nil {
 		panic(err)
 	}
@@ -83,7 +82,7 @@ type reconciler struct {
 	maxConcurrentReconciles int
 	typedReconcilerFn       reconcile.TypedReconcilerFn
 	client                  resourceclient.Client
-	resultCh                chan *runnerpb.Result
+	resultCh                chan *runnerpb.ReconcileResult
 	branchName              string
 
 	// Reconciler is a function that can be called at any time with the Name / Namespace of an object and
@@ -240,7 +239,7 @@ func (r *reconciler) reconcileHandler(ctx context.Context, req types.NamespacedN
 	log := log.FromContext(ctx)
 	reconcileID := uuid.NewUUID()
 
-	result := &runnerpb.Result{
+	result := &runnerpb.ReconcileResult{
 		ReconcilerName: r.name,
 		ReconcilerUID:  string(reconcileID),
 		EventTime:      timestamppb.New(time.Now()),
@@ -304,13 +303,13 @@ func (r *reconciler) reconcileHandler(ctx context.Context, req types.NamespacedN
 	}
 }
 
-func getTypeReconcilerFn(reconcilerConfig *choreov1alpha1.Reconciler, libs *unstructured.UnstructuredList, client resourceclient.Client, branch string) (reconcile.TypedReconcilerFn, error) {
+func getTypeReconcilerFn(reconcilerConfig *choreov1alpha1.Reconciler, libraries []*choreov1alpha1.Library, client resourceclient.Client, branch string) (reconcile.TypedReconcilerFn, error) {
 	if reconcilerConfig.Spec.Type == nil {
 		return nil, fmt.Errorf("reconcilerTypenot specified for %s", reconcilerConfig.GetName())
 	}
 	switch *reconcilerConfig.Spec.Type {
 	case choreov1alpha1.SoftwardTechnologyType_Starlark:
-		return starlark.NewReconcilerFn(client, reconcilerConfig, libs, branch), nil
+		return starlark.NewReconcilerFn(client, reconcilerConfig, libraries, branch), nil
 	case choreov1alpha1.SoftwardTechnologyType_GoTemplate:
 		return gotemplate.NewReconcilerFn(client, reconcilerConfig, branch), nil
 	case choreov1alpha1.SoftwardTechnologyType_JinjaTemplate:
