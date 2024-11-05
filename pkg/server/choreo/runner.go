@@ -203,7 +203,8 @@ func (r *run) Load(ctx context.Context, branchCtx *BranchCtx) error {
 
 	// load and update the global apis
 	for _, childChoreoInstance := range rootChoreoInstance.GetChildren() {
-		if childChoreoInstance.IsRootInstance() {
+		branchCtx.APIStore.Import(childChoreoInstance.GetAPIs())
+		for _, childChoreoInstance := range childChoreoInstance.GetChildren() {
 			branchCtx.APIStore.Import(childChoreoInstance.GetAPIs())
 		}
 	}
@@ -213,6 +214,11 @@ func (r *run) Load(ctx context.Context, branchCtx *BranchCtx) error {
 		return err
 	}
 	apiResources := branchCtx.APIStore.GetAPIResources()
+	/*
+		for _, apiResource := range apiResources {
+			fmt.Println("apiResource", apiResource.Kind)
+		}
+	*/
 
 	for _, childChoreoInstance := range rootChoreoInstance.GetChildren() {
 		if childChoreoInstance.IsRootInstance() {
@@ -253,8 +259,8 @@ func (r *run) Load(ctx context.Context, branchCtx *BranchCtx) error {
 			errm = errors.Join(errm, err)
 		}
 	}
-
 	return errm
+
 }
 
 func (r *run) loadUpstreamRefs(ctx context.Context, branchCtx *BranchCtx, choreoInstance instance.ChoreoInstance) error {
@@ -271,10 +277,14 @@ func (r *run) loadUpstreamRefs(ctx context.Context, branchCtx *BranchCtx, choreo
 	if err := upstreamloader.Load(ctx); err != nil {
 		return err
 	}
+
+	var errs error
 	for _, choreoinstance := range choreoInstance.GetChildren() {
-		r.loadUpstreamRefs(ctx, branchCtx, choreoinstance)
+		if err := r.loadUpstreamRefs(ctx, branchCtx, choreoinstance); err != nil {
+			errs = errors.Join(errs, err)
+		}
 	}
-	return nil
+	return errs
 }
 
 func (r *run) loadAPIs(ctx context.Context, branchCtx *BranchCtx, choreoInstance instance.ChoreoInstance, apiStore *api.APIStore) error {
@@ -361,6 +371,11 @@ func (r *run) loadReconcilers(ctx context.Context, branchCtx *BranchCtx, choreoI
 func (r *run) loadData(ctx context.Context, branchCtx *BranchCtx, choreoInstance instance.ChoreoInstance, gvks []schema.GroupVersionKind) error {
 	rootChoreoInstance := r.choreo.GetRootChoreoInstance()
 
+	annotation := choreov1alpha1.FileLoaderAnnotation.String()
+	if upstreamRef := choreoInstance.GetUpstreamRef(); upstreamRef != nil {
+		annotation = upstreamRef.LoaderAnnotation().String()
+	}
+
 	dataloader := &loader.DataLoader{
 		Cfg:        r.choreo.GetConfig(),
 		Client:     r.choreo.GetClient(),
@@ -370,6 +385,7 @@ func (r *run) loadData(ctx context.Context, branchCtx *BranchCtx, choreoInstance
 		PathInRepo: choreoInstance.GetPathInRepo(),
 		//APIStore:       branchCtx.APIStore,
 		InternalAPISet: rootChoreoInstance.GetInternalAPIStore().GetExternalGVKSet(),
+		Annotation:     annotation,
 	}
 	return dataloader.Load(ctx)
 }

@@ -23,11 +23,16 @@ import (
 )
 
 func (r *UpstreamRef) LoaderAnnotation() LoaderAnnotation {
-	return LoaderAnnotation{
+	a := LoaderAnnotation{
 		Kind: "Upstream",
 		URL:  r.Spec.URL,
 		Ref:  r.Spec.Ref.Name,
 	}
+	if r.Spec.Directory == nil {
+		return a
+	}
+	a.Directory = *r.Spec.Directory
+	return a
 }
 
 func (r *UpstreamRef) GetPlumbingReference() string {

@@ -231,6 +231,9 @@ func printReconcilerResourceResultSummary(reconcilerResourceOperations map[Recon
 		}
 		rows = append(rows, row)
 	}
+	sort.Slice(rows, func(i, j int) bool {
+		return strings.ToLower(fmt.Sprintf("%q.%q", rows[i][0], rows[i][1])) < strings.ToLower(fmt.Sprintf("%q.%q", rows[j][0], rows[j][1]))
+	})
 	printSummary("Reconciler Resource Operations Summary", []string{"Reconciler", "resource", "Start", "Stop", "Requeue", "Error"}, rows)
 }
 
@@ -246,6 +249,9 @@ func printReconcilerResultSummary(resourceOperations map[string]Operations) {
 		}
 		rows = append(rows, row)
 	}
+	sort.Slice(rows, func(i, j int) bool {
+		return strings.ToLower(rows[i][0]) < strings.ToLower(rows[j][0])
+	})
 	printSummary("Reconciler Operations Summary", []string{"Reconciler", "Start", "Stop", "Requeue", "Error"}, rows)
 }
 

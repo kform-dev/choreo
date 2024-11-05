@@ -55,7 +55,6 @@ func (r *UpstreamLoader) Load(ctx context.Context) error {
 	gvks := []schema.GroupVersionKind{
 		choreov1alpha1.SchemeGroupVersion.WithKind(choreov1alpha1.UpstreamRefKind),
 	}
-
 	abspath := filepath.Join(r.RepoPath, r.PathInRepo, *r.Cfg.ServerFlags.RefsPath)
 
 	if !fsys.PathExists(abspath) {
@@ -106,7 +105,6 @@ func (r *UpstreamLoader) Load(ctx context.Context) error {
 			errs = errors.Join(errs, fmt.Errorf("cannot create child choreo instance for %s from repo %s, err: %v", refName, url, err))
 			return
 		}
-
 		if err := r.Parent.AddChildChoreoInstance(childInstance); err != nil {
 			errs = errors.Join(errs, err)
 			return

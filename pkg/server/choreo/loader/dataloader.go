@@ -41,6 +41,7 @@ type DataLoader struct {
 	// used to clean reasources
 	//APIStore       *api.APIStore
 	InternalAPISet sets.Set[schema.GroupVersionKind]
+	Annotation     string
 }
 
 func (r *DataLoader) Load(ctx context.Context) error {

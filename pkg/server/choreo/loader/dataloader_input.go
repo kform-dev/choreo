@@ -45,6 +45,7 @@ func (r *DataLoader) loadInput(ctx context.Context) error {
 		//APIStore:       r.APIStore,
 		GVKs:           r.GVKs,
 		InternalAPISet: r.InternalAPISet,
+		Annotation:     r.Annotation,
 	}
 	if err := loader.Load(ctx, r.getInputReader(r.RepoPth, r.PathInRepo, r.Cfg)); err != nil {
 		return err
@@ -73,6 +74,7 @@ type InputLoader struct {
 	//APIStore       *api.APIStore
 	GVKs           []schema.GroupVersionKind
 	InternalAPISet sets.Set[schema.GroupVersionKind]
+	Annotation     string
 }
 
 func (r *InputLoader) Load(ctx context.Context, reader pkgio.Reader[*yaml.RNode]) error {
@@ -91,7 +93,7 @@ func (r *InputLoader) Load(ctx context.Context, reader pkgio.Reader[*yaml.RNode]
 		if len(a) == 0 {
 			a = map[string]string{}
 		}
-		a[choreov1alpha1.ChoreoLoaderOriginKey] = choreov1alpha1.FileLoaderAnnotation.String()
+		a[choreov1alpha1.ChoreoLoaderOriginKey] = r.Annotation
 		rn.SetAnnotations(a)
 
 		object := map[string]any{}
@@ -139,7 +141,7 @@ func (r *InputLoader) Clean(ctx context.Context) error {
 
 		for _, u := range ul.Items {
 			if len(u.GetAnnotations()) != 0 &&
-				u.GetAnnotations()[choreov1alpha1.ChoreoLoaderOriginKey] == choreov1alpha1.FileLoaderAnnotation.String() &&
+				u.GetAnnotations()[choreov1alpha1.ChoreoLoaderOriginKey] == r.Annotation &&
 				object.IsManagedBy(u.GetManagedFields(), ManagedFieldManagerInput) {
 				if !r.NewInput.Has(corev1.ObjectReference{
 					APIVersion: u.GetAPIVersion(),
