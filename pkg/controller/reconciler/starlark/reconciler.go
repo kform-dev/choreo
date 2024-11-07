@@ -190,7 +190,12 @@ func (r *reconciler) handleResult(ctx context.Context, oldu *unstructured.Unstru
 	}
 	// this is the happy path, we apply the child resources to the api
 	if err := r.resources.Apply(ctx); err != nil {
-		return reconcile.Result{}, fmt.Errorf("starlark reconciler %s apply resources failed, err: %s", r.name, err.Error())
+		log.Error("apply resources failed requeue", "reconciler", r.name, "err", err)
+		return reconcile.Result{
+			Requeue:      true,
+			RequeueAfter: requeue,
+			Message:      fmt.Errorf("starlark reconciler %s apply resources failed, err: %s", r.name, err.Error()).Error(),
+		}, nil
 	}
 	if uerr := r.updateForResourceStatus(ctx, newu, oldu, ""); uerr != nil {
 		return reconcile.Result{}, fmt.Errorf("starlark reconciler %s cannot update resource: err: %v", r.name, uerr)

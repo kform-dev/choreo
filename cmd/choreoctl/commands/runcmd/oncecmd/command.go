@@ -20,7 +20,7 @@ import (
 	"context"
 	"fmt"
 	"sort"
-	"strings"
+	"time"
 
 	"github.com/kform-dev/choreo/pkg/cli/genericclioptions"
 	"github.com/kform-dev/choreo/pkg/client/go/runnerclient"
@@ -110,37 +110,112 @@ func (r *OnceOptions) Run(ctx context.Context, args []string) error {
 			fmt.Println("execution failed")
 			for _, result := range rsp.Results {
 				if !result.Success {
-					fmt.Println("  reaon", result.TaskId, result.Message)
+					fmt.Println("  reason", "task", result.TaskId, "message", result.Message)
 				}
-
 			}
 			return nil
 		}
-		for _, result := range rsp.Results {
-			if len(result.Results) > 0 {
-				fmt.Println("execution success, time(msec)", result.Results[len(result.Results)-1].EventTime.AsTime().Sub(result.Results[0].EventTime.AsTime()))
+		/*
+			for _, result := range rsp.Results {
+				if len(result.Results) > 0 {
+					fmt.Println("execution success, time(msec)", result.Results[len(result.Results)-1].EventTime.AsTime().Sub(result.Results[0].EventTime.AsTime()))
+				}
+				switch r.ResultOutputFormat {
+				case "reconciler":
+					printReconcilerResultSummary(calculateReconcilerSummary(result))
+				case "resource":
+					printReconcilerResourceResultSummary(calculateReconcilerResourceSummary(result))
+				case "raw":
+					printResultRaw(result)
+				}
 			}
-			switch r.ResultOutputFormat {
-			case "reconciler":
-				printReconcilerResultSummary(calculateReconcilerSummary(result))
-			case "resource":
-				printReconcilerResourceResultSummary(calculateReconcilerResourceSummary(result))
-			case "raw":
-				printResultRaw(result)
-			}
-		}
+		*/
+		printResults(rsp, r.ResultOutputFormat)
 
 	}
 	return nil
 }
 
-func getReconcilers(rsp *runnerpb.Once_Result) []string {
-	reconcilers := []string{}
-	for _, result := range rsp.Results {
-		reconcilers = append(reconcilers, result.ReconcilerName)
+func printResults(rsp *runnerpb.Once_Response, resultOutputFormat string) error {
+	// Pre-calculate maximum widths for all results
+	maxWidths := map[string]int{
+		"EventTime":  len("EventTime"),
+		"Reconciler": len("Reconciler"),
+		"Resource":   len("Resource"),
+		"Operation":  len("Operation"),
+		"Message":    len("Message"),
 	}
-	sort.Strings(reconcilers)
-	return reconcilers
+
+	// Accumulate rows for each type of summary
+	reconcilerRows := [][]string{}
+	resourceRows := [][]string{}
+	rawRows := [][]string{}
+
+	for _, result := range rsp.Results {
+		if len(result.Results) > 0 {
+			fmt.Println("execution success, time(msec)", result.Results[len(result.Results)-1].EventTime.AsTime().Sub(result.Results[0].EventTime.AsTime()))
+		}
+
+		switch resultOutputFormat {
+		case "reconciler":
+			reconcilerSummary := calculateReconcilerSummary(result)
+			for name, ops := range reconcilerSummary {
+				row := []string{name, fmt.Sprint(ops[runnerpb.Operation_START]), fmt.Sprint(ops[runnerpb.Operation_STOP]), fmt.Sprint(ops[runnerpb.Operation_REQUEUE]), fmt.Sprint(ops[runnerpb.Operation_ERROR])}
+				reconcilerRows = append(reconcilerRows, row)
+				updateMaxWidths(row, maxWidths)
+			}
+		case "resource":
+			resourceSummary := calculateReconcilerResourceSummary(result)
+			for res, ops := range resourceSummary {
+				row := []string{res.Reconcilername, res.ResourceNameString(), fmt.Sprint(ops[runnerpb.Operation_START]), fmt.Sprint(ops[runnerpb.Operation_STOP]), fmt.Sprint(ops[runnerpb.Operation_REQUEUE]), fmt.Sprint(ops[runnerpb.Operation_ERROR])}
+				resourceRows = append(resourceRows, row)
+				updateMaxWidths(row, maxWidths)
+			}
+		case "raw":
+			for _, res := range result.Results {
+				row := []string{res.EventTime.AsTime().Format(time.RFC3339), res.ReconcilerName, getReconcilerResource(res).ResourceNameString(), res.Operation.String(), res.Message}
+				rawRows = append(rawRows, row)
+				updateMaxWidths(row, maxWidths)
+			}
+		}
+	}
+
+	// Print summaries based on the format
+	if resultOutputFormat == "reconciler" {
+		printSummary("Reconciler Summary", maxWidths, reconcilerRows)
+	} else if resultOutputFormat == "resource" {
+		printSummary("Resource Summary", maxWidths, resourceRows)
+	} else if resultOutputFormat == "raw" {
+		printSummary("Raw Events Summary", maxWidths, rawRows)
+	}
+
+	return nil
+}
+
+// Updates the maximum widths based on the content of each row
+func updateMaxWidths(row []string, maxWidths map[string]int) {
+	keys := []string{"EventTime", "Reconciler", "Resource", "Operation", "Message"}
+	for i, value := range row {
+		if len(value) > maxWidths[keys[i]] {
+			maxWidths[keys[i]] = len(value)
+		}
+	}
+}
+
+// Prints summary with headers adjusted to maximum widths
+func printSummary(title string, maxWidths map[string]int, rows [][]string) {
+	fmt.Println(title)
+	headers := []string{"EventTime", "Reconciler", "Resource", "Operation", "Message"}
+	headerFmt := ""
+	for _, h := range headers {
+		headerFmt += fmt.Sprintf("%%-%ds ", maxWidths[h])
+	}
+	headerFmt += "\n"
+
+	fmt.Printf(headerFmt, interfaceSlice(headers)...)
+	for _, row := range rows {
+		fmt.Printf(headerFmt, interfaceSlice(row)...)
+	}
 }
 
 type Operations map[runnerpb.Operation]int
@@ -166,6 +241,14 @@ func calculateReconcilerSummary(rsp *runnerpb.Once_Result) map[string]Operations
 	return reconcilerOperations
 }
 
+type ReconcilerResource struct {
+	Reconcilername string
+	Group          string
+	Kind           string
+	Namespace      string
+	Name           string
+}
+
 func getReconcilerResource(result *runnerpb.ReconcileResult) ReconcilerResource {
 	return ReconcilerResource{
 		Reconcilername: result.ReconcilerName,
@@ -176,12 +259,13 @@ func getReconcilerResource(result *runnerpb.ReconcileResult) ReconcilerResource 
 	}
 }
 
-type ReconcilerResource struct {
-	Reconcilername string
-	Group          string
-	Kind           string
-	Namespace      string
-	Name           string
+func getReconcilers(rsp *runnerpb.Once_Result) []string {
+	reconcilers := []string{}
+	for _, result := range rsp.Results {
+		reconcilers = append(reconcilers, result.ReconcilerName)
+	}
+	sort.Strings(reconcilers)
+	return reconcilers
 }
 
 func (r ReconcilerResource) ResourceNameString() string {
@@ -200,6 +284,19 @@ func calculateReconcilerResourceSummary(rsp *runnerpb.Once_Result) map[Reconcile
 	}
 	return reconcilerOperations
 }
+
+// Converts a slice of strings to a slice of interfaces for formatting purposes
+func interfaceSlice(slice []string) []interface{} {
+	result := make([]interface{}, len(slice))
+	for i, v := range slice {
+		result[i] = v
+	}
+	return result
+}
+
+/*
+
+
 
 func printResultRaw(rsp *runnerpb.Once_Result) {
 	timeFormat := "2006-01-02 15:04:05.000000 UTC"
@@ -290,11 +387,4 @@ func printSummary(title string, headers []string, rows [][]string) {
 	}
 }
 
-// Converts a slice of strings to a slice of interfaces for formatting purposes
-func interfaceSlice(slice []string) []interface{} {
-	result := make([]interface{}, len(slice))
-	for i, v := range slice {
-		result[i] = v
-	}
-	return result
-}
+*/

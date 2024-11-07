@@ -98,11 +98,11 @@ func (r strategy) ValidateCreate(ctx context.Context, obj runtime.Unstructured) 
 	return errs
 }
 
-func (r strategy) InvokeUpdate(ctx context.Context, obj runtime.Object, recursion bool) (runtime.Object, error) {
+func (r strategy) InvokeUpdate(ctx context.Context, obj, old runtime.Object, recursion bool) (runtime.Object, runtime.Object, error) {
 	if r.invoker != nil {
-		return r.invoker.InvokeUpdate(ctx, obj, recursion)
+		return r.invoker.InvokeUpdate(ctx, obj, old, recursion)
 	}
-	return obj, nil
+	return obj, old, nil
 }
 
 func (r strategy) ValidateUpdate(ctx context.Context, obj, old runtime.Unstructured) field.ErrorList {

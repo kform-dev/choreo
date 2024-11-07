@@ -37,8 +37,10 @@ func NewChoreoGenericBackendstorage(
 	claimObjectFn func(runtime.Unstructured) (backend.ClaimObject, error),
 ) genericbe.BackendStorage {
 	return &kuidgenericbe{
-		entryStorage: entryStorage,
-		claimStorage: claimStorage,
+		entryStorage:  entryStorage,
+		claimStorage:  claimStorage,
+		claimObjectFn: claimObjectFn,
+		entryObjectFn: entryObjectFn,
 	}
 }
 
@@ -68,7 +70,8 @@ func (r *kuidgenericbe) ListEntries(ctx context.Context, k store.Key) ([]backend
 		return nil, err
 	}
 	entryList := make([]backend.EntryObject, 0)
-	if ul.IsList() {
+	items, ok := ul.UnstructuredContent()["items"]
+	if ok && len(items.([]interface{})) > 0 {
 		ul.EachListItem(func(obj runtime.Object) error {
 			ru, ok := obj.(runtime.Unstructured)
 			if !ok {
@@ -102,6 +105,7 @@ func (r *kuidgenericbe) applyEntry(ctx context.Context, obj backend.EntryObject)
 	newu := &unstructured.Unstructured{
 		Object: newuobj,
 	}
+	newu.SetAPIVersion(obj.GetChoreoAPIVersion())
 	if _, err := r.entryStorage.Apply(ctx, newu, &rest.ApplyOptions{FieldManager: "backend"}); err != nil {
 		log.Error("cannot apply entry", "error", err)
 		return err
@@ -137,12 +141,14 @@ func (r *kuidgenericbe) ListClaims(ctx context.Context, k store.Key) (map[string
 		return nil, err
 	}
 	claimMap := make(map[string]backend.ClaimObject)
-	if ul.IsList() {
+	items, ok := ul.UnstructuredContent()["items"]
+	if ok && len(items.([]interface{})) > 0 {
 		ul.EachListItem(func(obj runtime.Object) error {
 			ru, ok := obj.(runtime.Unstructured)
 			if !ok {
 				return fmt.Errorf("not unstructured")
 			}
+
 			claimObj, err := r.claimObjectFn(ru)
 			if err != nil {
 				return fmt.Errorf("not claim object")

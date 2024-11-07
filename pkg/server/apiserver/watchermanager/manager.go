@@ -98,7 +98,7 @@ func (r *watcherManager) Start(ctx context.Context) {
 		case <-ctx.Done():
 			return
 		case event := <-r.watchCh:
-			log.Debug("watchermanager event received", "eventType", event.Type, "watchers", r.watchers.len())
+			log.Debug("watchermanager event received", "eventType", event.Type, "watchers", r.watchers.len(), "kind", event.Object.GetObjectKind().GroupVersionKind().Kind)
 			var wg sync.WaitGroup
 			for _, w := range r.watchers.list() {
 				w := w

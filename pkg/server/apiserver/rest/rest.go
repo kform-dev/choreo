@@ -53,7 +53,7 @@ type CreateStrategy interface {
 type UpdateStrategy interface {
 	ValidateUpdate(ctx context.Context, obj, old runtime.Unstructured) field.ErrorList
 	// called when async procedure is implemented by the storage layer
-	InvokeUpdate(ctx context.Context, obj runtime.Object, recursion bool) (runtime.Object, error)
+	InvokeUpdate(ctx context.Context, obj, old runtime.Object, recursion bool) (runtime.Object, runtime.Object, error)
 }
 
 type DeleteStrategy interface {

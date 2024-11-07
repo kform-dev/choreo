@@ -45,9 +45,8 @@ func (r *For) EventHandler(ctx context.Context, _ resourcepb.Watch_EventType, ob
 	log := log.FromContext(ctx)
 
 	if r.Selector != nil {
-
 		if !r.Selector.Matches(usrc.Object) {
-			log.Debug("for reconcile event filtered", "src", obj.GetObjectKind().GroupVersionKind().String(), "name", usrc.GetName())
+			log.Debug("for reconcile event filtered", "reconciler name", r.Name, "src", obj.GetObjectKind().GroupVersionKind().String(), "resource name", usrc.GetName())
 			return true
 		}
 	}
@@ -55,7 +54,7 @@ func (r *For) EventHandler(ctx context.Context, _ resourcepb.Watch_EventType, ob
 		Name:      usrc.GetName(),
 		Namespace: usrc.GetNamespace(),
 	}
-	log.Debug("watch reconcile event", "src", obj.GetObjectKind().GroupVersionKind().String(), "name", usrc.GetName())
+	log.Debug("watch reconcile event", "reconciler name", r.Name, "src", obj.GetObjectKind().GroupVersionKind().String(), "resource name", usrc.GetName())
 	r.Queue.Add(req)
 	return true
 }

@@ -79,6 +79,9 @@ func starlarkValueToInterface(value starlark.Value) (interface{}, error) {
 	case starlark.NoneType:
 		return "", nil
 	default:
+		if value == nil {
+			return nil, fmt.Errorf("unsupported starlark type: nil")
+		}
 		return nil, fmt.Errorf("unsupported starlark type: %s", value.Type())
 	}
 }
