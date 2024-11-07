@@ -209,6 +209,9 @@ func (r *reconciler) updateForResourceStatus(ctx context.Context, newu, u *unstr
 	if newStatus, ok := newu.Object["status"]; ok {
 		u.Object["status"] = newStatus
 	}
+	if newSpec, ok := newu.Object["spec"]; ok {
+		u.Object["spec"] = newSpec
+	}
 	object.PruneUnmanagedFields(u, r.name)
 	object.SetFinalizer(u, r.name)
 	if r.conditionType != nil {
