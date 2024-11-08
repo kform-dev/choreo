@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package loader
+package apiloader
 
 import (
 	"context"
@@ -54,7 +54,9 @@ func (r *APILoaderFile2APIStoreAndAPI) LoadFromCommit(ctx context.Context, commi
 	//log := log.FromContext(ctx)
 	var errm error
 	if err := r.loadAPIs(ctx, crdloader.GetCommitFileAPICRDReader(
-		filepath.Join(r.PathInRepo, *r.Cfg.ServerFlags.CRDPath), commit)); err != nil {
+		filepath.Join(r.PathInRepo, *r.Cfg.ServerFlags.CRDPath),
+		commit,
+	)); err != nil {
 		errm = errors.Join(errm, fmt.Errorf("cannot load api file in repo, err: %v", err))
 	}
 	return errm
@@ -62,23 +64,6 @@ func (r *APILoaderFile2APIStoreAndAPI) LoadFromCommit(ctx context.Context, commi
 
 func (r *APILoaderFile2APIStoreAndAPI) Load(ctx context.Context) error {
 	var errm error
-	/*
-		embeddedAnnotations := map[string]string{
-			choreov1alpha1.ChoreoAPIEmbeddedKey: "true",
-		}
-
-		if err := r.loadAPIs(ctx, crdloader.GetAPIExtReader(), embeddedAnnotations); err != nil {
-			errm = errors.Join(errm, fmt.Errorf("cannot load api extension apis, err: %v", err))
-		}
-		if err := r.loadAPIs(ctx, crdloader.GetEmbeddedAPIReader(), embeddedAnnotations); err != nil {
-			errm = errors.Join(errm, fmt.Errorf("cannot load embedded apis, err: %v", err))
-		}
-		if r.Flags.InternalReconcilers != nil && *r.Flags.InternalReconcilers {
-			if err := r.loadAPIs(ctx, crdloader.GetInternalAPIReader(), embeddedAnnotations); err != nil {
-				errm = errors.Join(errm, fmt.Errorf("cannot load internal apis, err: %v", err))
-			}
-		}
-	*/
 
 	abspath := filepath.Join(r.RepoPath, r.PathInRepo, *r.Cfg.ServerFlags.CRDPath)
 	if err := r.loadAPIs(ctx, crdloader.GetFileAPICRDReader(abspath)); err != nil {

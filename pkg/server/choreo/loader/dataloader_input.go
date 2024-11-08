@@ -26,7 +26,6 @@ import (
 	"github.com/kform-dev/choreo/pkg/cli/genericclioptions"
 	"github.com/kform-dev/choreo/pkg/client/go/resourceclient"
 	"github.com/kform-dev/choreo/pkg/proto/resourcepb"
-	"github.com/kform-dev/choreo/pkg/server/api"
 	"github.com/kform-dev/choreo/pkg/util/object"
 	"github.com/kform-dev/kform/pkg/fsys"
 	"github.com/kform-dev/kform/pkg/pkgio"
@@ -40,11 +39,13 @@ import (
 
 func (r *DataLoader) loadInput(ctx context.Context) error {
 	loader := &InputLoader{
-		Client:         r.Client,
-		Branch:         r.Branch,
-		NewInput:       sets.New[corev1.ObjectReference](),
-		APIStore:       r.APIStore,
+		Client:   r.Client,
+		Branch:   r.Branch,
+		NewInput: sets.New[corev1.ObjectReference](),
+		//APIStore:       r.APIStore,
+		GVKs:           r.GVKs,
 		InternalAPISet: r.InternalAPISet,
+		Annotation:     r.Annotation,
 	}
 	if err := loader.Load(ctx, r.getInputReader(r.RepoPth, r.PathInRepo, r.Cfg)); err != nil {
 		return err
@@ -58,20 +59,22 @@ func (r *DataLoader) loadInput(ctx context.Context) error {
 
 func (r *DataLoader) getInputReader(repoPath, pathInRepo string, cfg *genericclioptions.ChoreoConfig) pkgio.Reader[*yaml.RNode] {
 	abspath := filepath.Join(repoPath, pathInRepo, *cfg.ServerFlags.InputPath)
-	gvks := []schema.GroupVersionKind{}
+	//gvks := []schema.GroupVersionKind{}
 
 	if !fsys.PathExists(abspath) {
 		return nil
 	}
-	return GetFSYAMLReader(abspath, gvks)
+	return GetFSYAMLReader(abspath, r.GVKs)
 }
 
 type InputLoader struct {
-	Client         resourceclient.Client
-	Branch         string
-	NewInput       sets.Set[corev1.ObjectReference]
-	APIStore       *api.APIStore
+	Client   resourceclient.Client
+	Branch   string
+	NewInput sets.Set[corev1.ObjectReference]
+	//APIStore       *api.APIStore
+	GVKs           []schema.GroupVersionKind
 	InternalAPISet sets.Set[schema.GroupVersionKind]
+	Annotation     string
 }
 
 func (r *InputLoader) Load(ctx context.Context, reader pkgio.Reader[*yaml.RNode]) error {
@@ -90,7 +93,7 @@ func (r *InputLoader) Load(ctx context.Context, reader pkgio.Reader[*yaml.RNode]
 		if len(a) == 0 {
 			a = map[string]string{}
 		}
-		a[choreov1alpha1.ChoreoLoaderOriginKey] = choreov1alpha1.FileLoaderAnnotation.String()
+		a[choreov1alpha1.ChoreoLoaderOriginKey] = r.Annotation
 		rn.SetAnnotations(a)
 
 		object := map[string]any{}
@@ -120,7 +123,7 @@ func (r *InputLoader) Load(ctx context.Context, reader pkgio.Reader[*yaml.RNode]
 
 func (r *InputLoader) Clean(ctx context.Context) error {
 	var errm error
-	for _, gvk := range r.APIStore.GetExternalGVKSet().UnsortedList() {
+	for _, gvk := range r.GVKs {
 		// dont look at internal apis
 		if r.InternalAPISet.Has(gvk) {
 			continue
@@ -138,7 +141,7 @@ func (r *InputLoader) Clean(ctx context.Context) error {
 
 		for _, u := range ul.Items {
 			if len(u.GetAnnotations()) != 0 &&
-				u.GetAnnotations()[choreov1alpha1.ChoreoLoaderOriginKey] == choreov1alpha1.FileLoaderAnnotation.String() &&
+				u.GetAnnotations()[choreov1alpha1.ChoreoLoaderOriginKey] == r.Annotation &&
 				object.IsManagedBy(u.GetManagedFields(), ManagedFieldManagerInput) {
 				if !r.NewInput.Has(corev1.ObjectReference{
 					APIVersion: u.GetAPIVersion(),
@@ -156,4 +159,15 @@ func (r *InputLoader) Clean(ctx context.Context) error {
 		}
 	}
 	return nil
+}
+
+func setAnnotations(u *unstructured.Unstructured, annotations map[string]string) {
+	a := u.GetAnnotations()
+	if len(a) == 0 {
+		a = map[string]string{}
+	}
+	for k, v := range annotations {
+		a[k] = v
+	}
+	u.SetAnnotations(a)
 }

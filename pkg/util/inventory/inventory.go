@@ -81,6 +81,7 @@ func (inv Inventory) Build(ctx context.Context, client resourceclient.Client, ap
 		ul := &unstructured.UnstructuredList{}
 		ul.SetAPIVersion(schema.GroupVersion{Group: apiResource.Group, Version: apiResource.Version}.String())
 		ul.SetKind(apiResource.Kind)
+
 		if err := client.List(ctx, ul, &resourceclient.ListOptions{
 			ExprSelector:      &resourcepb.ExpressionSelector{},
 			ShowManagedFields: o.ShowManagedField,
@@ -155,6 +156,7 @@ func (r Inventory) CollectGarbage() sets.Set[corev1.ObjectReference] {
 	g := newGarbageCollector()
 	for _, node := range r {
 		if node.Resource == nil {
+			fmt.Println("CollectGarbage", node.Resource)
 			g.collect(node)
 		}
 	}

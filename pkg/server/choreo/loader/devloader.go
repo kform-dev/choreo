@@ -17,32 +17,38 @@ limitations under the License.
 package loader
 
 import (
-	"context"
-	"errors"
-	"fmt"
-
+	choreov1alpha1 "github.com/kform-dev/choreo/apis/choreo/v1alpha1"
 	"github.com/kform-dev/choreo/pkg/cli/genericclioptions"
-	"github.com/kform-dev/kform/pkg/fsys"
 	//"k8s.io/apimachinery/pkg/util/sets"
 )
 
 type DevLoader struct {
-	Cfg  *genericclioptions.ChoreoConfig
-	Path string
+	Cfg         *genericclioptions.ChoreoConfig
+	RepoPath    string
+	PathInRepo  string
+	Libraries   []*choreov1alpha1.Library
+	Reconcilers []*choreov1alpha1.Reconciler
+	//DstPath string
 	//NewLibraries sets.Set[string] -> TBD if we need a cleaner
+	// Experiment to load libraries direct -> since now they are the same as apis
+	//Client resourceclient.Client
+	//Branch string
 }
 
+/*
 func (r *DevLoader) Load(ctx context.Context) error {
-	if err := fsys.EnsureDir(ctx, []string{r.Path, *r.Cfg.ServerFlags.InputPath}...); err != nil {
-		return err
-	}
+
+	//	if err := fsys.EnsureDir(ctx, []string{r.DstPath, *r.Cfg.ServerFlags.InputPath}...); err != nil {
+	//		return err
+	//	}
 	var errm error
 	if err := r.loadReconcilers(ctx); err != nil {
 		errm = errors.Join(errm, fmt.Errorf("cannot load reconcilers, err: %v", err))
 	}
-	if err := r.loadLibraries(ctx); err != nil {
+	if err := r.LoadLibraries(ctx); err != nil {
 		errm = errors.Join(errm, fmt.Errorf("cannot load libraries, err: %v", err))
 	}
 
 	return errm
 }
+*/

@@ -18,9 +18,6 @@ package loader
 
 import (
 	"context"
-	"errors"
-	"fmt"
-	"os"
 	"path/filepath"
 	"strings"
 
@@ -29,19 +26,19 @@ import (
 	"github.com/kform-dev/kform/pkg/fsys"
 	"github.com/kform-dev/kform/pkg/pkgio"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"sigs.k8s.io/yaml"
 )
 
 func (r *DevLoader) getLibraryReader() pkgio.Reader[[]byte] {
-	abspath := filepath.Join(r.Path, *r.Cfg.ServerFlags.LibraryPath)
+	//abspath := filepath.Join(r.Path, *r.Cfg.ServerFlags.LibraryPath)
+	abspath := filepath.Join(r.RepoPath, r.PathInRepo, *r.Cfg.ServerFlags.CRDPath)
 
 	if !fsys.PathExists(abspath) {
 		return nil
 	}
-	return GetFSReader(abspath)
+	return GetFSStarReader(abspath)
 }
 
-func (r *DevLoader) loadLibraries(ctx context.Context) error {
+func (r *DevLoader) LoadLibraries(ctx context.Context) error {
 	reader := r.getLibraryReader()
 	if reader == nil {
 		// reader nil, mean the path does not exist, whcich is ok
@@ -52,15 +49,18 @@ func (r *DevLoader) loadLibraries(ctx context.Context) error {
 		return err
 	}
 
-	var errm error
+	var errs error
 	datastore.List(func(k store.Key, b []byte) {
+
+		name := strings.ReplaceAll(k.Name, "_", ".")
+
 		library := &choreov1alpha1.Library{
 			TypeMeta: metav1.TypeMeta{
 				APIVersion: choreov1alpha1.SchemeGroupVersion.Identifier(),
 				Kind:       choreov1alpha1.LibraryKind,
 			},
 			ObjectMeta: metav1.ObjectMeta{
-				Name: k.Name,
+				Name: name,
 			},
 			Spec: choreov1alpha1.LibrarySpec{
 				Type: choreov1alpha1.SoftwardTechnologyType_Starlark,
@@ -72,27 +72,51 @@ func (r *DevLoader) loadLibraries(ctx context.Context) error {
 			choreov1alpha1.ChoreoLoaderOriginKey: choreov1alpha1.FileLoaderAnnotation.String(),
 		})
 
+		r.Libraries = append(r.Libraries, library)
+
 		// this is to see if we need to do cleanup
 		//r.NewLibraries.Insert(k.Name)
 
-		b, err := yaml.Marshal(library)
-		if err != nil {
-			errm = errors.Join(errm, fmt.Errorf("cannot marshal library %s, err: %v", k.Name, err))
-		}
+		/*
+			b, err := yaml.Marshal(library)
+			if err != nil {
+				errs = errors.Join(errs, fmt.Errorf("cannot marshal library %s, err: %v", k.Name, err))
+				return
+			}
 
-		fileName := filepath.Join(
-			r.Path,
-			*r.Cfg.ServerFlags.InputPath,
-			fmt.Sprintf("%s.%s.%s.yaml",
-				choreov1alpha1.SchemeGroupVersion.Group,
-				strings.ToLower(choreov1alpha1.LibraryKind),
-				k.Name,
-			))
-		if err := os.WriteFile(fileName, b, 0644); err != nil {
-			errm = errors.Join(errm, fmt.Errorf("cannot marshal library %s, err: %v", k.Name, err))
-		}
+			fileName := filepath.Join(
+				r.DstPath,
+				*r.Cfg.ServerFlags.InputPath,
+				fmt.Sprintf("%s.%s.%s.yaml",
+					choreov1alpha1.SchemeGroupVersion.Group,
+					strings.ToLower(choreov1alpha1.LibraryKind),
+					name,
+				))
+			if err := os.WriteFile(fileName, b, 0644); err != nil {
+				errs = errors.Join(errs, fmt.Errorf("cannot marshal library %s, err: %v", k.Name, err))
+			}
+		*/
+		/*
+
+			obj := map[string]any{}
+			if err := yaml.Unmarshal(b, &obj); err != nil {
+				errs = errors.Join(errs, fmt.Errorf("cannot marshal library %s, err: %v", k.Name, err))
+				return
+			}
+			u := &unstructured.Unstructured{
+				Object: obj,
+			}
+
+			if err := r.Client.Apply(ctx, u, &resourceclient.ApplyOptions{
+				Branch:       r.Branch,
+				FieldManager: ManagedFieldManagerInput,
+			}); err != nil {
+				errs = errors.Join(errs, err)
+				return
+			}
+		*/
 	})
-	return errm
+	return errs
 }
 
 // TBD if we need this

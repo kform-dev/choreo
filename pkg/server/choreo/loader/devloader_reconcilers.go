@@ -20,7 +20,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"os"
 	"path/filepath"
 	"strings"
 
@@ -33,15 +32,16 @@ import (
 )
 
 func (r *DevLoader) getReconcilerReader() pkgio.Reader[[]byte] {
-	abspath := filepath.Join(r.Path, *r.Cfg.ServerFlags.ReconcilerPath)
+	//abspath := filepath.Join(r.Path, *r.Cfg.ServerFlags.ReconcilerPath)
+	abspath := filepath.Join(r.RepoPath, r.PathInRepo, "reconcilers")
 
 	if !fsys.PathExists(abspath) {
 		return nil
 	}
-	return GetFSReader(abspath)
+	return GetFSReconcilerReader(abspath)
 }
 
-func (r *DevLoader) loadReconcilers(ctx context.Context) error {
+func (r *DevLoader) LoadReconcilers(ctx context.Context) error {
 	reader := r.getReconcilerReader()
 	if reader == nil {
 		// reader nil, mean the path does not exist, whcich is ok
@@ -51,111 +51,115 @@ func (r *DevLoader) loadReconcilers(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	// For starlark we have 2 files fro which the name before the extension match
-	// As such we keep a structure with the name, extension, byte
+
+	// The reconciler reader reads all the directories/files that match config.yaml
+	// convetion is that this file contains the directory where the reconcilers
+	// are located
 	reconcilers := map[string]*choreov1alpha1.Reconciler{}
-	var errm error
+	var errs error
 	datastore.List(func(k store.Key, b []byte) {
-		if filepath.Ext(k.Name) == ".yaml" {
-			reconcilerName := strings.TrimSuffix(k.Name, ".yaml")
+		// phase 1 we load all files named config.yaml -> this should give us reconcielr cnfigs
+		basepath := filepath.Dir(k.Name)
+		abspath := filepath.Join(r.RepoPath, r.PathInRepo, "reconcilers", basepath)
 
-			reconcilerConfig := &choreov1alpha1.Reconciler{}
-			if err := yaml.Unmarshal(b, reconcilerConfig); err != nil {
-				errm = errors.Join(errm, fmt.Errorf("invalid reconciler %s, err: %v", k.Name, err))
-				return
-			}
-			reconcilerConfig.SetName(reconcilerName)
-			reconcilerConfig.Spec.Code = map[string]string{}
-			reconcilerConfig.SetAnnotations(map[string]string{
-				choreov1alpha1.ChoreoLoaderOriginKey: choreov1alpha1.FileLoaderAnnotation.String(),
-			})
-			reconcilers[reconcilerName] = reconcilerConfig
-		}
-	})
-
-	datastore.List(func(k store.Key, b []byte) {
-		if filepath.Ext(k.Name) == ".yaml" {
-			return // we already loaded the yaml files
-		}
-		reconcilerName, err := getReconcilerName(reconcilers, k.Name)
-		if err != nil {
-			errm = errors.Join(errm, err)
+		if !fsys.PathExists(abspath) {
+			errs = errors.Join(errs, fmt.Errorf("strange, reconciler path %s does not exists, while we just loaded the config.yaml", abspath))
 			return
 		}
-		reconcilerConfig := reconcilers[reconcilerName]
-
-		switch filepath.Ext(k.Name) {
-		case ".tpl":
-			if reconcilerConfig.Spec.Type != nil && *reconcilerConfig.Spec.Type != choreov1alpha1.SoftwardTechnologyType_GoTemplate {
-				errm = errors.Join(errm, fmt.Errorf("a given reconciler %s can only have 1 sw technology type got %s and %s", reconcilerName, (*reconcilerConfig.Spec.Type).String(), choreov1alpha1.SoftwardTechnologyType_GoTemplate.String()))
-				return
-			}
-			reconcilerConfig.Spec.Type = ptr.To(choreov1alpha1.SoftwardTechnologyType_GoTemplate)
-			if reconcilerConfig.Spec.Code == nil {
-				reconcilerConfig.Spec.Code = map[string]string{}
-			}
-			templateName := strings.TrimPrefix(k.Name, reconcilerName+".")
-			reconcilerConfig.Spec.Code[templateName] = string(b)
-
-		case ".jinja2":
-			if reconcilerConfig.Spec.Type != nil && *reconcilerConfig.Spec.Type != choreov1alpha1.SoftwardTechnologyType_JinjaTemplate {
-				errm = errors.Join(errm, fmt.Errorf("a given reconciler %s can only have 1 sw technology type got %s and %s", reconcilerName, (*reconcilerConfig.Spec.Type).String(), choreov1alpha1.SoftwardTechnologyType_GoTemplate.String()))
-				return
-			}
-			reconcilerConfig.Spec.Type = ptr.To(choreov1alpha1.SoftwardTechnologyType_JinjaTemplate)
-			if reconcilerConfig.Spec.Code == nil {
-				reconcilerConfig.Spec.Code = map[string]string{}
-			}
-			templateName := strings.TrimPrefix(k.Name, reconcilerName+".")
-			reconcilerConfig.Spec.Code[templateName] = string(b)
-
-		case ".star":
-			if reconcilerConfig.Spec.Type != nil {
-				errm = errors.Join(errm, fmt.Errorf("a starlark reconciler %s can only have 1 code file", reconcilerName))
-				return
-			}
-			reconcilerConfig.Spec.Type = ptr.To(choreov1alpha1.SoftwardTechnologyType_Starlark)
-			if reconcilerConfig.Spec.Code == nil {
-				reconcilerConfig.Spec.Code = map[string]string{}
-			}
-			reconcilerConfig.Spec.Code["reconciler.star"] = string(b)
+		reader := GetFSReader(abspath)
+		if reader == nil {
+			return
 		}
+		datastore, err := reader.Read(ctx)
+		if err != nil {
+			errs = errors.Join(errs, err)
+			return
+		}
+		reconcilerConfig := &choreov1alpha1.Reconciler{}
+		if err := yaml.Unmarshal(b, reconcilerConfig); err != nil {
+			errs = errors.Join(errs, fmt.Errorf("invalid reconciler %s, err: %v", k.Name, err))
+			return
+		}
+		reconcilerConfig.Spec.Code = map[string]string{}
+		reconcilerConfig.SetAnnotations(map[string]string{
+			choreov1alpha1.ChoreoLoaderOriginKey: choreov1alpha1.FileLoaderAnnotation.String(),
+		})
+		reconcilers[reconcilerConfig.GetName()] = reconcilerConfig
+		datastore.List(func(k store.Key, b []byte) {
+			if k.Name == "config.yaml" {
+				return
+			}
+			switch filepath.Ext(k.Name) {
+			case ".tpl":
+				if reconcilerConfig.Spec.Type != nil && *reconcilerConfig.Spec.Type != choreov1alpha1.SoftwardTechnologyType_GoTemplate {
+					errs = errors.Join(errs, fmt.Errorf("a given reconciler %s can only have 1 sw technology type got %s and %s", reconcilerConfig.GetName(), (*reconcilerConfig.Spec.Type).String(), choreov1alpha1.SoftwardTechnologyType_GoTemplate.String()))
+					return
+				}
+				reconcilerConfig.Spec.Type = ptr.To(choreov1alpha1.SoftwardTechnologyType_GoTemplate)
+				if reconcilerConfig.Spec.Code == nil {
+					reconcilerConfig.Spec.Code = map[string]string{}
+				}
+				templateName := strings.TrimPrefix(k.Name, reconcilerConfig.GetName()+".")
+				reconcilerConfig.Spec.Code[templateName] = string(b)
 
-		reconcilers[reconcilerName] = reconcilerConfig
+			case ".jinja2":
+				if reconcilerConfig.Spec.Type != nil && *reconcilerConfig.Spec.Type != choreov1alpha1.SoftwardTechnologyType_JinjaTemplate {
+					errs = errors.Join(errs, fmt.Errorf("a given reconciler %s can only have 1 sw technology type got %s and %s", reconcilerConfig.GetName(), (*reconcilerConfig.Spec.Type).String(), choreov1alpha1.SoftwardTechnologyType_GoTemplate.String()))
+					return
+				}
+				reconcilerConfig.Spec.Type = ptr.To(choreov1alpha1.SoftwardTechnologyType_JinjaTemplate)
+				if reconcilerConfig.Spec.Code == nil {
+					reconcilerConfig.Spec.Code = map[string]string{}
+				}
+				templateName := strings.TrimPrefix(k.Name, reconcilerConfig.GetName()+".")
+				reconcilerConfig.Spec.Code[templateName] = string(b)
+
+			case ".star":
+				if reconcilerConfig.Spec.Type != nil {
+					errs = errors.Join(errs, fmt.Errorf("a starlark reconciler %s can only have 1 code file", reconcilerConfig.GetName()))
+					return
+				}
+				reconcilerConfig.Spec.Type = ptr.To(choreov1alpha1.SoftwardTechnologyType_Starlark)
+				if reconcilerConfig.Spec.Code == nil {
+					reconcilerConfig.Spec.Code = map[string]string{}
+				}
+				reconcilerConfig.Spec.Code["reconciler.star"] = string(b)
+			}
+
+			reconcilers[reconcilerConfig.GetName()] = reconcilerConfig
+		})
 	})
 
 	for _, reconcilerConfig := range reconcilers {
-		if reconcilerConfig.Spec.Type != nil {
-			//r.NewReconcilers.Insert(reconcilerConfig.Name)
+		r.Reconcilers = append(r.Reconcilers, reconcilerConfig)
+	}
 
-			b, err := yaml.Marshal(reconcilerConfig)
-			if err != nil {
-				errm = errors.Join(errm, fmt.Errorf("cannot marshal library %s, err: %v", reconcilerConfig.Name, err))
-			}
+	/*
+		for _, reconcilerConfig := range reconcilers {
+			if reconcilerConfig.Spec.Type != nil {
+				//r.NewReconcilers.Insert(reconcilerConfig.Name)
 
-			fileName := filepath.Join(
-				r.Path,
-				*r.Cfg.ServerFlags.InputPath,
-				fmt.Sprintf("%s.%s.%s.yaml",
-					choreov1alpha1.SchemeGroupVersion.Group,
-					strings.ToLower(choreov1alpha1.ReconcilerKind),
-					reconcilerConfig.Name,
-				))
-			if err := os.WriteFile(fileName, b, 0644); err != nil {
-				errm = errors.Join(errm, fmt.Errorf("cannot marshal library %s, err: %v", reconcilerConfig.Name, err))
+				b, err := yaml.Marshal(reconcilerConfig)
+				if err != nil {
+					errs = errors.Join(errs, fmt.Errorf("cannot marshal library %s, err: %v", reconcilerConfig.Name, err))
+					continue
+				}
+
+				fileName := filepath.Join(
+					r.DstPath,
+					*r.Cfg.ServerFlags.InputPath,
+					fmt.Sprintf("%s.%s.%s.yaml",
+						choreov1alpha1.SchemeGroupVersion.Group,
+						strings.ToLower(choreov1alpha1.ReconcilerKind),
+						reconcilerConfig.Name,
+					))
+				if err := os.WriteFile(fileName, b, 0644); err != nil {
+					errs = errors.Join(errs, fmt.Errorf("cannot marshal library %s, err: %v", reconcilerConfig.Name, err))
+				}
 			}
 		}
-	}
-	return errm
-}
-
-func getReconcilerName(reconcilers map[string]*choreov1alpha1.Reconciler, filename string) (string, error) {
-	for reconcilerName := range reconcilers {
-		if strings.HasPrefix(filename, reconcilerName) {
-			return reconcilerName, nil
-		}
-	}
-	return "", fmt.Errorf("no reconciler config found for %s", filename)
+	*/
+	return errs
 }
 
 // TBD if we need to do the clean

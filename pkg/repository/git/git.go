@@ -91,6 +91,8 @@ func Open2(ctx context.Context, path, url string) (*git.Repository, error) {
 
 // Open open the git repo and either clones or fecthes the remote info
 func Open(ctx context.Context, path string, url, refName string) (*git.Repository, *object.Commit, error) {
+	log := log.FromContext(ctx)
+	log.Info("opening repo", "url", url, "ref", refName, "path", path)
 	cleanup := ""
 	defer func() {
 		if cleanup != "" {
@@ -100,41 +102,36 @@ func Open(ctx context.Context, path string, url, refName string) (*git.Repositor
 
 	repo, err := git.PlainOpen(path)
 	if err == git.ErrRepositoryNotExists {
+		log.Info("Repository does not exist, cloning...", "url", url)
 		// Repository does not exist, perform a clone
-		repo, err := cloneAll(ctx, path, url)
+		repo, err = cloneAll(ctx, path, url)
 		if err != nil {
+			log.Error("failed to open repo", "url", url, "ref", refName, "path", path, "error", err)
 			return nil, nil, err
 		}
-		commit, err := ResolveToCommit(repo, refName)
-		if err != nil {
-			return nil, nil, err
-		}
-		cleanup = ""
-		return repo, commit, nil
-	} else if err != nil {
-		return nil, nil, fmt.Errorf("failed to open existing repo: %v", err)
 	}
 
 	// Repository exists, check if the specific commit is available
 	// if so return; if not fetch latest updates and check if commit exists.
 	commit, err := ResolveToCommit(repo, refName)
 	if err != nil {
+		log.Info("failed to resolve commit, fetching repo", "url", url, "ref", refName, "path", path)
 		// Commit is not present, fetch it
 		if err := fetchAll(ctx, repo); err != nil {
 			return nil, nil, err
 		}
-		commit, err := ResolveToCommit(repo, refName)
+		commit, err = ResolveToCommit(repo, refName)
 		if err != nil {
+			log.Error("failed to resolve commit after fetching repo", "url", url, "ref", refName, "path", path, "error", err)
 			return nil, nil, err
 		}
-		cleanup = ""
-		return repo, commit, nil
 	}
 
+	// TODO need to see how we can reference the proper branch
 	if err := resetToRemoteHead(ctx, repo, MainBranch.BranchInRemote()); err != nil {
 		return nil, nil, err
 	}
-
+	log.Info("repo opened", "url", url, "ref", refName, "path", path)
 	// Commit is already present
 	return repo, commit, nil
 }
@@ -385,3 +382,42 @@ func ResolveToCommit(repo *git.Repository, refName string) (*object.Commit, erro
 
 	return tag.Commit()
 }
+
+/*
+// findBranchesContainingCommit lists all branches that contain the given commit hash.
+func findBranchesContainingCommit(repo *git.Repository, commitHash plumbing.Hash) ([]string, error) {
+	var branchesContainingCommit []string
+
+	refs, err := repo.References()
+	if err != nil {
+		return nil, err
+	}
+
+	err = refs.ForEach(func(ref *plumbing.Reference) error {
+		if ref.Name().IsBranch() {
+			// Check if the commit is in the history of the branch
+			commitIter, err := repo.Log(&git.LogOptions{From: ref.Hash()})
+			if err != nil {
+				return err
+			}
+			defer commitIter.Close()
+
+			// Iterate through the commits of the branch
+			return commitIter.ForEach(func(c *object.Commit) error {
+				if c.Hash == commitHash {
+					branchesContainingCommit = append(branchesContainingCommit, ref.Name().Short())
+					return storer.ErrStop
+				}
+				return nil
+			})
+		}
+		return nil
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	return branchesContainingCommit, nil
+}
+*/

@@ -23,7 +23,6 @@ import (
 
 	"github.com/kform-dev/choreo/pkg/cli/genericclioptions"
 	"github.com/kform-dev/choreo/pkg/client/go/resourceclient"
-	"github.com/kform-dev/choreo/pkg/server/api"
 	"github.com/kform-dev/kform/pkg/fsys"
 	"github.com/kform-dev/kform/pkg/pkgio"
 	"github.com/kform-dev/kform/pkg/pkgio/ignore"
@@ -40,8 +39,9 @@ type DataLoader struct {
 	RepoPth    string
 	PathInRepo string
 	// used to clean reasources
-	APIStore       *api.APIStore
+	//APIStore       *api.APIStore
 	InternalAPISet sets.Set[schema.GroupVersionKind]
+	Annotation     string
 }
 
 func (r *DataLoader) Load(ctx context.Context) error {
@@ -51,12 +51,6 @@ func (r *DataLoader) Load(ctx context.Context) error {
 		return err
 	}
 
-	//if err := r.loadReconcilers(ctx); err != nil {
-	//	errm = errors.Join(errm, fmt.Errorf("cannot load reconcilers, err: %v", err))
-	//}
-	//if err := r.loadLibraries(ctx); err != nil {
-	//	errm = errors.Join(errm, fmt.Errorf("cannot load libraries, err: %v", err))
-	//}
 	if err := r.loadInput(ctx); err != nil {
 		errm = errors.Join(errm, fmt.Errorf("cannot load input, err: %v", err))
 	}
@@ -78,6 +72,40 @@ func GetFSReader(path string) pkgio.Reader[[]byte] {
 		MatchFilesGlob: pkgio.MatchAll,
 		IgnoreRules:    ignoreRules,
 		SkipDir:        true,
+	}
+}
+
+func GetFSStarReader(path string) pkgio.Reader[[]byte] {
+	fsys := fsys.NewDiskFS(path)
+	ignoreRules := ignore.Empty(pkgio.IgnoreFileMatch[0])
+	f, err := fsys.Open(pkgio.IgnoreFileMatch[0])
+	if err == nil {
+		// if an error is return the rules is empty, so we dont have to worry about the error
+		ignoreRules, _ = ignore.Parse(f)
+	}
+	return &pkgio.DirReader{
+		RelFsysPath:    ".",
+		Fsys:           fsys,
+		MatchFilesGlob: pkgio.MatchFilesGlob([]string{"*.star"}),
+		IgnoreRules:    ignoreRules,
+		SkipDir:        true,
+	}
+}
+
+func GetFSReconcilerReader(path string) pkgio.Reader[[]byte] {
+	fsys := fsys.NewDiskFS(path)
+	ignoreRules := ignore.Empty(pkgio.IgnoreFileMatch[0])
+	f, err := fsys.Open(pkgio.IgnoreFileMatch[0])
+	if err == nil {
+		// if an error is return the rules is empty, so we dont have to worry about the error
+		ignoreRules, _ = ignore.Parse(f)
+	}
+	return &pkgio.DirReader{
+		RelFsysPath:    ".",
+		Fsys:           fsys,
+		MatchFilesGlob: pkgio.MatchFilesGlob([]string{"config.yaml"}),
+		IgnoreRules:    ignoreRules,
+		SkipDir:        false,
 	}
 }
 

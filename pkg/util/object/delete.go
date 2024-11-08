@@ -18,6 +18,7 @@ package object
 
 import (
 	"context"
+	"reflect"
 
 	"github.com/henderiw/logger/log"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -26,6 +27,10 @@ import (
 
 func RemoveManagedFieldsFromUnstructured(ctx context.Context, obj runtime.Unstructured) {
 	log := log.FromContext(ctx)
+	if obj == nil || reflect.ValueOf(obj).IsNil() {
+		return
+	}
+
 	// Access the unstructured content
 	unstructuredContent := obj.UnstructuredContent()
 

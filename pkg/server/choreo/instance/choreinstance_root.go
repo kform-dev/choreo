@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package choreo
+package instance
 
 import (
 	"context"
@@ -24,6 +24,7 @@ import (
 
 	"github.com/go-git/go-git/v5/plumbing/object"
 	"github.com/henderiw/logger/log"
+	choreov1alpha1 "github.com/kform-dev/choreo/apis/choreo/v1alpha1"
 	"github.com/kform-dev/choreo/pkg/cli/genericclioptions"
 	"github.com/kform-dev/choreo/pkg/client/go/resourceclient"
 	"github.com/kform-dev/choreo/pkg/proto/choreopb"
@@ -31,7 +32,7 @@ import (
 	"github.com/kform-dev/choreo/pkg/repository/git"
 	"github.com/kform-dev/choreo/pkg/repository/repogit"
 	"github.com/kform-dev/choreo/pkg/server/api"
-	"github.com/kform-dev/choreo/pkg/server/choreo/loader"
+	"github.com/kform-dev/choreo/pkg/server/choreo/apiloader"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -48,7 +49,8 @@ type Config struct {
 
 func NewRootChoreoInstance(ctx context.Context, config *Config) (ChoreoInstance, error) {
 	r := &RootChoreoInstance{
-		cfg: config.Cfg,
+		cfg:      config.Cfg,
+		children: []ChoreoInstance{},
 	}
 
 	if config.Repo == nil {
@@ -109,8 +111,12 @@ type RootChoreoInstance struct {
 	commit     *object.Commit
 	tempPath   string
 	apiclient  resourceclient.Client // apiclient is the client which allows to get access to the local db -> used for commit based api loading
+	children   []ChoreoInstance
 
 	apiStoreInternal *api.APIStore // this provides the storage layer - w/o the branch view
+	libraries        []*choreov1alpha1.Library
+	reconcilers      []*choreov1alpha1.Reconciler
+	apiStore         *api.APIStore
 }
 
 func (r *RootChoreoInstance) Destroy() error {
@@ -126,14 +132,41 @@ func (r *RootChoreoInstance) Destroy() error {
 	return nil
 }
 
+func (r *RootChoreoInstance) AddChildChoreoInstance(newchildchoreoinstance ChoreoInstance) error {
+	// check if upstream ref is present
+	newUpstreamRef := newchildchoreoinstance.GetUpstreamRef()
+	for _, childchoreoinstance := range r.children {
+		oldUpstreamRef := childchoreoinstance.GetUpstreamRef()
+		if newUpstreamRef.Spec.URL == oldUpstreamRef.Spec.URL &&
+			newUpstreamRef.Spec.Directory == oldUpstreamRef.Spec.Directory {
+			return fmt.Errorf("conflicting upstreamrefs %s and %s", newUpstreamRef.Name, oldUpstreamRef.Name)
+		}
+	}
+	r.children = append(r.children, newchildchoreoinstance)
+	return nil
+}
+
+func (r *RootChoreoInstance) GetUpstreamRef() *choreov1alpha1.UpstreamRef {
+	// a root choreo instance does not have an upstream ref
+	return nil
+}
+
+func (r *RootChoreoInstance) GetChildren() []ChoreoInstance {
+	return r.children
+}
+
 func (r *RootChoreoInstance) LoadInternalAPIs() error {
-	loader := loader.APILoaderInternal{
+	loader := apiloader.APILoaderInternal{
 		APIStore:   r.apiStoreInternal,
 		Cfg:        r.cfg,
 		DBPath:     r.GetDBPath(),
 		PathInRepo: r.GetPathInRepo(),
 	}
 	return loader.Load(context.Background())
+}
+
+func (r *RootChoreoInstance) GetChoreoInstanceName() string {
+	return "root"
 }
 
 func (r *RootChoreoInstance) GetRepo() repository.Repository {
@@ -168,7 +201,7 @@ func (r *RootChoreoInstance) GetConfig() *genericclioptions.ChoreoConfig {
 	return r.cfg
 }
 
-func (r *RootChoreoInstance) GetAPIStore() *api.APIStore {
+func (r *RootChoreoInstance) GetInternalAPIStore() *api.APIStore {
 	return r.apiStoreInternal
 }
 
@@ -196,4 +229,35 @@ func (r *RootChoreoInstance) PushBranch(branch string) (*choreopb.Push_Response,
 		return &choreopb.Push_Response{}, status.Errorf(codes.Internal, "failed pushing branch: %v", err)
 	}
 	return &choreopb.Push_Response{}, nil
+}
+
+func (r *RootChoreoInstance) InitAPIs()              { r.apiStore = api.NewAPIStore() }
+func (r *RootChoreoInstance) GetAPIs() *api.APIStore { return r.apiStore }
+func (r *RootChoreoInstance) AddAPIS(apiStore *api.APIStore) {
+	if r.apiStore == nil {
+		r.apiStore = api.NewAPIStore()
+	}
+	r.apiStore.Import(apiStore)
+}
+
+func (r *RootChoreoInstance) IsRootInstance() bool                    { return true }
+func (r *RootChoreoInstance) InitLibraries()                          { r.libraries = []*choreov1alpha1.Library{} }
+func (r *RootChoreoInstance) GetLibraries() []*choreov1alpha1.Library { return r.libraries }
+func (r *RootChoreoInstance) AddLibraries(libraries ...*choreov1alpha1.Library) {
+	if r.libraries == nil {
+		r.libraries = []*choreov1alpha1.Library{}
+	}
+	r.libraries = append(r.libraries, libraries...)
+}
+func (r *RootChoreoInstance) InitReconcilers()                             { r.reconcilers = []*choreov1alpha1.Reconciler{} }
+func (r *RootChoreoInstance) GetReconcilers() []*choreov1alpha1.Reconciler { return r.reconcilers }
+func (r *RootChoreoInstance) AddReconcilers(reconcilers ...*choreov1alpha1.Reconciler) {
+	if r.reconcilers == nil {
+		r.reconcilers = []*choreov1alpha1.Reconciler{}
+	}
+	r.reconcilers = append(r.reconcilers, reconcilers...)
+}
+
+func (r *RootChoreoInstance) InitChildren() {
+	r.children = []ChoreoInstance{}
 }

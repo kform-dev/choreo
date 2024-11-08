@@ -14,13 +14,24 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package loader
+package apiloader
+
+import (
+	"context"
+
+	"github.com/kform-dev/choreo/pkg/server/api"
+	"github.com/kform-dev/choreo/pkg/server/choreo/crdloader"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/util/sets"
+	"sigs.k8s.io/yaml"
+)
 
 const (
 	ManagedFieldManagerInput = "inputfileloader"
 )
 
-/*
 func getCRDFromUnstructured(u *unstructured.Unstructured) (*apiextensionsv1.CustomResourceDefinition, error) {
 	b, err := yaml.Marshal(u.Object)
 	if err != nil {
@@ -62,4 +73,3 @@ func (r *APIStoreLoader) Load(ctx context.Context, u *unstructured.Unstructured)
 	}
 	return nil
 }
-*/

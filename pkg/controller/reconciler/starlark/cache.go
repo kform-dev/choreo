@@ -25,22 +25,13 @@ import (
 	choreov1alpha1 "github.com/kform-dev/choreo/apis/choreo/v1alpha1"
 	"go.starlark.net/starlark"
 	"go.starlark.net/syntax"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
-func newCache(libs *unstructured.UnstructuredList) *cache {
+func newCache(libraries []*choreov1alpha1.Library) *cache {
 	modules := map[string]string{}
-	for _, lib := range libs.Items {
-		typ, found, err := unstructured.NestedString(lib.Object, "spec", "type")
-		if err != nil || !found {
-			continue
-		}
-		if typ == string(choreov1alpha1.SoftwardTechnologyType_Starlark) {
-			code, found, err := unstructured.NestedString(lib.Object, "spec", "code")
-			if err != nil || !found {
-				continue
-			}
-			modules[lib.GetName()] = code
+	for _, library := range libraries {
+		if library.Spec.Type == choreov1alpha1.SoftwardTechnologyType_Starlark {
+			modules[library.GetName()] = library.Spec.Code
 		}
 	}
 

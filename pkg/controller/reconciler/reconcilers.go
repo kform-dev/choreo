@@ -26,7 +26,6 @@ import (
 	"github.com/kform-dev/choreo/pkg/client/go/resourceclient"
 	"github.com/kform-dev/choreo/pkg/controller/informers"
 	"github.com/kform-dev/choreo/pkg/proto/runnerpb"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
 type reConcilers struct {
@@ -40,8 +39,8 @@ func newReconcilers(
 	client resourceclient.Client,
 	informerFactory informers.InformerFactory,
 	reconcilerConfigs []*choreov1alpha1.Reconciler,
-	libs *unstructured.UnstructuredList,
-	resultCh chan *runnerpb.Result,
+	libraries []*choreov1alpha1.Library,
+	resultCh chan *runnerpb.ReconcileResult,
 	branchName string,
 ) (*reConcilers, error) {
 	reconcilers := memory.NewStore[Reconciler](nil)
@@ -54,7 +53,7 @@ func newReconcilers(
 			client,
 			informerFactory,
 			reconcilerConfig,
-			libs,
+			libraries,
 			resultCh,
 			branchName,
 		)); err != nil {

@@ -73,7 +73,6 @@ func (r *srv) Once(ctx context.Context, req *runnerpb.Once_Request) (*runnerpb.O
 	if bctx == nil {
 		return nil, status.Errorf(codes.NotFound, "no checkedout branch found %v", err)
 	}
-
 	return r.choreo.Runner().RunOnce(ctx, bctx)
 }
 func (r *srv) Load(ctx context.Context, req *runnerpb.Load_Request) (*runnerpb.Load_Response, error) {
@@ -81,7 +80,7 @@ func (r *srv) Load(ctx context.Context, req *runnerpb.Load_Request) (*runnerpb.L
 	if bctx == nil {
 		return nil, status.Errorf(codes.NotFound, "no checkedout branch found %v", err)
 	}
-	if err := bctx.State.LoadData(ctx, bctx); err != nil {
+	if err := r.choreo.Runner().Load(ctx, bctx); err != nil {
 		return nil, status.Errorf(codes.Internal, "load data failed %v", err)
 	}
 

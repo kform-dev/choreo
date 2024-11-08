@@ -50,6 +50,7 @@ func (r *Own) EventHandler(ctx context.Context, eventType resourcepb.Watch_Event
 				Name:      ownerRef.Name,
 				Namespace: usrc.GetNamespace(),
 			}
+			//fmt.Println("own eventhandler", usrc.GetKind(), usrc.GetName(), "for", r.GVK.Kind, ownerRef.Name, "obj", usrc)
 			// we dont need a for selector since these resources were created by a for resource
 
 			log.Debug("own reconcile event", "src", obj.GetObjectKind().GroupVersionKind().String(), "name", usrc.GetName())

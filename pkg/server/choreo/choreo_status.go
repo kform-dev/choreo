@@ -21,12 +21,13 @@ import (
 	"sync"
 
 	"github.com/kform-dev/choreo/pkg/proto/choreopb"
+	"github.com/kform-dev/choreo/pkg/server/choreo/instance"
 )
 
 type ChoreoStatus struct {
 	Status             bool
 	Reason             string
-	RootChoreoInstance ChoreoInstance
+	RootChoreoInstance instance.ChoreoInstance
 	ChoreoCtx          *choreopb.ChoreoContext
 }
 
@@ -73,12 +74,12 @@ func Initializing() ChoreoStatus {
 	}
 }
 
-func Success(c ChoreoInstance, choreoCtx *choreopb.ChoreoContext) ChoreoStatus {
+func Success(ci instance.ChoreoInstance, choreoCtx *choreopb.ChoreoContext) ChoreoStatus {
 	fmt.Println("success", choreoCtx)
 	return ChoreoStatus{
 		Status:             true,
 		Reason:             "",
-		RootChoreoInstance: c,
+		RootChoreoInstance: ci,
 		ChoreoCtx:          choreoCtx,
 	}
 }

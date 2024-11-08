@@ -28,24 +28,24 @@ func (r TaskID) String() string {
 }
 
 func New(
-	reconcilerResultCh chan *runnerpb.Result,
-	collectorResultCh chan *runnerpb.Once_Response,
+	reconcilerResultCh chan *runnerpb.ReconcileResult,
+	collectorResultCh chan *runnerpb.Once_Result,
 ) Collector {
 
 	return &collector{
 		reconcilerResultCh: reconcilerResultCh,
 		collectorResultCh:  collectorResultCh,
 		work:               map[TaskID]time.Time{},
-		results:            []*runnerpb.Result{},
+		results:            []*runnerpb.ReconcileResult{},
 	}
 }
 
 type collector struct {
-	reconcilerResultCh chan *runnerpb.Result
-	collectorResultCh  chan *runnerpb.Once_Response
+	reconcilerResultCh chan *runnerpb.ReconcileResult
+	collectorResultCh  chan *runnerpb.Once_Result
 	m                  sync.Mutex
 	work               map[TaskID]time.Time
-	results            []*runnerpb.Result
+	results            []*runnerpb.ReconcileResult
 	finishing          bool
 	done               bool
 	idle               int
@@ -86,7 +86,7 @@ func (r *collector) Start(ctx context.Context, once bool) {
 			if once {
 				if r.done {
 					log.Debug("done", "elapsed time (sec)", r.finish.Sub(start).Seconds())
-					r.collectorResultCh <- &runnerpb.Once_Response{
+					r.collectorResultCh <- &runnerpb.Once_Result{
 						Success:       true,
 						ExecutionTime: fmt.Sprintf("%v", r.finish.Sub(start).Seconds()),
 						Results:       r.results,
@@ -107,11 +107,11 @@ func (r *collector) Start(ctx context.Context, once bool) {
 	}
 }
 
-func (r *collector) handleResult(ctx context.Context, result *runnerpb.Result) {
+func (r *collector) handleResult(ctx context.Context, result *runnerpb.ReconcileResult) {
 	r.m.Lock()
 	defer r.m.Unlock()
 	log := log.FromContext(ctx)
-	cloneResult := proto.Clone(result).(*runnerpb.Result)
+	cloneResult := proto.Clone(result).(*runnerpb.ReconcileResult)
 	r.results = append(r.results, cloneResult)
 	taskID := TaskID{
 		ReconcilerName: result.ReconcilerName,
@@ -126,7 +126,7 @@ func (r *collector) handleResult(ctx context.Context, result *runnerpb.Result) {
 		delete(r.work, taskID)
 		log.Debug("execution failed", "taskID", taskID.String(), "error", result.Message)
 		// context of the error
-		r.collectorResultCh <- &runnerpb.Once_Response{
+		r.collectorResultCh <- &runnerpb.Once_Result{
 			Success: false,
 			TaskId:  taskID.String(),
 			Message: result.Message,

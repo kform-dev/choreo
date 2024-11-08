@@ -21,6 +21,7 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/go-git/go-git/v5/plumbing/object"
 	"github.com/henderiw/logger/log"
 	"github.com/kform-dev/choreo/pkg/proto/resourcepb"
 	"github.com/kform-dev/choreo/pkg/server/api"
@@ -28,7 +29,7 @@ import (
 	"github.com/kform-dev/choreo/pkg/server/apiserver/watch"
 	"github.com/kform-dev/choreo/pkg/server/choreo"
 	"github.com/kform-dev/choreo/pkg/server/selector"
-	"github.com/kform-dev/choreo/pkg/util/object"
+	uobject "github.com/kform-dev/choreo/pkg/util/object"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/peer"
 	"google.golang.org/grpc/status"
@@ -54,7 +55,7 @@ func (r *srv) Get(ctx context.Context, req *resourcepb.Get_Request) (*resourcepb
 		return &resourcepb.Get_Response{}, err
 	}
 
-	u, err := object.GetUnstructured(req.Object)
+	u, err := uobject.GetUnstructured(req.Object)
 	if err != nil {
 		return &resourcepb.Get_Response{}, err
 	}
@@ -67,12 +68,20 @@ func (r *srv) Get(ctx context.Context, req *resourcepb.Get_Request) (*resourcepb
 	}
 	convertToInternal(rctx, u)
 
+	var commit *object.Commit
+	if bctx.State.String() != "CheckedOut" {
+		commit, err = r.choreo.GetStatus().Get().RootChoreoInstance.GetRepo().GetBranchCommit(bctx.Branch)
+		if err != nil {
+			return &resourcepb.Get_Response{}, err
+		}
+	}
+
 	// invoke storage
 	obj, err := rctx.Storage.Get(ctx, u.GetName(), &rest.GetOptions{
 		ShowManagedFields: req.Options.ShowManagedField,
 		Trace:             req.Options.Trace,
 		Origin:            req.Options.Origin,
-		Commit:            bctx.State.GetCommit(),
+		Commit:            commit,
 	})
 	if err != nil {
 		fmt.Println("get error", err)
@@ -95,10 +104,11 @@ func (r *srv) List(ctx context.Context, req *resourcepb.List_Request) (*resource
 
 	bctx, err := r.getBranchContext(req.Options.Branch)
 	if err != nil {
+		fmt.Println("list bctx", req)
 		return &resourcepb.List_Response{}, err
 	}
 
-	u, err := object.GetUnstructured(req.Object)
+	u, err := uobject.GetUnstructured(req.Object)
 	if err != nil {
 		return &resourcepb.List_Response{}, err
 	}
@@ -116,13 +126,21 @@ func (r *srv) List(ctx context.Context, req *resourcepb.List_Request) (*resource
 	}
 	convertToInternal(rctx, u)
 
+	var commit *object.Commit
+	if bctx.State.String() != "CheckedOut" {
+		commit, err = r.choreo.GetStatus().Get().RootChoreoInstance.GetRepo().GetBranchCommit(bctx.Branch)
+		if err != nil {
+			return &resourcepb.List_Response{}, err
+		}
+	}
+
 	// invoke storage
 	obj, err := rctx.Storage.List(ctx, &rest.ListOptions{
 		Selector:          selector,
 		ShowManagedFields: req.Options.ShowManagedField,
 		Trace:             req.Options.Trace,
 		Origin:            req.Options.Origin,
-		Commit:            bctx.State.GetCommit(),
+		Commit:            commit,
 	})
 	if err != nil {
 		return &resourcepb.List_Response{}, err
@@ -151,7 +169,7 @@ func (r *srv) Apply(ctx context.Context, req *resourcepb.Apply_Request) (*resour
 		return &resourcepb.Apply_Response{}, err
 	}
 
-	u, err := object.GetUnstructured(req.Object)
+	u, err := uobject.GetUnstructured(req.Object)
 	if err != nil {
 		return &resourcepb.Apply_Response{}, err
 	}
@@ -204,7 +222,7 @@ func (r *srv) Create(ctx context.Context, req *resourcepb.Create_Request) (*reso
 		return &resourcepb.Create_Response{}, err
 	}
 
-	u, err := object.GetUnstructured(req.Object)
+	u, err := uobject.GetUnstructured(req.Object)
 	if err != nil {
 		return &resourcepb.Create_Response{}, err
 	}
@@ -242,7 +260,7 @@ func (r *srv) Update(ctx context.Context, req *resourcepb.Update_Request) (*reso
 		return &resourcepb.Update_Response{}, err
 	}
 
-	u, err := object.GetUnstructured(req.Object)
+	u, err := uobject.GetUnstructured(req.Object)
 	if err != nil {
 		return &resourcepb.Update_Response{}, err
 	}
@@ -280,7 +298,7 @@ func (r *srv) Delete(ctx context.Context, req *resourcepb.Delete_Request) (*reso
 		return &resourcepb.Delete_Response{}, err
 	}
 
-	u, err := object.GetUnstructured(req.Object)
+	u, err := uobject.GetUnstructured(req.Object)
 	if err != nil {
 		return &resourcepb.Delete_Response{}, err
 	}
@@ -328,7 +346,7 @@ func (r *srv) Watch(req *resourcepb.Watch_Request, stream resourcepb.Resource_Wa
 		return err
 	}
 
-	u, err := object.GetUnstructured(req.Object)
+	u, err := uobject.GetUnstructured(req.Object)
 	if err != nil {
 		return err
 	}

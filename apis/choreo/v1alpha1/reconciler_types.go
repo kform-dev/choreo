@@ -27,20 +27,22 @@ import (
 type ReconcilerSpec struct {
 	// ConditionType defines the condition used by this reconciler to reflect the status of its operation
 	ConditionType *string `json:"conditionType,omitempty" protobuf:"bytes,1,opt,name=conditionType"`
+	// SpecUpdate indicates the reconciler is updating the spec with additional data
+	SpecUpdate *bool `json:"specUpdate,omitempty" protobuf:"bytes,2,opt,name=specUpdate"`
 	// For defines the resource and business logic of the reconciler for this Reconciler.
-	For ReconcilerResource `json:"for" protobuf:"bytes,2,opt,name=for"`
+	For ReconcilerResource `json:"for" protobuf:"bytes,3,opt,name=for"`
 	// Owns define the child resources this Reconciler generates as part of its business logic.
 	// The For resource of this Reconciler owns the derived child resources.
 	// The OwnerReferences are set by the internal reconciler logic. Changes to any of these resources
 	// will trigger the Reconciler reconciler
-	Owns []*ReconcilerResource `json:"owns,omitempty" protobuf:"bytes,3,rep,name=owns"`
+	Owns []*ReconcilerResource `json:"owns,omitempty" protobuf:"bytes,4,rep,name=owns"`
 	// Watches defines the resources on which the main reconciler can be retriggered. The pipeline/business logic
 	// determines if the reconciler is to be retriggered.
-	Watches []*ReconcilerResource `json:"watches,omitempty" protobuf:"bytes,4,opt,name=watches"`
+	Watches []*ReconcilerResource `json:"watches,omitempty" protobuf:"bytes,5,opt,name=watches"`
 	// Type defines the software technology this library contains
-	Type *SoftwardTechnologyType `json:"type,omitempty" protobuf:"bytes,5,opt,name=type"`
+	Type *SoftwardTechnologyType `json:"type,omitempty" protobuf:"bytes,6,opt,name=type"`
 	// Code supporting the reconciler
-	Code map[string]string `json:"code,omitempty" protobuf:"bytes,6,rep,name=code"`
+	Code map[string]string `json:"code,omitempty" protobuf:"bytes,7,rep,name=code"`
 }
 
 type ReconcilerResource struct {

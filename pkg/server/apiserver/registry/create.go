@@ -18,7 +18,6 @@ package registry
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/henderiw/logger/log"
 	"github.com/henderiw/store"
@@ -63,9 +62,6 @@ func (r *storage) Create(ctx context.Context, obj runtime.Unstructured, opts ...
 	if err != nil {
 		log.Error("invoke synchronous create failed", "obj", obj, "error", err)
 		return nil, status.Errorf(codes.InvalidArgument, "invoke synchronous create failed: %v", err)
-	}
-	if obj.GetObjectKind().GroupVersionKind().Kind == "IPIndex" {
-		fmt.Println("create, after invoke, obj\n", obj)
 	}
 	obj = robj.(runtime.Unstructured)
 

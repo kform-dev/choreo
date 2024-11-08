@@ -29,22 +29,25 @@ import (
 	"github.com/kform-dev/choreo/pkg/controller/informers"
 	"github.com/kform-dev/choreo/pkg/controller/reconciler"
 	"github.com/kform-dev/choreo/pkg/proto/discoverypb"
-	"github.com/kform-dev/choreo/pkg/proto/resourcepb"
 	"github.com/kform-dev/choreo/pkg/proto/runnerpb"
+	"github.com/kform-dev/choreo/pkg/server/api"
+	"github.com/kform-dev/choreo/pkg/server/choreo/apiloader"
+	"github.com/kform-dev/choreo/pkg/server/choreo/instance"
+	"github.com/kform-dev/choreo/pkg/server/choreo/loader"
 	"github.com/kform-dev/choreo/pkg/util/inventory"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/sets"
-	"sigs.k8s.io/yaml"
 )
 
 type Runner interface {
-	AddResourceClientAndContext(ctx context.Context, client resourceclient.Client)
+	//AddResourceClientAndContext(ctx context.Context, client resourceclient.Client)
 	Start(ctx context.Context, bctx *BranchCtx) (*runnerpb.Start_Response, error)
 	Stop()
 	RunOnce(ctx context.Context, bctx *BranchCtx) (*runnerpb.Once_Response, error)
+	Load(ctx context.Context, bctx *BranchCtx) error
 }
 
 func NewRunner(choreo Choreo) Runner {
@@ -58,23 +61,19 @@ type run struct {
 	status RunnerStatus
 	//
 	choreo Choreo
+	// get ctx -> r.choreo.GetContext()
+	// get client -> r.choreo.GetClient()
+	// get commit -> r.choreo.status.Get().RootChoreoInstance.GetRepo().GetBranchCommit(branchObj.Name)
 	// added dynamically before start
-	ctx    context.Context
-	client resourceclient.Client
 	//discoveryClient discovery.CachedDiscoveryInterface
 	// dynamic data
-	cancel             context.CancelFunc
-	reconcilerConfigs  []*choreov1alpha1.Reconciler
-	libs               *unstructured.UnstructuredList
-	reconcilerResultCh chan *runnerpb.Result
-	runResultCh        chan *runnerpb.Once_Response
-	collector          collector.Collector
-	informerfactory    informers.InformerFactory
-}
-
-func (r *run) AddResourceClientAndContext(ctx context.Context, client resourceclient.Client) {
-	r.client = client
-	r.ctx = ctx
+	cancel context.CancelFunc
+	//reconcilerConfigs  []*choreov1alpha1.Reconciler
+	//libraries          []*choreov1alpha1.Library
+	//reconcilerResultCh chan *runnerpb.Result
+	//runResultCh        chan *runnerpb.Once_Response
+	//collector          collector.Collector
+	//informerfactory    informers.InformerFactory
 }
 
 func (r *run) Start(ctx context.Context, bctx *BranchCtx) (*runnerpb.Start_Response, error) {
@@ -86,13 +85,25 @@ func (r *run) Start(ctx context.Context, bctx *BranchCtx) (*runnerpb.Start_Respo
 			status.Errorf(codes.InvalidArgument, "runner is already running, status %s", r.status.String())
 	}
 
-	if err := r.load(ctx, bctx); err != nil {
+	if err := r.Load(ctx, bctx); err != nil {
 		return &runnerpb.Start_Response{}, err
 	}
 
+	rootChoreoInstance := r.choreo.GetRootChoreoInstance()
+	reconcilers := []*choreov1alpha1.Reconciler{}
+	libraries := []*choreov1alpha1.Library{}
+	for _, childChoreoInstance := range rootChoreoInstance.GetChildren() {
+		if childChoreoInstance.IsRootInstance() {
+			reconcilers = append(reconcilers, childChoreoInstance.GetReconcilers()...)
+			libraries = append(libraries, childChoreoInstance.GetLibraries()...)
+		}
+	}
+	reconcilers = append(reconcilers, rootChoreoInstance.GetReconcilers()...)
+	libraries = append(libraries, rootChoreoInstance.GetLibraries()...)
+
 	// we use the server context to cancel/handle the status of the server
 	// since the ctx we get is from the client
-	runctx, cancel := context.WithCancel(r.ctx)
+	runctx, cancel := context.WithCancel(r.choreo.GetContext())
 	r.setStatusAndCancel(RunnerStatus_Running, cancel)
 
 	go func() {
@@ -102,7 +113,7 @@ func (r *run) Start(ctx context.Context, bctx *BranchCtx) (*runnerpb.Start_Respo
 			return
 		default:
 			// use runctx since the ctx is from the cmd and it will be cancelled upon completion
-			r.runReconciler(runctx, bctx, false) // false -> run continuously, not once
+			r.runReconciler(runctx, "root", bctx, reconcilers, libraries, false) // false -> run continuously, not once
 		}
 	}()
 	return &runnerpb.Start_Response{}, nil
@@ -116,67 +127,117 @@ func (r *run) Stop() {
 	// don't nilify the other resources, since they will be reinitialized
 }
 
-func (r *run) RunOnce(ctx context.Context, bctx *BranchCtx) (*runnerpb.Once_Response, error) {
+func (r *run) RunOnce(ctx context.Context, branchCtx *BranchCtx) (*runnerpb.Once_Response, error) {
 	if r.getStatus() != RunnerStatus_Stopped {
 		return &runnerpb.Once_Response{},
 			status.Errorf(codes.InvalidArgument, "runner is already running, status %s", r.status.String())
 	}
 
-	if err := r.load(ctx, bctx); err != nil {
+	if err := r.Load(ctx, branchCtx); err != nil {
 		return nil, err
 	}
 
 	// we use the server context to cancel/handle the status of the server
 	// since the ctx we get is from the client
-	_, cancel := context.WithCancel(r.ctx)
+	_, cancel := context.WithCancel(r.choreo.GetContext())
 	r.setStatusAndCancel(RunnerStatus_Once, cancel)
 
 	defer r.Stop()
 
-	rsp, err := r.runReconciler(ctx, bctx, true) // run once
+	rsp, err := r.runReconcilers(ctx, branchCtx, true) // run once
 	if err != nil {
 		return rsp, err
 	}
 
-	r.createSnapshot(ctx, bctx)
+	r.createSnapshot(ctx, branchCtx)
 
 	return rsp, nil
+
+	//return &runnerpb.Once_Response{}, nil
+
+	/*
+		// we use the server context to cancel/handle the status of the server
+		// since the ctx we get is from the client
+		_, cancel := context.WithCancel(r.ctx)
+		r.setStatusAndCancel(RunnerStatus_Once, cancel)
+
+		defer r.Stop()
+
+		rsp, err := r.runReconciler(ctx, bctx, true) // run once
+		if err != nil {
+			return rsp, err
+		}
+
+		r.createSnapshot(ctx, bctx)
+
+		return rsp, nil
+	*/
 }
 
-func (r *run) createSnapshot(ctx context.Context, bctx *BranchCtx) error {
-	uid := uuid.New().String()
-
-	apiResources := bctx.APIStore.GetAPIResources()
-
-	inv := inventory.Inventory{}
-	if err := inv.Build(ctx, r.client, apiResources, &inventory.BuildOptions{
-		ShowManagedField: true,
-		Branch:           bctx.Branch,
-		ShowChoreoAPIs:   true,
-	}); err != nil {
-		return status.Errorf(codes.Internal, "err: %s", err.Error())
-	}
-	fmt.Println("create snapshot", uid)
-
-	r.choreo.SnapshotManager().Create(uid, apiResources, inv)
-
-	return nil
-}
-
-func (r *run) load(ctx context.Context, bctx *BranchCtx) error {
+// loads upstream refs, apis, reconcilers, data and garbage collect
+func (r *run) Load(ctx context.Context, branchCtx *BranchCtx) error {
 	// we only work with checkout branch
-	apiResources := bctx.APIStore.GetAPIResources()
-
-	if err := r.choreo.GetBranchStore().LoadData(ctx, bctx.Branch); err != nil {
-		return status.Errorf(codes.Internal, "err: %s", err.Error())
+	rootChoreoInstance := r.choreo.GetRootChoreoInstance()
+	rootChoreoInstance.InitChildren()
+	if err := r.loadUpstreamRefs(ctx, branchCtx, rootChoreoInstance); err != nil {
+		return err
+	}
+	// we load the apis to the global context
+	rootChoreoInstance.InitAPIs()
+	apis := rootChoreoInstance.GetAPIs()
+	if err := r.loadAPIs(ctx, branchCtx, rootChoreoInstance, apis); err != nil {
+		return err
 	}
 
-	// we use this to garbagecollect -
-	// Root object might have been deleted in the input so we need to cleanup
+	rootChoreoInstance.InitLibraries()
+	libraries := rootChoreoInstance.GetLibraries()
+	if err := r.loadLibraries(ctx, branchCtx, rootChoreoInstance, libraries); err != nil {
+		return err
+	}
+
+	rootChoreoInstance.InitReconcilers()
+	reconcilers := rootChoreoInstance.GetReconcilers()
+	if err := r.loadReconcilers(ctx, branchCtx, rootChoreoInstance, reconcilers); err != nil {
+		return err
+	}
+
+	// load and update the global apis
+	for _, childChoreoInstance := range rootChoreoInstance.GetChildren() {
+		branchCtx.APIStore.Import(childChoreoInstance.GetAPIs())
+		for _, childChoreoInstance := range childChoreoInstance.GetChildren() {
+			branchCtx.APIStore.Import(childChoreoInstance.GetAPIs())
+		}
+	}
+	branchCtx.APIStore.Import(rootChoreoInstance.GetAPIs())
+
+	if err := r.choreo.GetBranchStore().UpdateBranchCtx(branchCtx); err != nil {
+		return err
+	}
+	apiResources := branchCtx.APIStore.GetAPIResources()
+	/*
+		for _, apiResource := range apiResources {
+			fmt.Println("apiResource", apiResource.Kind)
+		}
+	*/
+
+	for _, childChoreoInstance := range rootChoreoInstance.GetChildren() {
+		if childChoreoInstance.IsRootInstance() {
+			// load the data
+			if err := r.loadData(ctx, branchCtx, childChoreoInstance, childChoreoInstance.GetAPIs().GetExternalGVKSet().UnsortedList()); err != nil {
+				return err
+			}
+		}
+	}
+	if err := r.loadData(ctx, branchCtx, rootChoreoInstance, branchCtx.APIStore.GetExternalGVKSet().UnsortedList()); err != nil {
+		return err
+	}
+
+	// run the garbage collection to cleanup childObjects for root Objects that got deleted
+	// since the reconcilers dont run all the time this is needed
 	inv := inventory.Inventory{}
-	if err := inv.Build(ctx, r.client, apiResources, &inventory.BuildOptions{
+	if err := inv.Build(ctx, r.choreo.GetClient(), apiResources, &inventory.BuildOptions{
 		ShowManagedField: true,
-		Branch:           bctx.Branch,
+		Branch:           branchCtx.Branch,
 		ShowChoreoAPIs:   false, // TO CHANGE
 	}); err != nil {
 		return status.Errorf(codes.Internal, "err: %s", err.Error())
@@ -190,69 +251,143 @@ func (r *run) load(ctx context.Context, bctx *BranchCtx) error {
 		u.SetName(ref.Name)
 		u.SetNamespace(ref.Namespace)
 
-		//fmt.Println("delete garbage", u.GetAPIVersion(), u.GetKind(), u.GetName())
+		fmt.Println("delete garbage", u.GetAPIVersion(), u.GetKind(), u.GetName())
 
-		if err := r.client.Delete(ctx, u, &resourceclient.DeleteOptions{
-			Branch: bctx.Branch,
+		if err := r.choreo.GetClient().Delete(ctx, u, &resourceclient.DeleteOptions{
+			Branch: branchCtx.Branch,
 		}); err != nil {
 			errm = errors.Join(errm, err)
 		}
-
 	}
-	if errm != nil {
-		return errm
-	}
-
-	reconcilerConfigs := &unstructured.UnstructuredList{}
-	reconcilerConfigs.SetGroupVersionKind(choreov1alpha1.SchemeGroupVersion.WithKind(choreov1alpha1.ReconcilerKind))
-	r.client.List(ctx, reconcilerConfigs, &resourceclient.ListOptions{
-		ExprSelector: &resourcepb.ExpressionSelector{},
-		Branch:       bctx.Branch,
-	})
-
-	r.reconcilerConfigs = []*choreov1alpha1.Reconciler{}
-	reconcilerGVKs := sets.New[schema.GroupVersionKind]()
-	for _, reconcilerConfig := range reconcilerConfigs.Items {
-		b, err := yaml.Marshal(reconcilerConfig.Object)
-		if err != nil {
-			errm = errors.Join(errm, err)
-			continue
-		}
-		reconciler := choreov1alpha1.Reconciler{}
-		if err := yaml.Unmarshal(b, &reconciler); err != nil {
-			errm = errors.Join(errm, err)
-			continue
-		}
-		r.reconcilerConfigs = append(r.reconcilerConfigs, &reconciler)
-		for _, gvk := range reconciler.GetGVKs().UnsortedList() {
-			if !HasAPIResource(apiResources, gvk) {
-				errm = errors.Join(errm, fmt.Errorf("reconciler %s api %s of reconciler not available in apigroup", reconcilerConfig.GetName(), gvk.String()))
-			}
-		}
-		reconcilerGVKs.Insert(reconciler.GetGVKs().UnsortedList()...)
-	}
-
-	libs := &unstructured.UnstructuredList{}
-	libs.SetGroupVersionKind(choreov1alpha1.SchemeGroupVersion.WithKind(choreov1alpha1.LibraryKind))
-	if err := r.client.List(ctx, libs, &resourceclient.ListOptions{
-		ExprSelector: &resourcepb.ExpressionSelector{},
-		Branch:       bctx.Branch,
-	}); err != nil {
-		errm = errors.Join(errm, err)
-	}
-	r.libs = libs
-
-	if errm != nil {
-		return errm
-	}
-
-	r.reconcilerResultCh = make(chan *runnerpb.Result)
-	r.runResultCh = make(chan *runnerpb.Once_Response)
-	r.collector = collector.New(r.reconcilerResultCh, r.runResultCh)
-	r.informerfactory = informers.NewInformerFactory(r.client, reconcilerGVKs, bctx.Branch)
-
 	return errm
 
+}
+
+func (r *run) loadUpstreamRefs(ctx context.Context, branchCtx *BranchCtx, choreoInstance instance.ChoreoInstance) error {
+	upstreamloader := loader.UpstreamLoader{
+		Parent:     choreoInstance,
+		Cfg:        r.choreo.GetConfig(),
+		Client:     r.choreo.GetClient(), // used to upload the upstream ref
+		Branch:     branchCtx.Branch,
+		RepoPath:   choreoInstance.GetRepoPath(),
+		PathInRepo: choreoInstance.GetPathInRepo(),
+		TempDir:    r.choreo.GetRootChoreoInstance().GetTempPath(), // this is the temppath of the rootInstance
+	}
+	// this loads additional choreoinstance
+	if err := upstreamloader.Load(ctx); err != nil {
+		return err
+	}
+
+	var errs error
+	for _, choreoinstance := range choreoInstance.GetChildren() {
+		if err := r.loadUpstreamRefs(ctx, branchCtx, choreoinstance); err != nil {
+			errs = errors.Join(errs, err)
+		}
+	}
+	return errs
+}
+
+func (r *run) loadAPIs(ctx context.Context, branchCtx *BranchCtx, choreoInstance instance.ChoreoInstance, apiStore *api.APIStore) error {
+	// load api files to apistore and apiserver
+	if choreoInstance.IsRootInstance() {
+		choreoInstance.InitAPIs()
+		apiStore = choreoInstance.GetAPIs()
+	}
+
+	rootChoreoInstance := r.choreo.GetRootChoreoInstance()
+	loader := &apiloader.APILoaderFile2APIStoreAndAPI{
+		Cfg:      r.choreo.GetConfig(),
+		Client:   r.choreo.GetClient(),
+		APIStore: apiStore,
+		Branch:   branchCtx.Branch,
+		// InternalGVKs are only kept in the root choreo instance
+		InternalGVKs: rootChoreoInstance.GetInternalAPIStore().GetExternalGVKSet(),
+		RepoPath:     choreoInstance.GetRepoPath(),
+		PathInRepo:   choreoInstance.GetPathInRepo(),
+		DBPath:       rootChoreoInstance.GetDBPath(),
+	}
+	// TBD if we need to use the commit loader or not
+	if err := loader.Load(ctx); err != nil {
+		return err
+	}
+	choreoInstance.AddAPIS(loader.APIStore)
+	for _, choreoinstance := range choreoInstance.GetChildren() {
+		r.loadAPIs(ctx, branchCtx, choreoinstance, apiStore)
+	}
+	return nil
+}
+
+func (r *run) loadLibraries(ctx context.Context, branchCtx *BranchCtx, choreoInstance instance.ChoreoInstance, libraries []*choreov1alpha1.Library) error {
+	// load api files to apistore and apiserver
+	//rootChoreoInstance := r.Choreo.status.Get().RootChoreoInstance
+	// overwrite libraries when we are a root instance
+	if choreoInstance.IsRootInstance() {
+		choreoInstance.InitLibraries()
+		libraries = choreoInstance.GetLibraries()
+	}
+
+	devloader := &loader.DevLoader{
+		Cfg:        r.choreo.GetConfig(),
+		RepoPath:   choreoInstance.GetRepoPath(),
+		PathInRepo: choreoInstance.GetPathInRepo(),
+		Libraries:  libraries,
+	}
+
+	if err := devloader.LoadLibraries(ctx); err != nil {
+		return err
+	}
+	choreoInstance.AddLibraries(devloader.Libraries...)
+	for _, choreoinstance := range choreoInstance.GetChildren() {
+		r.loadLibraries(ctx, branchCtx, choreoinstance, libraries)
+	}
+	return nil
+}
+
+func (r *run) loadReconcilers(ctx context.Context, branchCtx *BranchCtx, choreoInstance instance.ChoreoInstance, reconcilers []*choreov1alpha1.Reconciler) error {
+	// overwrite reconcilers when we are a root instance since we start from scratch
+	if choreoInstance.IsRootInstance() {
+		choreoInstance.InitReconcilers()
+		reconcilers = choreoInstance.GetReconcilers()
+	}
+
+	devloader := &loader.DevLoader{
+		Cfg:         r.choreo.GetConfig(),
+		RepoPath:    choreoInstance.GetRepoPath(),
+		PathInRepo:  choreoInstance.GetPathInRepo(),
+		Reconcilers: reconcilers,
+	}
+
+	if err := devloader.LoadReconcilers(ctx); err != nil {
+		return err
+	}
+
+	choreoInstance.AddReconcilers(devloader.Reconcilers...)
+	for _, choreoinstance := range choreoInstance.GetChildren() {
+		r.loadReconcilers(ctx, branchCtx, choreoinstance, reconcilers)
+	}
+	return nil
+}
+
+func (r *run) loadData(ctx context.Context, branchCtx *BranchCtx, choreoInstance instance.ChoreoInstance, gvks []schema.GroupVersionKind) error {
+	rootChoreoInstance := r.choreo.GetRootChoreoInstance()
+
+	annotation := choreov1alpha1.FileLoaderAnnotation.String()
+	if upstreamRef := choreoInstance.GetUpstreamRef(); upstreamRef != nil {
+		annotation = upstreamRef.LoaderAnnotation().String()
+	}
+
+	dataloader := &loader.DataLoader{
+		Cfg:        r.choreo.GetConfig(),
+		Client:     r.choreo.GetClient(),
+		Branch:     branchCtx.Branch,
+		GVKs:       gvks,
+		RepoPth:    choreoInstance.GetRepoPath(),
+		PathInRepo: choreoInstance.GetPathInRepo(),
+		//APIStore:       branchCtx.APIStore,
+		InternalAPISet: rootChoreoInstance.GetInternalAPIStore().GetExternalGVKSet(),
+		Annotation:     annotation,
+	}
+	return dataloader.Load(ctx)
 }
 
 func PrintAPIResource(apiResources []*discoverypb.APIResource) bool {
@@ -276,9 +411,89 @@ func HasAPIResource(apiResources []*discoverypb.APIResource, gvk schema.GroupVer
 	return false
 }
 
-func (r *run) runReconciler(ctx context.Context, bctx *BranchCtx, once bool) (*runnerpb.Once_Response, error) {
+func (r *run) runReconcilers(ctx context.Context, branchCtx *BranchCtx, once bool) (*runnerpb.Once_Response, error) {
+	rsp := &runnerpb.Once_Response{
+		Success: true,
+		Results: []*runnerpb.Once_Result{},
+	}
+
+	rootChoreoInstance := r.choreo.GetRootChoreoInstance()
+	rootLibraries := []*choreov1alpha1.Library{}
+	for _, childChoreoInstance := range rootChoreoInstance.GetChildren() {
+		// gather the libraries - libraries are used for the child choreo instance runner
+		libraries := []*choreov1alpha1.Library{}
+		// gather the crd childinstance libraries if present
+		for _, childChoreoInstance := range childChoreoInstance.GetChildren() {
+			libraries = append(libraries, childChoreoInstance.GetLibraries()...)
+		}
+		libraries = append(libraries, childChoreoInstance.GetLibraries()...)
+		rootLibraries = append(rootLibraries, libraries...)
+		// only run the reconciler when there are reconcilers
+		if len(childChoreoInstance.GetReconcilers()) > 0 {
+			upstreamRefName := childChoreoInstance.GetUpstreamRef().GetName()
+			runrsp, err := r.runReconciler(
+				ctx,
+				upstreamRefName,
+				branchCtx,
+				childChoreoInstance.GetReconcilers(),
+				libraries,
+				once,
+			) // run once
+			if err != nil {
+				rsp.Success = false
+				rsp.Results = append(rsp.Results, runrsp)
+				return rsp, err
+			}
+			if !runrsp.Success {
+				rsp.Success = false
+			}
+			rsp.Results = append(rsp.Results, runrsp)
+		}
+	}
+	rootLibraries = append(rootLibraries, rootChoreoInstance.GetLibraries()...)
+	if len(rootChoreoInstance.GetReconcilers()) > 0 {
+		runrsp, err := r.runReconciler(
+			ctx,
+			"root",
+			branchCtx,
+			rootChoreoInstance.GetReconcilers(),
+			rootLibraries,
+			once,
+		) // run once
+		if err != nil {
+			rsp.Success = false
+			rsp.Results = append(rsp.Results, runrsp)
+			return rsp, err
+		}
+		if !runrsp.Success {
+			rsp.Success = false
+		}
+		rsp.Results = append(rsp.Results, runrsp)
+	}
+	return rsp, nil
+
+}
+
+func (r *run) runReconciler(ctx context.Context, ref string, branchCtx *BranchCtx, reconcilers []*choreov1alpha1.Reconciler, libraries []*choreov1alpha1.Library, once bool) (*runnerpb.Once_Result, error) {
+	reconcilerGVKs := sets.New[schema.GroupVersionKind]()
+	for _, reconciler := range reconcilers {
+		reconcilerGVKs.Insert(reconciler.GetGVKs().UnsortedList()...)
+	}
+
+	reconcilerResultCh := make(chan *runnerpb.ReconcileResult)
+	runResultCh := make(chan *runnerpb.Once_Result)
+	collector := collector.New(reconcilerResultCh, runResultCh)
+	informerfactory := informers.NewInformerFactory(r.choreo.GetClient(), reconcilerGVKs, branchCtx.Branch)
+
 	reconcilerfactory, err := reconciler.NewReconcilerFactory(
-		ctx, r.client, r.informerfactory, r.reconcilerConfigs, r.libs, r.reconcilerResultCh, bctx.Branch)
+		ctx,
+		r.choreo.GetClient(),
+		informerfactory,
+		reconcilers,
+		libraries,
+		reconcilerResultCh,
+		branchCtx.Branch,
+	)
 
 	if err != nil {
 		return nil, err
@@ -290,7 +505,7 @@ func (r *run) runReconciler(ctx context.Context, bctx *BranchCtx, once bool) (*r
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		go r.collector.Start(ctx, once)
+		go collector.Start(ctx, once)
 	}()
 
 	wg.Add(1)
@@ -302,20 +517,41 @@ func (r *run) runReconciler(ctx context.Context, bctx *BranchCtx, once bool) (*r
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		go r.informerfactory.Start(ctx)
+		go informerfactory.Start(ctx)
 	}()
 
 	select {
-	case result, ok := <-r.runResultCh:
+	case result, ok := <-runResultCh:
 		if !ok {
 			return nil, nil
 		}
+		result.ReconcilerRunner = ref
 		return result, nil
 
 	case <-ctx.Done():
 		wg.Wait()
 		return nil, nil
 	}
+}
+
+func (r *run) createSnapshot(ctx context.Context, bctx *BranchCtx) error {
+	uid := uuid.New().String()
+
+	apiResources := bctx.APIStore.GetAPIResources()
+
+	inv := inventory.Inventory{}
+	if err := inv.Build(ctx, r.choreo.GetClient(), apiResources, &inventory.BuildOptions{
+		ShowManagedField: true,
+		Branch:           bctx.Branch,
+		ShowChoreoAPIs:   true,
+	}); err != nil {
+		return status.Errorf(codes.Internal, "err: %s", err.Error())
+	}
+	fmt.Println("create snapshot", uid)
+
+	r.choreo.SnapshotManager().Create(uid, apiResources, inv)
+
+	return nil
 }
 
 func (r *run) getStatus() RunnerStatus {

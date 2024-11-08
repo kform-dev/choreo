@@ -65,7 +65,6 @@ func (inv Inventory) Diff(invBefore Inventory, diff *choreov1alpha1.Diff, opts *
 			}
 			invSetsBefore.Delete(ref)
 		} else {
-
 			copiedAfterObj := treenode.Resource.DeepCopy()
 			if !opts.ShowManagedField {
 				object.RemoveManagedFieldsFromUnstructured(context.Background(), copiedAfterObj)

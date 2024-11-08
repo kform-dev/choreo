@@ -107,31 +107,169 @@ func (r *OnceOptions) Run(ctx context.Context, args []string) error {
 	if rsp != nil {
 		if !rsp.Success {
 			// failed
-			fmt.Println("execution failed", rsp.TaskId, rsp.Message)
+			fmt.Println("execution failed")
+			for _, result := range rsp.Results {
+				if !result.Success {
+					fmt.Println("  reason", "task", result.TaskId, "message", result.Message)
+				}
+			}
 			return nil
 		}
-		if len(rsp.Results) > 0 {
-			fmt.Println("execution success, time(msec)", rsp.Results[len(rsp.Results)-1].EventTime.AsTime().Sub(rsp.Results[0].EventTime.AsTime()))
-		}
+		var p SummaryPrinter
 		switch r.ResultOutputFormat {
 		case "reconciler":
-			printReconcilerResultSummary(calculateReconcilerSummary(rsp))
+			p = NewReconcilerPrinter()
 		case "resource":
-			printReconcilerResourceResultSummary(calculateReconcilerResourceSummary(rsp))
+			p = NewResourcePrinter()
 		case "raw":
-			printResultRaw(rsp)
+			p = NewRawPrinter()
+		default:
+			return fmt.Errorf("invalid output format, got: %s", r.ResultOutputFormat)
 		}
+		// first calculate overall max idth
+		for _, result := range rsp.Results {
+			p.CollectData(result)
+		}
+		// print the result using the overall max width
+		for _, result := range rsp.Results {
+			fmt.Printf("Run %s summary\n", result.ReconcilerRunner)
+			if len(result.Results) > 0 {
+				fmt.Println("execution success, time(msec)", result.Results[len(result.Results)-1].EventTime.AsTime().Sub(result.Results[0].EventTime.AsTime()))
+			}
+			p.CollectData(result)
+			p.PrintSummary()
+		}
+		return nil
 	}
 	return nil
 }
 
-func getReconcilers(rsp *runnerpb.Once_Response) []string {
-	reconcilers := []string{}
-	for _, result := range rsp.Results {
-		reconcilers = append(reconcilers, result.ReconcilerName)
+type SummaryPrinter interface {
+	CollectData(result *runnerpb.Once_Result)
+	PrintSummary()
+}
+
+type BasePrinter struct {
+	maxWidths []int
+	header    []string
+	rows      [][]string
+}
+
+func (bp *BasePrinter) updateMaxWidths() {
+	for _, row := range bp.rows {
+		for i, value := range row {
+			if len(value) > bp.maxWidths[i] {
+				bp.maxWidths[i] = len(value)
+			}
+		}
 	}
-	sort.Strings(reconcilers)
-	return reconcilers
+}
+
+func (bp *BasePrinter) PrintSummary() {
+	headerFormat := ""
+	for i := range bp.header {
+		headerFormat += fmt.Sprintf("%%-%ds ", bp.maxWidths[i])
+	}
+	headerFormat = strings.TrimSpace(headerFormat) + "\n"
+
+	fmt.Printf(headerFormat, interfaceSlice(bp.header)...)
+	for _, row := range bp.rows {
+		fmt.Printf(headerFormat, interfaceSlice(row)...)
+	}
+}
+
+type ReconcilerPrinter struct {
+	BasePrinter
+}
+
+func NewReconcilerPrinter() SummaryPrinter {
+	header := []string{"Reconciler", "Start", "Stop", "Requeue", "Error"}
+	maxWidths := make([]int, len(header))
+	for i, head := range header {
+		maxWidths[i] = len(head)
+	}
+	return &ReconcilerPrinter{BasePrinter{header: header, maxWidths: maxWidths}}
+}
+
+func (rp *ReconcilerPrinter) CollectData(result *runnerpb.Once_Result) {
+	rp.rows = [][]string{}
+	reconcilerOperations := calculateReconcilerSummary(result)
+	for name, operations := range reconcilerOperations {
+		row := []string{
+			name,
+			fmt.Sprint(operations[runnerpb.Operation_START]),
+			fmt.Sprint(operations[runnerpb.Operation_STOP]),
+			fmt.Sprint(operations[runnerpb.Operation_REQUEUE]),
+			fmt.Sprint(operations[runnerpb.Operation_ERROR]),
+		}
+		rp.rows = append(rp.rows, row)
+	}
+	rp.updateMaxWidths()
+
+	sort.Slice(rp.rows, func(i, j int) bool {
+		return strings.ToLower(fmt.Sprintf("%q.%q", rp.rows[i][0], rp.rows[i][1])) < strings.ToLower(fmt.Sprintf("%q.%q", rp.rows[j][0], rp.rows[j][1]))
+	})
+}
+
+type ResourcePrinter struct {
+	BasePrinter
+}
+
+func NewResourcePrinter() SummaryPrinter {
+	header := []string{"Reconciler", "Resource", "Start", "Stop", "Requeue", "Error"}
+	maxWidths := make([]int, len(header))
+	for i, head := range header {
+		maxWidths[i] = len(head)
+	}
+	return &ResourcePrinter{BasePrinter{header: header, maxWidths: maxWidths}}
+}
+
+func (rp *ResourcePrinter) CollectData(result *runnerpb.Once_Result) {
+	resourceOperations := calculateReconcilerResourceSummary(result)
+	for res, ops := range resourceOperations {
+		row := []string{
+			res.Reconcilername,
+			res.ResourceNameString(),
+			fmt.Sprint(ops[runnerpb.Operation_START]),
+			fmt.Sprint(ops[runnerpb.Operation_STOP]),
+			fmt.Sprint(ops[runnerpb.Operation_REQUEUE]),
+			fmt.Sprint(ops[runnerpb.Operation_ERROR]),
+		}
+		rp.rows = append(rp.rows, row)
+	}
+	rp.updateMaxWidths()
+	sort.Slice(rp.rows, func(i, j int) bool {
+		return strings.ToLower(fmt.Sprintf("%q.%q", rp.rows[i][0], rp.rows[i][1])) < strings.ToLower(fmt.Sprintf("%q.%q", rp.rows[j][0], rp.rows[j][1]))
+	})
+}
+
+type RawPrinter struct {
+	BasePrinter
+}
+
+func NewRawPrinter() SummaryPrinter {
+	header := []string{"EventTime", "Reconciler", "Resource", "Operation", "Message"}
+	maxWidths := make([]int, len(header))
+	for i, head := range header {
+		maxWidths[i] = len(head)
+	}
+	return &RawPrinter{BasePrinter{header: header, maxWidths: maxWidths}}
+}
+
+func (rp *RawPrinter) CollectData(result *runnerpb.Once_Result) {
+	timeFormat := "2006-01-02 15:04:05.000000 UTC"
+	rp.rows = [][]string{}
+	for _, result := range result.Results {
+		row := []string{
+			result.EventTime.AsTime().Format(timeFormat),
+			result.ReconcilerName,
+			getReconcilerResource(result).ResourceNameString(),
+			result.Operation.String(),
+			result.Message,
+		}
+		rp.rows = append(rp.rows, row)
+	}
+	rp.updateMaxWidths()
 }
 
 type Operations map[runnerpb.Operation]int
@@ -145,7 +283,7 @@ func NewOperations() Operations {
 	}
 }
 
-func calculateReconcilerSummary(rsp *runnerpb.Once_Response) map[string]Operations {
+func calculateReconcilerSummary(rsp *runnerpb.Once_Result) map[string]Operations {
 	reconcilers := getReconcilers(rsp)
 	reconcilerOperations := make(map[string]Operations, len(reconcilers))
 	for _, result := range rsp.Results {
@@ -157,14 +295,13 @@ func calculateReconcilerSummary(rsp *runnerpb.Once_Response) map[string]Operatio
 	return reconcilerOperations
 }
 
-func getReconcilerResource(result *runnerpb.Result) ReconcilerResource {
-	return ReconcilerResource{
-		Reconcilername: result.ReconcilerName,
-		Group:          result.Resource.Group,
-		Kind:           result.Resource.Kind,
-		Name:           result.Resource.Name,
-		Namespace:      result.Resource.Namespace,
+func getReconcilers(rsp *runnerpb.Once_Result) []string {
+	reconcilers := []string{}
+	for _, result := range rsp.Results {
+		reconcilers = append(reconcilers, result.ReconcilerName)
 	}
+	sort.Strings(reconcilers)
+	return reconcilers
 }
 
 type ReconcilerResource struct {
@@ -175,11 +312,21 @@ type ReconcilerResource struct {
 	Name           string
 }
 
+func getReconcilerResource(result *runnerpb.ReconcileResult) ReconcilerResource {
+	return ReconcilerResource{
+		Reconcilername: result.ReconcilerName,
+		Group:          result.Resource.Group,
+		Kind:           result.Resource.Kind,
+		Name:           result.Resource.Name,
+		Namespace:      result.Resource.Namespace,
+	}
+}
+
 func (r ReconcilerResource) ResourceNameString() string {
 	return fmt.Sprintf("%s.%s.%s.%s", r.Group, r.Kind, r.Namespace, r.Name)
 }
 
-func calculateReconcilerResourceSummary(rsp *runnerpb.Once_Response) map[ReconcilerResource]Operations {
+func calculateReconcilerResourceSummary(rsp *runnerpb.Once_Result) map[ReconcilerResource]Operations {
 	//reconcilerResourceSet := getReconcilerResourceSet(rsp)
 	reconcilerOperations := make(map[ReconcilerResource]Operations, 0)
 	for _, result := range rsp.Results {
@@ -190,89 +337,6 @@ func calculateReconcilerResourceSummary(rsp *runnerpb.Once_Response) map[Reconci
 		reconcilerOperations[reconcilerResource][result.Operation]++
 	}
 	return reconcilerOperations
-}
-
-func printResultRaw(rsp *runnerpb.Once_Response) {
-	timeFormat := "2006-01-02 15:04:05.000000 UTC"
-	rows := make([][]string, 0)
-	for _, result := range rsp.Results {
-		row := []string{
-			result.EventTime.AsTime().Format(timeFormat),
-			result.ReconcilerName,
-			getReconcilerResource(result).ResourceNameString(),
-			result.Operation.String(),
-			result.Message,
-		}
-		rows = append(rows, row)
-	}
-	printSummary("Raw Summary", []string{"EventTime", "Reconciler", "Resource", "Operation", "Message"}, rows)
-}
-
-// Example usage within your original functions
-func printReconcilerResourceResultSummary(reconcilerResourceOperations map[ReconcilerResource]Operations) {
-	rows := make([][]string, 0)
-	for reconcilerResource, operations := range reconcilerResourceOperations {
-		row := []string{
-			reconcilerResource.Reconcilername,
-			reconcilerResource.ResourceNameString(),
-			fmt.Sprint(operations[runnerpb.Operation_START]),
-			fmt.Sprint(operations[runnerpb.Operation_STOP]),
-			fmt.Sprint(operations[runnerpb.Operation_REQUEUE]),
-			fmt.Sprint(operations[runnerpb.Operation_ERROR]),
-		}
-		rows = append(rows, row)
-	}
-	printSummary("Reconciler Resource Operations Summary", []string{"Reconciler", "resource", "Start", "Stop", "Requeue", "Error"}, rows)
-}
-
-func printReconcilerResultSummary(resourceOperations map[string]Operations) {
-	rows := make([][]string, 0)
-	for name, operations := range resourceOperations {
-		row := []string{
-			name,
-			fmt.Sprint(operations[runnerpb.Operation_START]),
-			fmt.Sprint(operations[runnerpb.Operation_STOP]),
-			fmt.Sprint(operations[runnerpb.Operation_REQUEUE]),
-			fmt.Sprint(operations[runnerpb.Operation_ERROR]),
-		}
-		rows = append(rows, row)
-	}
-	printSummary("Reconciler Operations Summary", []string{"Reconciler", "Start", "Stop", "Requeue", "Error"}, rows)
-}
-
-func printSummary(title string, headers []string, rows [][]string) {
-	maxLengths := make([]int, len(headers))
-	for i, header := range headers {
-		maxLengths[i] = len(header)
-	}
-
-	// Determine the maximum length of each column
-	for _, row := range rows {
-		for i, field := range row {
-			if len(field) > maxLengths[i] {
-				maxLengths[i] = len(field)
-			}
-		}
-	}
-
-	// Prepare format string for headers and rows
-	var formatBuilder strings.Builder
-	for _, length := range maxLengths {
-		formatBuilder.WriteString(fmt.Sprintf("%%-%ds ", length))
-	}
-	formatBuilder.WriteString("\n")
-	format := formatBuilder.String()
-
-	// Print title
-	fmt.Println(title)
-
-	// Print header
-	fmt.Printf(format, interfaceSlice(headers)...)
-
-	// Print rows
-	for _, row := range rows {
-		fmt.Printf(format, interfaceSlice(row)...)
-	}
 }
 
 // Converts a slice of strings to a slice of interfaces for formatting purposes

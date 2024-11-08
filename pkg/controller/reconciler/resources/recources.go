@@ -174,7 +174,7 @@ func (r *Resources) apiDelete(ctx context.Context) error {
 
 func (r *Resources) delete(ctx context.Context, ref corev1.ObjectReference, u *unstructured.Unstructured) error {
 	log := log.FromContext(ctx)
-	log.Debug("api delete existing resource", "referernce", ref.String())
+	log.Info("api delete existing resource", "referernce", ref.String())
 	if err := r.client.Delete(ctx, u, &resourceclient.DeleteOptions{
 		Branch: r.branch,
 	}); err != nil {
