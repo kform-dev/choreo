@@ -56,6 +56,7 @@ func (r *UpstreamLoader) Load(ctx context.Context) error {
 		choreov1alpha1.SchemeGroupVersion.WithKind(choreov1alpha1.UpstreamRefKind),
 	}
 	abspath := filepath.Join(r.RepoPath, r.PathInRepo, *r.Cfg.ServerFlags.RefsPath)
+	fmt.Println("upstream loader", abspath)
 
 	if !fsys.PathExists(abspath) {
 		return nil
@@ -73,6 +74,8 @@ func (r *UpstreamLoader) Load(ctx context.Context) error {
 			errs = errors.Join(errs, fmt.Errorf("invalid upstreamref %s, err: %v", k.Name, err))
 			return
 		}
+		fmt.Println("upstream loader upstreamRef", upstreamRef.Name)
+
 		// upload the upstream to the apiserver
 		//r.NewChoreoRef.Insert(k.Name)
 		obj, err := uobject.GetUnstructructered(upstreamRef)

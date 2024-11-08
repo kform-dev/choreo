@@ -113,7 +113,7 @@ func (r *run) Start(ctx context.Context, bctx *BranchCtx) (*runnerpb.Start_Respo
 			return
 		default:
 			// use runctx since the ctx is from the cmd and it will be cancelled upon completion
-			r.runReconciler(runctx, bctx, reconcilers, libraries, false) // false -> run continuously, not once
+			r.runReconciler(runctx, "root", bctx, reconcilers, libraries, false) // false -> run continuously, not once
 		}
 	}()
 	return &runnerpb.Start_Response{}, nil
@@ -251,7 +251,7 @@ func (r *run) Load(ctx context.Context, branchCtx *BranchCtx) error {
 		u.SetName(ref.Name)
 		u.SetNamespace(ref.Namespace)
 
-		//fmt.Println("delete garbage", u.GetAPIVersion(), u.GetKind(), u.GetName())
+		fmt.Println("delete garbage", u.GetAPIVersion(), u.GetKind(), u.GetName())
 
 		if err := r.choreo.GetClient().Delete(ctx, u, &resourceclient.DeleteOptions{
 			Branch: branchCtx.Branch,
@@ -430,8 +430,10 @@ func (r *run) runReconcilers(ctx context.Context, branchCtx *BranchCtx, once boo
 		rootLibraries = append(rootLibraries, libraries...)
 		// only run the reconciler when there are reconcilers
 		if len(childChoreoInstance.GetReconcilers()) > 0 {
+			upstreamRefName := childChoreoInstance.GetUpstreamRef().GetName()
 			runrsp, err := r.runReconciler(
 				ctx,
+				upstreamRefName,
 				branchCtx,
 				childChoreoInstance.GetReconcilers(),
 				libraries,
@@ -452,6 +454,7 @@ func (r *run) runReconcilers(ctx context.Context, branchCtx *BranchCtx, once boo
 	if len(rootChoreoInstance.GetReconcilers()) > 0 {
 		runrsp, err := r.runReconciler(
 			ctx,
+			"root",
 			branchCtx,
 			rootChoreoInstance.GetReconcilers(),
 			rootLibraries,
@@ -471,7 +474,7 @@ func (r *run) runReconcilers(ctx context.Context, branchCtx *BranchCtx, once boo
 
 }
 
-func (r *run) runReconciler(ctx context.Context, branchCtx *BranchCtx, reconcilers []*choreov1alpha1.Reconciler, libraries []*choreov1alpha1.Library, once bool) (*runnerpb.Once_Result, error) {
+func (r *run) runReconciler(ctx context.Context, ref string, branchCtx *BranchCtx, reconcilers []*choreov1alpha1.Reconciler, libraries []*choreov1alpha1.Library, once bool) (*runnerpb.Once_Result, error) {
 	reconcilerGVKs := sets.New[schema.GroupVersionKind]()
 	for _, reconciler := range reconcilers {
 		reconcilerGVKs.Insert(reconciler.GetGVKs().UnsortedList()...)
@@ -522,6 +525,7 @@ func (r *run) runReconciler(ctx context.Context, branchCtx *BranchCtx, reconcile
 		if !ok {
 			return nil, nil
 		}
+		result.ReconcilerRunner = ref
 		return result, nil
 
 	case <-ctx.Done():

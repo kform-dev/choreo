@@ -4,8 +4,6 @@ go 1.23.0
 
 toolchain go1.23.2
 
-//replace github.com/kuidio/kuid => /Users/henderiw/code/kuidio/kuid
-
 require (
 	github.com/adrg/xdg v0.5.2
 	github.com/flosch/pongo2/v6 v6.0.0
@@ -18,7 +16,7 @@ require (
 	github.com/henderiw/logger v0.0.0-20230911123436-8655829b1abe
 	github.com/henderiw/store v0.0.2-0.20241030044529-f6baff74eab3
 	github.com/kform-dev/kform v0.0.16-0.20241029050934-f462791a4045
-	github.com/kuidio/kuid v0.0.8-0.20241106103200-fd12843baffe
+	github.com/kuidio/kuid v0.0.8
 	github.com/pkg/errors v0.9.1
 	github.com/rivo/tview v0.0.0-20240818110301-fd649dbf1223
 	github.com/spf13/cobra v1.8.1
@@ -31,7 +29,7 @@ require (
 	google.golang.org/protobuf v1.35.1
 	k8s.io/api v0.31.1
 	k8s.io/apiextensions-apiserver v0.31.1
-	k8s.io/apimachinery v0.31.2
+	k8s.io/apimachinery v0.32.0-alpha.1
 	k8s.io/apiserver v0.31.1
 	k8s.io/client-go v0.31.1
 	k8s.io/kube-openapi v0.0.0-20240827152857-f7e401e7b4c2

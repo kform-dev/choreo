@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	"reflect"
+	"strings"
 	"time"
 
 	"github.com/henderiw/iputil"
@@ -47,6 +48,7 @@ func NewReconcilerFn(client resourceclient.Client, reconcileConfig *choreov1alph
 			name:          reconcileConfig.Name,
 			client:        client,
 			conditionType: reconcileConfig.Spec.ConditionType,
+			specUpdate:    reconcileConfig.Spec.SpecUpdate,
 			forgvk:        reconcileConfig.GetForGVK(),
 			owns:          reconcileConfig.GetOwnsGVKs(),
 			branch:        branch,
@@ -100,6 +102,7 @@ type reconciler struct {
 	startlarkReconciler starlark.StringDict
 	client              resourceclient.Client
 	conditionType       *string
+	specUpdate          *bool
 	forgvk              schema.GroupVersionKind
 	owns                sets.Set[schema.GroupVersionKind]
 	branch              string
@@ -130,6 +133,26 @@ func (r *reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 	// reinitialize the resource on each reconcile
 	r.resources = resources.New(r.name, r.client, u, r.owns, r.branch)
 	if u.GetDeletionTimestamp() != nil {
+		if r.specUpdate != nil && *r.specUpdate {
+			// call the python code; it will call various hooks we build
+			// returns an error message
+			obj, err := util.UnstructuredToStarlarkValue(u)
+			if err != nil {
+				return reconcile.Result{}, err
+			}
+			reconciler := r.startlarkReconciler["reconcile"]
+			thread := &starlark.Thread{Name: "main"}
+			v, err := starlark.Call(thread, reconciler, starlark.Tuple{starlark.Value(obj)}, nil)
+			if err != nil {
+				// this is a starlark execution runtime failure
+				return reconcile.Result{}, fmt.Errorf("starlark execution runtime failure: %s", err.Error())
+			}
+			reconcileResult, err := r.handleResult(ctx, u, v)
+			if err != nil {
+				return reconcileResult, err
+			}
+		}
+
 		if err := r.resources.Delete(ctx); err != nil {
 			return reconcile.Result{}, fmt.Errorf("starlark reconciler %s cannot delete child resource, err: %s", r.name, err.Error())
 		}
@@ -190,12 +213,18 @@ func (r *reconciler) handleResult(ctx context.Context, oldu *unstructured.Unstru
 	}
 	// this is the happy path, we apply the child resources to the api
 	if err := r.resources.Apply(ctx); err != nil {
-		log.Error("apply resources failed requeue", "reconciler", r.name, "err", err)
-		return reconcile.Result{
-			Requeue:      true,
-			RequeueAfter: requeue,
-			Message:      fmt.Errorf("starlark reconciler %s apply resources failed, err: %s", r.name, err.Error()).Error(),
-		}, nil
+		// when we get not initialized we continue and requeue
+		// other errors are returned as fatal
+		if strings.Contains(err.Error(), "not initialized") {
+			log.Error("apply resources failed requeue", "reconciler", r.name, "err", err)
+
+			return reconcile.Result{
+				Requeue:      true,
+				RequeueAfter: requeue,
+				Message:      fmt.Errorf("starlark reconciler %s apply resources failed, err: %s", r.name, err.Error()).Error(),
+			}, nil
+		}
+		return reconcile.Result{}, fmt.Errorf("apply resources failed reconciler %s err: %v", r.name, err)
 	}
 	if uerr := r.updateForResourceStatus(ctx, newu, oldu, ""); uerr != nil {
 		return reconcile.Result{}, fmt.Errorf("starlark reconciler %s cannot update resource: err: %v", r.name, uerr)

@@ -585,6 +585,11 @@ func (in *ReconcilerSpec) DeepCopyInto(out *ReconcilerSpec) {
 		*out = new(string)
 		**out = **in
 	}
+	if in.SpecUpdate != nil {
+		in, out := &in.SpecUpdate, &out.SpecUpdate
+		*out = new(bool)
+		**out = **in
+	}
 	in.For.DeepCopyInto(&out.For)
 	if in.Owns != nil {
 		in, out := &in.Owns, &out.Owns
