@@ -53,12 +53,12 @@ func (r *DevLoader) LoadReconcilers(ctx context.Context) error {
 	}
 
 	// The reconciler reader reads all the directories/files that match config.yaml
-	// convetion is that this file contains the directory where the reconcilers
+	// convention is that this file contains the directory where the reconcilers
 	// are located
 	reconcilers := map[string]*choreov1alpha1.Reconciler{}
 	var errs error
 	datastore.List(func(k store.Key, b []byte) {
-		// phase 1 we load all files named config.yaml -> this should give us reconcielr cnfigs
+		// phase 1 we load all files named config.yaml -> this should give us reconcielr configs
 		basepath := filepath.Dir(k.Name)
 		abspath := filepath.Join(r.RepoPath, r.PathInRepo, "reconcilers", basepath)
 

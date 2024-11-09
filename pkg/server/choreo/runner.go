@@ -149,35 +149,29 @@ func (r *run) RunOnce(ctx context.Context, branchCtx *BranchCtx) (*runnerpb.Once
 		return rsp, err
 	}
 
+	if r.choreo.GetConfig().ServerFlags.SDC != nil && *r.choreo.GetConfig().ServerFlags.SDC {
+		configValidator := NewConfigValidator(r.choreo)
+		if err := configValidator.runConfigValidation(ctx, branchCtx); err != nil {
+			return rsp, err
+		}
+	}
+
 	r.createSnapshot(ctx, branchCtx)
 
 	return rsp, nil
-
-	//return &runnerpb.Once_Response{}, nil
-
-	/*
-		// we use the server context to cancel/handle the status of the server
-		// since the ctx we get is from the client
-		_, cancel := context.WithCancel(r.ctx)
-		r.setStatusAndCancel(RunnerStatus_Once, cancel)
-
-		defer r.Stop()
-
-		rsp, err := r.runReconciler(ctx, bctx, true) // run once
-		if err != nil {
-			return rsp, err
-		}
-
-		r.createSnapshot(ctx, bctx)
-
-		return rsp, nil
-	*/
 }
 
 // loads upstream refs, apis, reconcilers, data and garbage collect
 func (r *run) Load(ctx context.Context, branchCtx *BranchCtx) error {
 	// we only work with checkout branch
 	rootChoreoInstance := r.choreo.GetRootChoreoInstance()
+
+	if r.choreo.GetConfig().ServerFlags.SDC != nil && *r.choreo.GetConfig().ServerFlags.SDC {
+		if err := r.loadSchemas(ctx, branchCtx, rootChoreoInstance); err != nil {
+			return err
+		}
+	}
+	// we reinitialize from scratch
 	rootChoreoInstance.InitChildren()
 	if err := r.loadUpstreamRefs(ctx, branchCtx, rootChoreoInstance); err != nil {
 		return err
@@ -263,6 +257,23 @@ func (r *run) Load(ctx context.Context, branchCtx *BranchCtx) error {
 
 }
 
+func (r *run) loadSchemas(ctx context.Context, _ *BranchCtx, choreoInstance instance.ChoreoInstance) error {
+	schemaloader := loader.SchemaLoader{
+		Parent: choreoInstance,
+		Cfg:    r.choreo.GetConfig(),
+		//Client:     r.choreo.GetClient(), // used to upload the upstream ref
+		//Branch:     branchCtx.Branch,
+		RepoPath:   choreoInstance.GetRepoPath(),
+		PathInRepo: choreoInstance.GetPathInRepo(),
+		TempDir:    r.choreo.GetRootChoreoInstance().GetTempPath(), // this is the temppath of the rootInstance
+	}
+	// this loads schema to the schemastore
+	if err := schemaloader.Load(ctx); err != nil {
+		return err
+	}
+	return nil
+}
+
 func (r *run) loadUpstreamRefs(ctx context.Context, branchCtx *BranchCtx, choreoInstance instance.ChoreoInstance) error {
 	upstreamloader := loader.UpstreamLoader{
 		Parent:     choreoInstance,
@@ -273,7 +284,7 @@ func (r *run) loadUpstreamRefs(ctx context.Context, branchCtx *BranchCtx, choreo
 		PathInRepo: choreoInstance.GetPathInRepo(),
 		TempDir:    r.choreo.GetRootChoreoInstance().GetTempPath(), // this is the temppath of the rootInstance
 	}
-	// this loads additional choreoinstance
+	// this loads additional choreoinstances
 	if err := upstreamloader.Load(ctx); err != nil {
 		return err
 	}

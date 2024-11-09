@@ -33,6 +33,10 @@ import (
 	"github.com/kform-dev/choreo/pkg/repository/repogit"
 	"github.com/kform-dev/choreo/pkg/server/api"
 	"github.com/kform-dev/choreo/pkg/server/choreo/apiloader"
+	"github.com/sdcio/config-diff/schemaloader"
+	schemaconfig "github.com/sdcio/schema-server/pkg/config"
+	schemastore "github.com/sdcio/schema-server/pkg/store"
+	"github.com/sdcio/schema-server/pkg/store/persiststore"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -69,6 +73,22 @@ func NewRootChoreoInstance(ctx context.Context, config *Config) (ChoreoInstance,
 	r.tempPath = filepath.Join(r.GetPath(), ".choreo")
 	if err := EnsureDir(r.tempPath); err != nil {
 		return r, err
+	}
+	if config.Cfg.ServerFlags.SDC != nil && *config.Cfg.ServerFlags.SDC {
+		var err error
+
+		r.schemastore, err = persiststore.New(ctx, filepath.Join(r.pathInRepo, ".choreo/schemastore"), &schemaconfig.SchemaPersistStoreCacheConfig{})
+		if err != nil {
+			return nil, err
+		}
+
+		r.schemaloader, err = schemaloader.New(r.schemastore, &schemaloader.Config{
+			TmpPath:     filepath.Join(r.pathInRepo, ".choreo/tmp"),
+			SchemasPath: filepath.Join(r.pathInRepo, ".choreo/schemas"),
+		})
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	/*
@@ -117,6 +137,8 @@ type RootChoreoInstance struct {
 	libraries        []*choreov1alpha1.Library
 	reconcilers      []*choreov1alpha1.Reconciler
 	apiStore         *api.APIStore
+	schemastore      schemastore.Store
+	schemaloader     *schemaloader.SchemaLoader
 }
 
 func (r *RootChoreoInstance) Destroy() error {
@@ -261,3 +283,6 @@ func (r *RootChoreoInstance) AddReconcilers(reconcilers ...*choreov1alpha1.Recon
 func (r *RootChoreoInstance) InitChildren() {
 	r.children = []ChoreoInstance{}
 }
+
+func (r *RootChoreoInstance) SchemaStore() schemastore.Store           { return r.schemastore }
+func (r *RootChoreoInstance) SchemaLoader() *schemaloader.SchemaLoader { return r.schemaloader }
