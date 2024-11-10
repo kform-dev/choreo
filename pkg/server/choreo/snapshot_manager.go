@@ -23,6 +23,7 @@ import (
 
 	choreov1alpha1 "github.com/kform-dev/choreo/apis/choreo/v1alpha1"
 	"github.com/kform-dev/choreo/pkg/proto/discoverypb"
+	"github.com/kform-dev/choreo/pkg/proto/runnerpb"
 	"github.com/kform-dev/choreo/pkg/proto/snapshotpb"
 	"github.com/kform-dev/choreo/pkg/util/inventory"
 	"github.com/kform-dev/choreo/pkg/util/object"
@@ -59,8 +60,8 @@ type Snapshot struct {
 	CreatedAt    time.Time
 	APIResources []*discoverypb.APIResource
 	//Input
-	Inventory inventory.Inventory
-	//Result
+	Inventory   inventory.Inventory
+	RunResponse *runnerpb.Once_Response_RunResponse
 }
 
 func (r *SnapshotManager) getLatest() (*SnapshotNode, bool) {
@@ -87,7 +88,7 @@ func (r *SnapshotManager) getPrevious(id string) (*SnapshotNode, bool) {
 	return snapshotNode.prev, true
 }
 
-func (r *SnapshotManager) Create(id string, apiResources []*discoverypb.APIResource, inventory inventory.Inventory) {
+func (r *SnapshotManager) Create(id string, apiResources []*discoverypb.APIResource, inventory inventory.Inventory, rsp *runnerpb.Once_Response_RunResponse) {
 	r.m.Lock()
 	defer r.m.Unlock()
 
@@ -97,6 +98,7 @@ func (r *SnapshotManager) Create(id string, apiResources []*discoverypb.APIResou
 			CreatedAt:    time.Now(),
 			APIResources: apiResources,
 			Inventory:    inventory,
+			RunResponse:  rsp,
 		},
 	}
 

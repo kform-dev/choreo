@@ -29,7 +29,7 @@ func (r TaskID) String() string {
 
 func New(
 	reconcilerResultCh chan *runnerpb.ReconcileResult,
-	collectorResultCh chan *runnerpb.Once_Result,
+	collectorResultCh chan *runnerpb.Once_RunResult,
 ) Collector {
 
 	return &collector{
@@ -42,7 +42,7 @@ func New(
 
 type collector struct {
 	reconcilerResultCh chan *runnerpb.ReconcileResult
-	collectorResultCh  chan *runnerpb.Once_Result
+	collectorResultCh  chan *runnerpb.Once_RunResult
 	m                  sync.Mutex
 	work               map[TaskID]time.Time
 	results            []*runnerpb.ReconcileResult
@@ -86,7 +86,7 @@ func (r *collector) Start(ctx context.Context, once bool) {
 			if once {
 				if r.done {
 					log.Debug("done", "elapsed time (sec)", r.finish.Sub(start).Seconds())
-					r.collectorResultCh <- &runnerpb.Once_Result{
+					r.collectorResultCh <- &runnerpb.Once_RunResult{
 						Success:       true,
 						ExecutionTime: fmt.Sprintf("%v", r.finish.Sub(start).Seconds()),
 						Results:       r.results,
@@ -126,7 +126,7 @@ func (r *collector) handleResult(ctx context.Context, result *runnerpb.Reconcile
 		delete(r.work, taskID)
 		log.Debug("execution failed", "taskID", taskID.String(), "error", result.Message)
 		// context of the error
-		r.collectorResultCh <- &runnerpb.Once_Result{
+		r.collectorResultCh <- &runnerpb.Once_RunResult{
 			Success: false,
 			TaskId:  taskID.String(),
 			Message: result.Message,

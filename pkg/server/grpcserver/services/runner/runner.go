@@ -68,13 +68,16 @@ func (r *srv) Stop(ctx context.Context, req *runnerpb.Stop_Request) (*runnerpb.S
 	return &runnerpb.Stop_Response{}, nil
 }
 
-func (r *srv) Once(ctx context.Context, req *runnerpb.Once_Request) (*runnerpb.Once_Response, error) {
+func (r *srv) Once(req *runnerpb.Once_Request, stream runnerpb.Runner_OnceServer) error {
+	ctx := stream.Context()
 	bctx, err := r.choreo.GetBranchStore().GetCheckedOut()
 	if bctx == nil {
-		return nil, status.Errorf(codes.NotFound, "no checkedout branch found %v", err)
+		return status.Errorf(codes.NotFound, "no checkedout branch found %v", err)
 	}
-	return r.choreo.Runner().RunOnce(ctx, bctx)
+	// blocks
+	return r.choreo.Runner().RunOnce(ctx, bctx, stream)
 }
+
 func (r *srv) Load(ctx context.Context, req *runnerpb.Load_Request) (*runnerpb.Load_Response, error) {
 	bctx, err := r.choreo.GetBranchStore().GetCheckedOut()
 	if bctx == nil {

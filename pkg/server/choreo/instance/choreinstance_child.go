@@ -28,6 +28,8 @@ import (
 	"github.com/kform-dev/choreo/pkg/proto/choreopb"
 	"github.com/kform-dev/choreo/pkg/repository"
 	"github.com/kform-dev/choreo/pkg/server/api"
+	"github.com/sdcio/config-diff/schemaloader"
+	schemastore "github.com/sdcio/schema-server/pkg/store"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -154,7 +156,7 @@ func (r *ChildChoreoInstance) IsRootInstance() bool {
 
 func (r *ChildChoreoInstance) InitAPIs()              { r.apiStore = api.NewAPIStore() }
 func (r *ChildChoreoInstance) GetAPIs() *api.APIStore { return r.apiStore }
-func (r *ChildChoreoInstance) AddAPIS(apiStore *api.APIStore) {
+func (r *ChildChoreoInstance) AddAPIs(apiStore *api.APIStore) {
 	if r.apiStore == nil {
 		r.apiStore = api.NewAPIStore()
 	}
@@ -181,3 +183,6 @@ func (r *ChildChoreoInstance) AddReconcilers(reconcilers ...*choreov1alpha1.Reco
 func (r *ChildChoreoInstance) InitChildren() {
 	r.children = []ChoreoInstance{}
 }
+
+func (r *ChildChoreoInstance) SchemaStore() schemastore.Store           { return nil }
+func (r *ChildChoreoInstance) SchemaLoader() *schemaloader.SchemaLoader { return nil }

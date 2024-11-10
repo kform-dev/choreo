@@ -31,7 +31,10 @@ const (
 	flagPostprocessing      = "post"
 	flagOutput              = "output"
 	flagRefs                = "refs"
+	flagSchemas             = "schemas"
+	flagRunningConfigs      = "runningConfigs"
 	flagInternalReconcilers = "internalReconcilers"
+	flagSDC                 = "sdc"
 )
 
 // ResourceFlags are flags for generic resources.
@@ -45,7 +48,10 @@ type ServerFlags struct {
 	OutputPath          *string
 	InputPath           *string
 	RefsPath            *string
+	SchemaPath          *string
+	RunningConfigsPath  *string
 	InternalReconcilers *bool
+	SDC                 *bool
 }
 
 func NewServerFlags() *ServerFlags {
@@ -59,7 +65,10 @@ func NewServerFlags() *ServerFlags {
 		OutputPath:          ptr.To("out"),
 		InputPath:           ptr.To("in"),
 		RefsPath:            ptr.To("refs"),
+		SchemaPath:          ptr.To("schemas"),
+		RunningConfigsPath:  ptr.To("runningconfigs"),
 		InternalReconcilers: ptr.To(false),
+		SDC:                 ptr.To(false),
 	}
 }
 
@@ -90,11 +99,19 @@ func (r *ServerFlags) AddFlags(flags *pflag.FlagSet) {
 	}
 	if r.InputPath != nil {
 		flags.StringVar(r.InputPath, flagInput, *r.InputPath,
-			"the path where the input is located")
+			"the path where the input(s) are located")
 	}
 	if r.RefsPath != nil {
 		flags.StringVar(r.RefsPath, flagRefs, *r.RefsPath,
-			"the path where the refs is located")
+			"the path where the ref(s) are located")
+	}
+	if r.SchemaPath != nil {
+		flags.StringVar(r.SchemaPath, flagSchemas, *r.SchemaPath,
+			"the path where the schema(s) are located")
+	}
+	if r.RunningConfigsPath != nil {
+		flags.StringVar(r.RunningConfigsPath, flagRunningConfigs, *r.RunningConfigsPath,
+			"the path where the running config(s) are located")
 	}
 	if r.PostProcessingPath != nil {
 		flags.StringVar(r.PostProcessingPath, flagPostprocessing, *r.PostProcessingPath,
@@ -103,5 +120,9 @@ func (r *ServerFlags) AddFlags(flags *pflag.FlagSet) {
 	if r.InternalReconcilers != nil {
 		flags.BoolVarP(r.InternalReconcilers, flagInternalReconcilers, "r", *r.InternalReconcilers,
 			"enable internal reconciler")
+	}
+	if r.SDC != nil {
+		flags.BoolVarP(r.SDC, flagSDC, "s", *r.SDC,
+			"enable sdc")
 	}
 }

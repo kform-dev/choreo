@@ -24,7 +24,7 @@ const _ = grpc.SupportPackageIsVersion7
 type RunnerClient interface {
 	Start(ctx context.Context, in *Start_Request, opts ...grpc.CallOption) (*Start_Response, error)
 	Stop(ctx context.Context, in *Stop_Request, opts ...grpc.CallOption) (*Stop_Response, error)
-	Once(ctx context.Context, in *Once_Request, opts ...grpc.CallOption) (*Once_Response, error)
+	Once(ctx context.Context, in *Once_Request, opts ...grpc.CallOption) (Runner_OnceClient, error)
 	Load(ctx context.Context, in *Load_Request, opts ...grpc.CallOption) (*Load_Response, error)
 }
 
@@ -54,13 +54,36 @@ func (c *runnerClient) Stop(ctx context.Context, in *Stop_Request, opts ...grpc.
 	return out, nil
 }
 
-func (c *runnerClient) Once(ctx context.Context, in *Once_Request, opts ...grpc.CallOption) (*Once_Response, error) {
-	out := new(Once_Response)
-	err := c.cc.Invoke(ctx, "/runnerpb.Runner/Once", in, out, opts...)
+func (c *runnerClient) Once(ctx context.Context, in *Once_Request, opts ...grpc.CallOption) (Runner_OnceClient, error) {
+	stream, err := c.cc.NewStream(ctx, &Runner_ServiceDesc.Streams[0], "/runnerpb.Runner/Once", opts...)
 	if err != nil {
 		return nil, err
 	}
-	return out, nil
+	x := &runnerOnceClient{stream}
+	if err := x.ClientStream.SendMsg(in); err != nil {
+		return nil, err
+	}
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	return x, nil
+}
+
+type Runner_OnceClient interface {
+	Recv() (*Once_Response, error)
+	grpc.ClientStream
+}
+
+type runnerOnceClient struct {
+	grpc.ClientStream
+}
+
+func (x *runnerOnceClient) Recv() (*Once_Response, error) {
+	m := new(Once_Response)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
 }
 
 func (c *runnerClient) Load(ctx context.Context, in *Load_Request, opts ...grpc.CallOption) (*Load_Response, error) {
@@ -78,7 +101,7 @@ func (c *runnerClient) Load(ctx context.Context, in *Load_Request, opts ...grpc.
 type RunnerServer interface {
 	Start(context.Context, *Start_Request) (*Start_Response, error)
 	Stop(context.Context, *Stop_Request) (*Stop_Response, error)
-	Once(context.Context, *Once_Request) (*Once_Response, error)
+	Once(*Once_Request, Runner_OnceServer) error
 	Load(context.Context, *Load_Request) (*Load_Response, error)
 	mustEmbedUnimplementedRunnerServer()
 }
@@ -93,8 +116,8 @@ func (UnimplementedRunnerServer) Start(context.Context, *Start_Request) (*Start_
 func (UnimplementedRunnerServer) Stop(context.Context, *Stop_Request) (*Stop_Response, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Stop not implemented")
 }
-func (UnimplementedRunnerServer) Once(context.Context, *Once_Request) (*Once_Response, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method Once not implemented")
+func (UnimplementedRunnerServer) Once(*Once_Request, Runner_OnceServer) error {
+	return status.Errorf(codes.Unimplemented, "method Once not implemented")
 }
 func (UnimplementedRunnerServer) Load(context.Context, *Load_Request) (*Load_Response, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Load not implemented")
@@ -148,22 +171,25 @@ func _Runner_Stop_Handler(srv interface{}, ctx context.Context, dec func(interfa
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Runner_Once_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(Once_Request)
-	if err := dec(in); err != nil {
-		return nil, err
+func _Runner_Once_Handler(srv interface{}, stream grpc.ServerStream) error {
+	m := new(Once_Request)
+	if err := stream.RecvMsg(m); err != nil {
+		return err
 	}
-	if interceptor == nil {
-		return srv.(RunnerServer).Once(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/runnerpb.Runner/Once",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(RunnerServer).Once(ctx, req.(*Once_Request))
-	}
-	return interceptor(ctx, in, info, handler)
+	return srv.(RunnerServer).Once(m, &runnerOnceServer{stream})
+}
+
+type Runner_OnceServer interface {
+	Send(*Once_Response) error
+	grpc.ServerStream
+}
+
+type runnerOnceServer struct {
+	grpc.ServerStream
+}
+
+func (x *runnerOnceServer) Send(m *Once_Response) error {
+	return x.ServerStream.SendMsg(m)
 }
 
 func _Runner_Load_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
@@ -200,14 +226,16 @@ var Runner_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _Runner_Stop_Handler,
 		},
 		{
-			MethodName: "Once",
-			Handler:    _Runner_Once_Handler,
-		},
-		{
 			MethodName: "Load",
 			Handler:    _Runner_Load_Handler,
 		},
 	},
-	Streams:  []grpc.StreamDesc{},
+	Streams: []grpc.StreamDesc{
+		{
+			StreamName:    "Once",
+			Handler:       _Runner_Once_Handler,
+			ServerStreams: true,
+		},
+	},
 	Metadata: "runner.proto",
 }

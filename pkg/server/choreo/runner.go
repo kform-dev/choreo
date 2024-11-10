@@ -23,6 +23,7 @@ import (
 	"sync"
 
 	"github.com/google/uuid"
+	"github.com/henderiw/logger/log"
 	choreov1alpha1 "github.com/kform-dev/choreo/apis/choreo/v1alpha1"
 	"github.com/kform-dev/choreo/pkg/client/go/resourceclient"
 	"github.com/kform-dev/choreo/pkg/controller/collector"
@@ -36,6 +37,7 @@ import (
 	"github.com/kform-dev/choreo/pkg/server/choreo/loader"
 	"github.com/kform-dev/choreo/pkg/util/inventory"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/peer"
 	"google.golang.org/grpc/status"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -46,7 +48,7 @@ type Runner interface {
 	//AddResourceClientAndContext(ctx context.Context, client resourceclient.Client)
 	Start(ctx context.Context, bctx *BranchCtx) (*runnerpb.Start_Response, error)
 	Stop()
-	RunOnce(ctx context.Context, bctx *BranchCtx) (*runnerpb.Once_Response, error)
+	RunOnce(ctx context.Context, bctx *BranchCtx, stream runnerpb.Runner_OnceServer) error
 	Load(ctx context.Context, bctx *BranchCtx) error
 }
 
@@ -74,6 +76,7 @@ type run struct {
 	//runResultCh        chan *runnerpb.Once_Response
 	//collector          collector.Collector
 	//informerfactory    informers.InformerFactory
+	oncerspChan chan *runnerpb.Once_Response
 }
 
 func (r *run) Start(ctx context.Context, bctx *BranchCtx) (*runnerpb.Start_Response, error) {
@@ -127,15 +130,111 @@ func (r *run) Stop() {
 	// don't nilify the other resources, since they will be reinitialized
 }
 
-func (r *run) RunOnce(ctx context.Context, branchCtx *BranchCtx) (*runnerpb.Once_Response, error) {
-	if r.getStatus() != RunnerStatus_Stopped {
-		return &runnerpb.Once_Response{},
-			status.Errorf(codes.InvalidArgument, "runner is already running, status %s", r.status.String())
+func (r *run) runOnce(ctx context.Context, stream runnerpb.Runner_OnceServer) error {
+	log := log.FromContext(ctx)
+	for {
+		select {
+		case <-ctx.Done():
+			log.Debug("grpc watch stopped, stopping storage watch")
+			close(r.oncerspChan)
+			return nil
+		case rsp, ok := <-r.oncerspChan:
+			if !ok {
+				log.Debug("response channel closed, stopping once runner")
+			}
+			if err := stream.Send(rsp); err != nil {
+				p, _ := peer.FromContext(stream.Context())
+				addr := "unknown"
+				if p != nil {
+					addr = p.Addr.String()
+				}
+				log.Error("grpc watch send stream failed", "client", addr)
+			}
+		}
+	}
+}
+
+func (r *run) RunOnce(ctx context.Context, bctx *BranchCtx, stream runnerpb.Runner_OnceServer) error {
+	log := log.FromContext(ctx)
+	ctx, cancel := context.WithCancel(stream.Context())
+	defer cancel()
+
+	r.oncerspChan = make(chan *runnerpb.Once_Response)
+
+	go r.runOnce(ctx, stream)
+
+	r.once(ctx, bctx)
+	<-ctx.Done()
+	log.Debug("grpc runOnce goroutine stopped")
+	return nil
+}
+
+func (r *run) onceResponseCompleted() {
+	if r.oncerspChan == nil {
+		return
+	}
+	r.oncerspChan <- &runnerpb.Once_Response{
+		Type: runnerpb.Once_COMPLETED,
 	}
 
-	if err := r.Load(ctx, branchCtx); err != nil {
-		return nil, err
+}
+
+func (r *run) onceResponseProgressUpdate(msg string) {
+	if r.oncerspChan == nil {
+		return
 	}
+	r.oncerspChan <- &runnerpb.Once_Response{
+		Type: runnerpb.Once_PROGRESS_UPDATE,
+		Data: &runnerpb.Once_Response_ProgressUpdate{
+			ProgressUpdate: &runnerpb.Once_ProgressUpdate{Message: msg},
+		},
+	}
+}
+
+func (r *run) onceResponseError(msg string) {
+	if r.oncerspChan == nil {
+		return
+	}
+	r.oncerspChan <- &runnerpb.Once_Response{
+		Type: runnerpb.Once_ERROR,
+		Data: &runnerpb.Once_Response_Error{
+			Error: &runnerpb.Once_Error{Message: msg},
+		},
+	}
+}
+
+func (r *run) onceResponseRunResult(rsp *runnerpb.Once_Response_RunResponse) {
+	if r.oncerspChan == nil {
+		return
+	}
+	r.oncerspChan <- &runnerpb.Once_Response{
+		Type: runnerpb.Once_RUN_RESPONSE,
+		Data: rsp,
+	}
+}
+
+/*
+func (r *run) onceResponseSDCResult(rsp *runnerpb.Once_Response_SdcResponse) {
+	r.oncerspChan <- &runnerpb.Once_Response{
+		Type: runnerpb.Once_SDC_RESPONSE,
+		Data: rsp,
+	}
+}
+*/
+
+func (r *run) once(ctx context.Context, bctx *BranchCtx) {
+	log := log.FromContext(ctx)
+	if r.getStatus() != RunnerStatus_Stopped {
+		r.onceResponseError(fmt.Sprintf("runner is already running, status %s", r.status.String()))
+		return
+	}
+	r.onceResponseProgressUpdate("loading ...")
+	if err := r.Load(ctx, bctx); err != nil {
+		log.Error("loading failed", "err", err)
+		r.onceResponseError(err.Error())
+		return
+	}
+	r.onceResponseProgressUpdate("loading done")
 
 	// we use the server context to cancel/handle the status of the server
 	// since the ctx we get is from the client
@@ -144,40 +243,39 @@ func (r *run) RunOnce(ctx context.Context, branchCtx *BranchCtx) (*runnerpb.Once
 
 	defer r.Stop()
 
-	rsp, err := r.runReconcilers(ctx, branchCtx, true) // run once
+	r.onceResponseProgressUpdate("running reconcilers ...")
+	rsp, err := r.runReconcilers(ctx, bctx, true) // run once
 	if err != nil {
-		return rsp, err
+		r.onceResponseError(err.Error())
+		return
+	}
+	r.onceResponseRunResult(rsp)
+
+	if r.choreo.GetConfig().ServerFlags.SDC != nil && *r.choreo.GetConfig().ServerFlags.SDC {
+		r.onceResponseProgressUpdate("running config validator ...")
+		configValidator := NewConfigValidator(r.choreo)
+		if err := configValidator.runConfigValidation(ctx, bctx); err != nil {
+			r.onceResponseError(err.Error())
+			return
+		}
 	}
 
-	r.createSnapshot(ctx, branchCtx)
-
-	return rsp, nil
-
-	//return &runnerpb.Once_Response{}, nil
-
-	/*
-		// we use the server context to cancel/handle the status of the server
-		// since the ctx we get is from the client
-		_, cancel := context.WithCancel(r.ctx)
-		r.setStatusAndCancel(RunnerStatus_Once, cancel)
-
-		defer r.Stop()
-
-		rsp, err := r.runReconciler(ctx, bctx, true) // run once
-		if err != nil {
-			return rsp, err
-		}
-
-		r.createSnapshot(ctx, bctx)
-
-		return rsp, nil
-	*/
+	r.createSnapshot(ctx, bctx, rsp)
+	r.onceResponseCompleted()
 }
 
 // loads upstream refs, apis, reconcilers, data and garbage collect
 func (r *run) Load(ctx context.Context, branchCtx *BranchCtx) error {
 	// we only work with checkout branch
 	rootChoreoInstance := r.choreo.GetRootChoreoInstance()
+
+	if r.choreo.GetConfig().ServerFlags.SDC != nil && *r.choreo.GetConfig().ServerFlags.SDC {
+		if err := r.loadSchemas(ctx, branchCtx, rootChoreoInstance); err != nil {
+			fmt.Println("schema load error", err)
+			return err
+		}
+	}
+	// we reinitialize from scratch
 	rootChoreoInstance.InitChildren()
 	if err := r.loadUpstreamRefs(ctx, branchCtx, rootChoreoInstance); err != nil {
 		return err
@@ -186,6 +284,7 @@ func (r *run) Load(ctx context.Context, branchCtx *BranchCtx) error {
 	rootChoreoInstance.InitAPIs()
 	apis := rootChoreoInstance.GetAPIs()
 	if err := r.loadAPIs(ctx, branchCtx, rootChoreoInstance, apis); err != nil {
+		fmt.Println("apis", err)
 		return err
 	}
 
@@ -263,6 +362,23 @@ func (r *run) Load(ctx context.Context, branchCtx *BranchCtx) error {
 
 }
 
+func (r *run) loadSchemas(ctx context.Context, _ *BranchCtx, choreoInstance instance.ChoreoInstance) error {
+	schemaloader := loader.SchemaLoader{
+		Parent: choreoInstance,
+		Cfg:    r.choreo.GetConfig(),
+		//Client:     r.choreo.GetClient(), // used to upload the upstream ref
+		//Branch:     branchCtx.Branch,
+		RepoPath:   choreoInstance.GetRepoPath(),
+		PathInRepo: choreoInstance.GetPathInRepo(),
+		TempDir:    r.choreo.GetRootChoreoInstance().GetTempPath(), // this is the temppath of the rootInstance
+	}
+	// this loads schema to the schemastore
+	if err := schemaloader.Load(ctx); err != nil {
+		return err
+	}
+	return nil
+}
+
 func (r *run) loadUpstreamRefs(ctx context.Context, branchCtx *BranchCtx, choreoInstance instance.ChoreoInstance) error {
 	upstreamloader := loader.UpstreamLoader{
 		Parent:     choreoInstance,
@@ -272,8 +388,9 @@ func (r *run) loadUpstreamRefs(ctx context.Context, branchCtx *BranchCtx, choreo
 		RepoPath:   choreoInstance.GetRepoPath(),
 		PathInRepo: choreoInstance.GetPathInRepo(),
 		TempDir:    r.choreo.GetRootChoreoInstance().GetTempPath(), // this is the temppath of the rootInstance
+		ProgressFn: r.onceResponseProgressUpdate,
 	}
-	// this loads additional choreoinstance
+	// this loads additional choreoinstances
 	if err := upstreamloader.Load(ctx); err != nil {
 		return err
 	}
@@ -310,7 +427,7 @@ func (r *run) loadAPIs(ctx context.Context, branchCtx *BranchCtx, choreoInstance
 	if err := loader.Load(ctx); err != nil {
 		return err
 	}
-	choreoInstance.AddAPIS(loader.APIStore)
+	choreoInstance.AddAPIs(loader.APIStore)
 	for _, choreoinstance := range choreoInstance.GetChildren() {
 		r.loadAPIs(ctx, branchCtx, choreoinstance, apiStore)
 	}
@@ -411,10 +528,12 @@ func HasAPIResource(apiResources []*discoverypb.APIResource, gvk schema.GroupVer
 	return false
 }
 
-func (r *run) runReconcilers(ctx context.Context, branchCtx *BranchCtx, once bool) (*runnerpb.Once_Response, error) {
-	rsp := &runnerpb.Once_Response{
-		Success: true,
-		Results: []*runnerpb.Once_Result{},
+func (r *run) runReconcilers(ctx context.Context, branchCtx *BranchCtx, once bool) (*runnerpb.Once_Response_RunResponse, error) {
+	rsp := &runnerpb.Once_Response_RunResponse{
+		RunResponse: &runnerpb.Once_RunResponse{
+			Success: true,
+			Results: []*runnerpb.Once_RunResult{},
+		},
 	}
 
 	rootChoreoInstance := r.choreo.GetRootChoreoInstance()
@@ -430,6 +549,7 @@ func (r *run) runReconcilers(ctx context.Context, branchCtx *BranchCtx, once boo
 		rootLibraries = append(rootLibraries, libraries...)
 		// only run the reconciler when there are reconcilers
 		if len(childChoreoInstance.GetReconcilers()) > 0 {
+			r.onceResponseProgressUpdate(fmt.Sprintf("running child reconciler %s", childChoreoInstance.GetUpstreamRef().GetName()))
 			upstreamRefName := childChoreoInstance.GetUpstreamRef().GetName()
 			runrsp, err := r.runReconciler(
 				ctx,
@@ -440,18 +560,19 @@ func (r *run) runReconcilers(ctx context.Context, branchCtx *BranchCtx, once boo
 				once,
 			) // run once
 			if err != nil {
-				rsp.Success = false
-				rsp.Results = append(rsp.Results, runrsp)
+				rsp.RunResponse.Success = false
+				rsp.RunResponse.Results = append(rsp.RunResponse.Results, runrsp)
 				return rsp, err
 			}
 			if !runrsp.Success {
-				rsp.Success = false
+				rsp.RunResponse.Success = false
 			}
-			rsp.Results = append(rsp.Results, runrsp)
+			rsp.RunResponse.Results = append(rsp.RunResponse.Results, runrsp)
 		}
 	}
 	rootLibraries = append(rootLibraries, rootChoreoInstance.GetLibraries()...)
 	if len(rootChoreoInstance.GetReconcilers()) > 0 {
+		r.onceResponseProgressUpdate(fmt.Sprintf("running root reconciler %s", rootChoreoInstance.GetName()))
 		runrsp, err := r.runReconciler(
 			ctx,
 			"root",
@@ -461,27 +582,27 @@ func (r *run) runReconcilers(ctx context.Context, branchCtx *BranchCtx, once boo
 			once,
 		) // run once
 		if err != nil {
-			rsp.Success = false
-			rsp.Results = append(rsp.Results, runrsp)
+			rsp.RunResponse.Success = false
+			rsp.RunResponse.Results = append(rsp.RunResponse.Results, runrsp)
 			return rsp, err
 		}
 		if !runrsp.Success {
-			rsp.Success = false
+			rsp.RunResponse.Success = false
 		}
-		rsp.Results = append(rsp.Results, runrsp)
+		rsp.RunResponse.Results = append(rsp.RunResponse.Results, runrsp)
 	}
 	return rsp, nil
 
 }
 
-func (r *run) runReconciler(ctx context.Context, ref string, branchCtx *BranchCtx, reconcilers []*choreov1alpha1.Reconciler, libraries []*choreov1alpha1.Library, once bool) (*runnerpb.Once_Result, error) {
+func (r *run) runReconciler(ctx context.Context, ref string, branchCtx *BranchCtx, reconcilers []*choreov1alpha1.Reconciler, libraries []*choreov1alpha1.Library, once bool) (*runnerpb.Once_RunResult, error) {
 	reconcilerGVKs := sets.New[schema.GroupVersionKind]()
 	for _, reconciler := range reconcilers {
 		reconcilerGVKs.Insert(reconciler.GetGVKs().UnsortedList()...)
 	}
 
 	reconcilerResultCh := make(chan *runnerpb.ReconcileResult)
-	runResultCh := make(chan *runnerpb.Once_Result)
+	runResultCh := make(chan *runnerpb.Once_RunResult)
 	collector := collector.New(reconcilerResultCh, runResultCh)
 	informerfactory := informers.NewInformerFactory(r.choreo.GetClient(), reconcilerGVKs, branchCtx.Branch)
 
@@ -534,7 +655,7 @@ func (r *run) runReconciler(ctx context.Context, ref string, branchCtx *BranchCt
 	}
 }
 
-func (r *run) createSnapshot(ctx context.Context, bctx *BranchCtx) error {
+func (r *run) createSnapshot(ctx context.Context, bctx *BranchCtx, rsp *runnerpb.Once_Response_RunResponse) error {
 	uid := uuid.New().String()
 
 	apiResources := bctx.APIStore.GetAPIResources()
@@ -549,7 +670,7 @@ func (r *run) createSnapshot(ctx context.Context, bctx *BranchCtx) error {
 	}
 	fmt.Println("create snapshot", uid)
 
-	r.choreo.SnapshotManager().Create(uid, apiResources, inv)
+	r.choreo.SnapshotManager().Create(uid, apiResources, inv, rsp)
 
 	return nil
 }

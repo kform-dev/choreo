@@ -46,7 +46,7 @@ type UpstreamLoader struct {
 	RepoPath   string
 	PathInRepo string
 	TempDir    string
-	CallbackFn UpstreamCallBackFn
+	ProgressFn func(string)
 }
 
 type UpstreamCallBackFn func(ctx context.Context, parentName string, repo repository.Repository, upstreamRef *choreov1alpha1.UpstreamRef, cfg *genericclioptions.ChoreoConfig, commit *object.Commit, annotationVal string) error
@@ -56,7 +56,6 @@ func (r *UpstreamLoader) Load(ctx context.Context) error {
 		choreov1alpha1.SchemeGroupVersion.WithKind(choreov1alpha1.UpstreamRefKind),
 	}
 	abspath := filepath.Join(r.RepoPath, r.PathInRepo, *r.Cfg.ServerFlags.RefsPath)
-	fmt.Println("upstream loader", abspath)
 
 	if !fsys.PathExists(abspath) {
 		return nil
@@ -74,7 +73,6 @@ func (r *UpstreamLoader) Load(ctx context.Context) error {
 			errs = errors.Join(errs, fmt.Errorf("invalid upstreamref %s, err: %v", k.Name, err))
 			return
 		}
-		fmt.Println("upstream loader upstreamRef", upstreamRef.Name)
 
 		// upload the upstream to the apiserver
 		//r.NewChoreoRef.Insert(k.Name)
@@ -97,7 +95,7 @@ func (r *UpstreamLoader) Load(ctx context.Context) error {
 		refName := upstreamRef.GetPlumbingReference()
 		url := upstreamRef.Spec.URL
 
-		repo, commit, err := repogit.NewUpstreamRepo(ctx, childRepoPath, url, refName)
+		repo, commit, err := repogit.NewUpstreamRepo(ctx, childRepoPath, url, refName, r.ProgressFn)
 		if err != nil {
 			errs = errors.Join(errs, fmt.Errorf("cannot open repo %s, err: %v", url, err))
 			return

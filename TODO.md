@@ -2,32 +2,35 @@
 
 ## choreo
 
-- update choreo docs
-- garbage collector: do we ignore the version -> currently we do a special trick in kuid to change the ownereference to v1alpha1 in the backend apis( as, vlan, genid, etc)
-- fetch repo assumes main branch -> need to check the actual used branch
-- snapshots are stored in memory. Is this the right approach ?
-- snapshots add the detailed result.
-- do we need to add reconcilers, libraries to the api or not ?
+- (P1) update choreo docs
+- (P0) streaming once runner
+- {P2} snapshots are stored in memory. Is this the right approach ?
+- (P2) garbage collector: do we ignore the version -> currently we do a special trick in kuid to change the ownereference to v1alpha1 in the backend apis( as, vlan, genid, etc)
+- (P2) fetch repo assumes main branch -> need to check the actual used branch
+
+- (P2) do we need to add reconcilers, libraries to the api or not ?
     - right now we dont
-- how to handle secrets? Vault ?
-- k8s API versus grpc API ??
-- project scaffold
+- (P2) how to handle secrets? Vault ?
+- (P2) k8s API versus grpc API ??
+- (P2) project scaffold
+- (P2) pydantic api definition
+- OK config-diff integration
 
 ## kubenet
-- config generation
-- config-diff integration
+- (P1,5) fix genid
+- (P1) addtional logic and config generation
 
 ## choreo controller
 
-- Variant controller
-- Approval controller
+- (P2) Variant controller
+- (P2) Approval controller
 
 ## kuid
 
-- rework the generic backend in the same way as IPAM -> allows for real claims
-- proto generation
-- reconcilers (non IPAM)
+- (P2) rework the generic backend in the same way as IPAM -> allows for real claims
+- (P2) proto generation
+- (P2) reconcilers (non IPAM)
 
 ## main
 
-- align storage backend kuid and chorio
+- (P2) align storage backend kuid and chorio

@@ -19,6 +19,7 @@ package oncecmd
 import (
 	"context"
 	"fmt"
+	"io"
 	"sort"
 	"strings"
 
@@ -97,55 +98,83 @@ func (r *OnceOptions) Validate(args []string) error {
 }
 
 func (r *OnceOptions) Run(ctx context.Context, args []string) error {
+	w := r.Streams.Out
+
 	runnerClient := r.Factory.GetRunnerClient()
-	rsp, err := runnerClient.Once(ctx, &runnerclient.OnceOptions{
+	stream, err := runnerClient.Once(ctx, &runnerclient.OnceOptions{
 		Proxy: r.Factory.GetProxy(),
 	})
 	if err != nil {
 		return err
 	}
-	if rsp != nil {
-		if !rsp.Success {
-			// failed
-			fmt.Println("execution failed")
-			for _, result := range rsp.Results {
-				if !result.Success {
-					fmt.Println("  reason", "task", result.TaskId, "message", result.Message)
-				}
-			}
+	for {
+		rsp, err := stream.Recv()
+		if err == io.EOF {
+			break // Stream is closed by the server
+		}
+		if err != nil {
+			return err
+		}
+		switch rsp.Type {
+		case runnerpb.Once_PROGRESS_UPDATE:
+			fmt.Fprintf(w, "%s\n", rsp.GetProgressUpdate().Message)
+		case runnerpb.Once_ERROR:
+			fmt.Fprintf(w, "%s\n", rsp.GetError().Message)
+			stream.CloseSend()
+			return nil
+		case runnerpb.Once_RUN_RESPONSE:
+			r.handleRunResponse(rsp.GetRunResponse())
+		case runnerpb.Once_SDC_RESPONSE:
+			fmt.Fprintf(w, "%s\n", "to be updated")
+		case runnerpb.Once_COMPLETED:
+			fmt.Fprintf(w, "%s\n", "completed")
+			stream.CloseSend()
 			return nil
 		}
-		var p SummaryPrinter
-		switch r.ResultOutputFormat {
-		case "reconciler":
-			p = NewReconcilerPrinter()
-		case "resource":
-			p = NewResourcePrinter()
-		case "raw":
-			p = NewRawPrinter()
-		default:
-			return fmt.Errorf("invalid output format, got: %s", r.ResultOutputFormat)
-		}
-		// first calculate overall max idth
-		for _, result := range rsp.Results {
-			p.CollectData(result)
-		}
-		// print the result using the overall max width
-		for _, result := range rsp.Results {
-			fmt.Printf("Run %s summary\n", result.ReconcilerRunner)
-			if len(result.Results) > 0 {
-				fmt.Println("execution success, time(msec)", result.Results[len(result.Results)-1].EventTime.AsTime().Sub(result.Results[0].EventTime.AsTime()))
-			}
-			p.CollectData(result)
-			p.PrintSummary()
-		}
-		return nil
 	}
 	return nil
 }
 
+func (r *OnceOptions) handleRunResponse(rsp *runnerpb.Once_RunResponse) {
+	if !rsp.Success {
+		// failed
+		fmt.Println("execution failed")
+		for _, result := range rsp.Results {
+			if !result.Success {
+				fmt.Println("  reason", "task", result.TaskId, "message", result.Message)
+			}
+		}
+		return
+	}
+	var p SummaryPrinter
+	switch r.ResultOutputFormat {
+	case "reconciler":
+		p = NewReconcilerPrinter()
+	case "resource":
+		p = NewResourcePrinter()
+	case "raw":
+		p = NewRawPrinter()
+	default:
+		return
+	}
+	// first calculate overall max idth
+	for _, result := range rsp.Results {
+		p.CollectData(result)
+	}
+	// print the result using the overall max width
+	for _, result := range rsp.Results {
+		fmt.Printf("Run %s summary\n", result.ReconcilerRunner)
+		if len(result.Results) > 0 {
+			fmt.Println("execution success, time(msec)", result.Results[len(result.Results)-1].EventTime.AsTime().Sub(result.Results[0].EventTime.AsTime()))
+		}
+		p.CollectData(result)
+		p.PrintSummary()
+	}
+
+}
+
 type SummaryPrinter interface {
-	CollectData(result *runnerpb.Once_Result)
+	CollectData(result *runnerpb.Once_RunResult)
 	PrintSummary()
 }
 
@@ -191,7 +220,7 @@ func NewReconcilerPrinter() SummaryPrinter {
 	return &ReconcilerPrinter{BasePrinter{header: header, maxWidths: maxWidths}}
 }
 
-func (rp *ReconcilerPrinter) CollectData(result *runnerpb.Once_Result) {
+func (rp *ReconcilerPrinter) CollectData(result *runnerpb.Once_RunResult) {
 	rp.rows = [][]string{}
 	reconcilerOperations := calculateReconcilerSummary(result)
 	for name, operations := range reconcilerOperations {
@@ -224,7 +253,7 @@ func NewResourcePrinter() SummaryPrinter {
 	return &ResourcePrinter{BasePrinter{header: header, maxWidths: maxWidths}}
 }
 
-func (rp *ResourcePrinter) CollectData(result *runnerpb.Once_Result) {
+func (rp *ResourcePrinter) CollectData(result *runnerpb.Once_RunResult) {
 	resourceOperations := calculateReconcilerResourceSummary(result)
 	for res, ops := range resourceOperations {
 		row := []string{
@@ -256,7 +285,7 @@ func NewRawPrinter() SummaryPrinter {
 	return &RawPrinter{BasePrinter{header: header, maxWidths: maxWidths}}
 }
 
-func (rp *RawPrinter) CollectData(result *runnerpb.Once_Result) {
+func (rp *RawPrinter) CollectData(result *runnerpb.Once_RunResult) {
 	timeFormat := "2006-01-02 15:04:05.000000 UTC"
 	rp.rows = [][]string{}
 	for _, result := range result.Results {
@@ -283,7 +312,7 @@ func NewOperations() Operations {
 	}
 }
 
-func calculateReconcilerSummary(rsp *runnerpb.Once_Result) map[string]Operations {
+func calculateReconcilerSummary(rsp *runnerpb.Once_RunResult) map[string]Operations {
 	reconcilers := getReconcilers(rsp)
 	reconcilerOperations := make(map[string]Operations, len(reconcilers))
 	for _, result := range rsp.Results {
@@ -295,7 +324,7 @@ func calculateReconcilerSummary(rsp *runnerpb.Once_Result) map[string]Operations
 	return reconcilerOperations
 }
 
-func getReconcilers(rsp *runnerpb.Once_Result) []string {
+func getReconcilers(rsp *runnerpb.Once_RunResult) []string {
 	reconcilers := []string{}
 	for _, result := range rsp.Results {
 		reconcilers = append(reconcilers, result.ReconcilerName)
@@ -326,7 +355,7 @@ func (r ReconcilerResource) ResourceNameString() string {
 	return fmt.Sprintf("%s.%s.%s.%s", r.Group, r.Kind, r.Namespace, r.Name)
 }
 
-func calculateReconcilerResourceSummary(rsp *runnerpb.Once_Result) map[ReconcilerResource]Operations {
+func calculateReconcilerResourceSummary(rsp *runnerpb.Once_RunResult) map[ReconcilerResource]Operations {
 	//reconcilerResourceSet := getReconcilerResourceSet(rsp)
 	reconcilerOperations := make(map[ReconcilerResource]Operations, 0)
 	for _, result := range rsp.Results {
@@ -347,3 +376,33 @@ func interfaceSlice(slice []string) []interface{} {
 	}
 	return result
 }
+
+/*
+
+stream, err := client.Once(...)
+if err != nil {
+    // Handle error
+}
+for {
+    response, err := stream.Recv()
+    if err == io.EOF {
+        break // Stream is closed by the server
+    }
+    if err != nil {
+        // Handle error
+    }
+
+    switch response.Type {
+    case Once.MessageType.PROGRESS_UPDATE:
+        fmt.Println("Progress:", response.GetProgressUpdate().Message)
+    case Once.MessageType.ERROR:
+        fmt.Println("Error:", response.GetError().Message)
+    case Once.MessageType.RUN_RESPONSE:
+        handleRunResponse(response.GetRunResponse())
+    case Once.MessageType.SDC_RESPONSE:
+        fmt.Println("SDC Message:", response.GetSdcResponse().Message)
+    case Once.MessageType.COMPLETED:
+        fmt.Println("Completed:", response.GetCompleted().Message)
+    }
+}
+*/

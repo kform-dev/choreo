@@ -68,7 +68,7 @@ func (r *runnerclient) Start(ctx context.Context, in *runnerpb.Start_Request, op
 func (r *runnerclient) Stop(ctx context.Context, in *runnerpb.Stop_Request, opts ...grpc.CallOption) (*runnerpb.Stop_Response, error) {
 	return r.client.Stop(ctx, in, opts...)
 }
-func (r *runnerclient) Once(ctx context.Context, in *runnerpb.Once_Request, opts ...grpc.CallOption) (*runnerpb.Once_Response, error) {
+func (r *runnerclient) Once(ctx context.Context, in *runnerpb.Once_Request, opts ...grpc.CallOption) (runnerpb.Runner_OnceClient, error) {
 	return r.client.Once(ctx, in, opts...)
 }
 func (r *runnerclient) Load(ctx context.Context, in *runnerpb.Load_Request, opts ...grpc.CallOption) (*runnerpb.Load_Response, error) {

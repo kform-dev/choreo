@@ -24,6 +24,8 @@ import (
 	"github.com/kform-dev/choreo/pkg/proto/choreopb"
 	"github.com/kform-dev/choreo/pkg/repository"
 	"github.com/kform-dev/choreo/pkg/server/api"
+	"github.com/sdcio/config-diff/schemaloader"
+	schemastore "github.com/sdcio/schema-server/pkg/store"
 )
 
 type ChoreoInstance interface {
@@ -51,11 +53,14 @@ type ChoreoInstance interface {
 
 	InitAPIs()
 	GetAPIs() *api.APIStore
-	AddAPIS(*api.APIStore)
+	AddAPIs(*api.APIStore)
 	InitLibraries()
 	GetLibraries() []*choreov1alpha1.Library
 	AddLibraries(...*choreov1alpha1.Library)
 	InitReconcilers()
 	GetReconcilers() []*choreov1alpha1.Reconciler
 	AddReconcilers(...*choreov1alpha1.Reconciler)
+
+	SchemaStore() schemastore.Store
+	SchemaLoader() *schemaloader.SchemaLoader
 }
