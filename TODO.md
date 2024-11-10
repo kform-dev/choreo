@@ -1,14 +1,10 @@
 # TODO
 
-Priority
-- streaming once runner
-
 ## choreo
 
 - (P1) update choreo docs
 - (P0) streaming once runner
 - {P2} snapshots are stored in memory. Is this the right approach ?
-- (P1) snapshots add the detailed result.
 - (P2) garbage collector: do we ignore the version -> currently we do a special trick in kuid to change the ownereference to v1alpha1 in the backend apis( as, vlan, genid, etc)
 - (P2) fetch repo assumes main branch -> need to check the actual used branch
 

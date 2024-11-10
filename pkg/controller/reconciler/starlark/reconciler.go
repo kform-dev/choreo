@@ -216,7 +216,7 @@ func (r *reconciler) handleResult(ctx context.Context, oldu *unstructured.Unstru
 		// when we get not initialized we continue and requeue
 		// other errors are returned as fatal
 		if strings.Contains(err.Error(), "not initialized") {
-			log.Error("apply resources failed requeue", "reconciler", r.name, "err", err)
+			log.Info("apply resources failed requeue", "reconciler", r.name, "err", err)
 
 			return reconcile.Result{
 				Requeue:      true,
@@ -226,8 +226,8 @@ func (r *reconciler) handleResult(ctx context.Context, oldu *unstructured.Unstru
 		}
 		return reconcile.Result{}, fmt.Errorf("apply resources failed reconciler %s err: %v", r.name, err)
 	}
-	if uerr := r.updateForResourceStatus(ctx, newu, oldu, ""); uerr != nil {
-		return reconcile.Result{}, fmt.Errorf("starlark reconciler %s cannot update resource: err: %v", r.name, uerr)
+	if err := r.updateForResourceStatus(ctx, newu, oldu, ""); err != nil {
+		return reconcile.Result{}, err
 	}
 	return reconcile.Result{}, nil
 }
@@ -238,8 +238,10 @@ func (r *reconciler) updateForResourceStatus(ctx context.Context, newu, u *unstr
 	if newStatus, ok := newu.Object["status"]; ok {
 		u.Object["status"] = newStatus
 	}
-	if newSpec, ok := newu.Object["spec"]; ok {
-		u.Object["spec"] = newSpec
+	if r.specUpdate != nil && *r.specUpdate {
+		if newSpec, ok := newu.Object["spec"]; ok {
+			u.Object["spec"] = newSpec
+		}
 	}
 	object.PruneUnmanagedFields(u, r.name)
 	object.SetFinalizer(u, r.name)
@@ -252,7 +254,7 @@ func (r *reconciler) updateForResourceStatus(ctx context.Context, newu, u *unstr
 		FieldManager: r.name,
 		Branch:       r.branch,
 	}); err != nil {
-		return fmt.Errorf("starlark reconciler %s cannot set finalizer, err: %s", r.name, err.Error())
+		return fmt.Errorf("cannot apply resource, err: %s", err.Error())
 	}
 	return nil
 }

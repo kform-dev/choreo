@@ -255,7 +255,7 @@ func (r *RootChoreoInstance) PushBranch(branch string) (*choreopb.Push_Response,
 
 func (r *RootChoreoInstance) InitAPIs()              { r.apiStore = api.NewAPIStore() }
 func (r *RootChoreoInstance) GetAPIs() *api.APIStore { return r.apiStore }
-func (r *RootChoreoInstance) AddAPIS(apiStore *api.APIStore) {
+func (r *RootChoreoInstance) AddAPIs(apiStore *api.APIStore) {
 	if r.apiStore == nil {
 		r.apiStore = api.NewAPIStore()
 	}

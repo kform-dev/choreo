@@ -53,7 +53,7 @@ type ChoreoInstance interface {
 
 	InitAPIs()
 	GetAPIs() *api.APIStore
-	AddAPIS(*api.APIStore)
+	AddAPIs(*api.APIStore)
 	InitLibraries()
 	GetLibraries() []*choreov1alpha1.Library
 	AddLibraries(...*choreov1alpha1.Library)

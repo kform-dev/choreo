@@ -90,9 +90,9 @@ func Open2(ctx context.Context, path, url string) (*git.Repository, error) {
 }
 
 // Open open the git repo and either clones or fecthes the remote info
-func Open(ctx context.Context, path string, url, refName string) (*git.Repository, *object.Commit, error) {
+func Open(ctx context.Context, path string, url, refName string, progressFn func(string)) (*git.Repository, *object.Commit, error) {
 	log := log.FromContext(ctx)
-	log.Info("opening repo", "url", url, "ref", refName, "path", path)
+	log.Debug("opening repo", "url", url, "ref", refName, "path", path)
 	cleanup := ""
 	defer func() {
 		if cleanup != "" {
@@ -102,7 +102,10 @@ func Open(ctx context.Context, path string, url, refName string) (*git.Repositor
 
 	repo, err := git.PlainOpen(path)
 	if err == git.ErrRepositoryNotExists {
-		log.Info("Repository does not exist, cloning...", "url", url)
+		if progressFn != nil {
+			progressFn(fmt.Sprintf("cloning repo %s ref %s ....", url, refName))
+		}
+		log.Debug("Repository does not exist, cloning...", "url", url)
 		// Repository does not exist, perform a clone
 		repo, err = cloneAll(ctx, path, url)
 		if err != nil {
@@ -115,7 +118,10 @@ func Open(ctx context.Context, path string, url, refName string) (*git.Repositor
 	// if so return; if not fetch latest updates and check if commit exists.
 	commit, err := ResolveToCommit(repo, refName)
 	if err != nil {
-		log.Info("failed to resolve commit, fetching repo", "url", url, "ref", refName, "path", path)
+		if progressFn != nil {
+			progressFn(fmt.Sprintf("fetching repo %s ref %s ....", url, refName))
+		}
+		log.Debug("failed to resolve commit, fetching repo", "url", url, "ref", refName, "path", path)
 		// Commit is not present, fetch it
 		if err := fetchAll(ctx, repo); err != nil {
 			return nil, nil, err
@@ -131,7 +137,9 @@ func Open(ctx context.Context, path string, url, refName string) (*git.Repositor
 	if err := resetToRemoteHead(ctx, repo, MainBranch.BranchInRemote()); err != nil {
 		return nil, nil, err
 	}
-	log.Info("repo opened", "url", url, "ref", refName, "path", path)
+	if progressFn != nil {
+		progressFn(fmt.Sprintf("opened repo %s ref %s ....", url, refName))
+	}
 	// Commit is already present
 	return repo, commit, nil
 }
@@ -174,7 +182,7 @@ func fetchAll(ctx context.Context, repo *git.Repository) error {
 	err := repo.Fetch(fetchOptions)
 	if err != nil {
 		if err == git.NoErrAlreadyUpToDate {
-			log.Info("Repository already up-to-date")
+			log.Debug("Repository already up-to-date")
 			return nil
 		}
 		log.Error("Failed to fetch updates", "error", err)
@@ -312,7 +320,7 @@ func doGitWithAuth(ctx context.Context, op func(transport.AuthMethod) error) err
 		if !errors.Is(err, transport.ErrAuthenticationRequired) {
 			return err
 		}
-		log.Info("Authentication failed. Trying to refresh credentials")
+		log.Debug("Authentication failed. Trying to refresh credentials")
 		// TODO: Consider having some kind of backoff here.
 		auth, err := getAuthMethod(ctx, true)
 		if err != nil {

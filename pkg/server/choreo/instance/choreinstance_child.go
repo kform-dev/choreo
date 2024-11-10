@@ -156,7 +156,7 @@ func (r *ChildChoreoInstance) IsRootInstance() bool {
 
 func (r *ChildChoreoInstance) InitAPIs()              { r.apiStore = api.NewAPIStore() }
 func (r *ChildChoreoInstance) GetAPIs() *api.APIStore { return r.apiStore }
-func (r *ChildChoreoInstance) AddAPIS(apiStore *api.APIStore) {
+func (r *ChildChoreoInstance) AddAPIs(apiStore *api.APIStore) {
 	if r.apiStore == nil {
 		r.apiStore = api.NewAPIStore()
 	}

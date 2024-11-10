@@ -48,7 +48,6 @@ func NewReconcilerFn(client resourceclient.Client, reconcileConfig *choreov1alph
 		if err != nil {
 			return nil, err
 		}
-
 		r.parser = p
 		return r, nil
 	}
@@ -113,7 +112,7 @@ func (r *reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		return reconcile.Result{}, fmt.Errorf("jinja2 template %s parser failed err: %s", r.name, err.Error())
 	}
 
-	fmt.Println("config", buf.String())
+	//fmt.Println("config", buf.String())
 
 	data := map[string]any{}
 	if err := yaml.Unmarshal(buf.Bytes(), &data); err != nil {
@@ -128,7 +127,7 @@ func (r *reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		return reconcile.Result{}, fmt.Errorf("apply failed for jinja2 template %s, err: %s", r.name, err.Error())
 	}
 
-	fmt.Println("config", newu)
+	//fmt.Println("config", newu)
 
 	// removes the fields that are not managed by this reconciler based on the managedFields info in the resource
 	// done before conditions are set

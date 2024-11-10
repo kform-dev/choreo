@@ -46,7 +46,7 @@ type UpstreamLoader struct {
 	RepoPath   string
 	PathInRepo string
 	TempDir    string
-	CallbackFn UpstreamCallBackFn
+	ProgressFn func(string)
 }
 
 type UpstreamCallBackFn func(ctx context.Context, parentName string, repo repository.Repository, upstreamRef *choreov1alpha1.UpstreamRef, cfg *genericclioptions.ChoreoConfig, commit *object.Commit, annotationVal string) error
@@ -95,7 +95,7 @@ func (r *UpstreamLoader) Load(ctx context.Context) error {
 		refName := upstreamRef.GetPlumbingReference()
 		url := upstreamRef.Spec.URL
 
-		repo, commit, err := repogit.NewUpstreamRepo(ctx, childRepoPath, url, refName)
+		repo, commit, err := repogit.NewUpstreamRepo(ctx, childRepoPath, url, refName, r.ProgressFn)
 		if err != nil {
 			errs = errors.Join(errs, fmt.Errorf("cannot open repo %s, err: %v", url, err))
 			return

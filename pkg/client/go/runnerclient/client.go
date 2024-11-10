@@ -29,7 +29,7 @@ import (
 type Client interface {
 	Start(ctx context.Context, opts ...StartOption) error
 	Stop(ctx context.Context, opts ...StopOption) error
-	Once(ctx context.Context, opts ...OnceOption) (*runnerpb.Once_Response, error)
+	Once(ctx context.Context, opts ...OnceOption) (runnerpb.Runner_OnceClient, error)
 	Load(ctx context.Context, opts ...LoadOption) error
 	Close() error
 }
@@ -94,20 +94,16 @@ func (r *client) Stop(ctx context.Context, opts ...StopOption) error {
 	}
 	return nil
 }
-func (r *client) Once(ctx context.Context, opts ...OnceOption) (*runnerpb.Once_Response, error) {
+func (r *client) Once(ctx context.Context, opts ...OnceOption) (runnerpb.Runner_OnceClient, error) {
 	o := OnceOptions{}
 	o.ApplyOptions(opts)
 
-	rsp, err := r.client.Once(ctx, &runnerpb.Once_Request{
+	return r.client.Once(ctx, &runnerpb.Once_Request{
 		Options: &runnerpb.Once_Options{
 			ProxyName:      o.Proxy.Name,
 			ProxyNamespace: o.Proxy.Namespace,
 		},
 	})
-	if err != nil {
-		return nil, err
-	}
-	return rsp, nil
 }
 func (r *client) Load(ctx context.Context, opts ...LoadOption) error {
 	o := LoadOptions{}

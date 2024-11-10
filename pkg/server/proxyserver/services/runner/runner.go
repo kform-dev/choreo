@@ -19,11 +19,15 @@ package runner
 import (
 	"context"
 	"fmt"
+	"io"
 
+	"github.com/henderiw/logger/log"
 	"github.com/henderiw/store"
+	"github.com/kform-dev/choreo/pkg/client/go/runnerclient"
 	"github.com/kform-dev/choreo/pkg/proto/runnerpb"
 	"github.com/kform-dev/choreo/pkg/server/proxyserver/choreoctx"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/peer"
 	"google.golang.org/grpc/status"
 	"k8s.io/apimachinery/pkg/types"
 )
@@ -66,17 +70,61 @@ func (r *proxy) Stop(ctx context.Context, req *runnerpb.Stop_Request) (*runnerpb
 	return choreoCtx.RunnerClient.Stop(ctx, req)
 }
 
-func (r *proxy) Once(ctx context.Context, req *runnerpb.Once_Request) (*runnerpb.Once_Response, error) {
-	choreoCtx, err := r.getChoreoCtx(types.NamespacedName{Namespace: req.Options.ProxyNamespace, Name: req.Options.ProxyName})
-	if err != nil {
-		return &runnerpb.Once_Response{}, err
-	}
-	return choreoCtx.RunnerClient.Once(ctx, req)
-}
 func (r *proxy) Load(ctx context.Context, req *runnerpb.Load_Request) (*runnerpb.Load_Response, error) {
 	choreoCtx, err := r.getChoreoCtx(types.NamespacedName{Namespace: req.Options.ProxyNamespace, Name: req.Options.ProxyName})
 	if err != nil {
 		return &runnerpb.Load_Response{}, err
 	}
 	return choreoCtx.RunnerClient.Load(ctx, req)
+}
+
+func (r *proxy) Once(req *runnerpb.Once_Request, stream runnerpb.Runner_OnceServer) error {
+	ctx := stream.Context()
+	log := log.FromContext(ctx)
+
+	choreoCtx, err := r.getChoreoCtx(types.NamespacedName{Namespace: req.Options.ProxyNamespace, Name: req.Options.ProxyName})
+	if err != nil {
+		return err
+	}
+	ctx, cancel := context.WithCancel(stream.Context())
+	defer cancel()
+
+	go r.once(ctx, choreoCtx.RunnerClient, req, stream)
+	<-ctx.Done()
+	log.Debug("watch stopped, program cancelled")
+	return nil
+
+}
+
+func (r *proxy) once(ctx context.Context, client runnerclient.RunnerClient, req *runnerpb.Once_Request, clientStream runnerpb.Runner_OnceServer) {
+	log := log.FromContext(ctx)
+	// start watching
+	stream, err := client.Once(ctx, req)
+	if err != nil {
+		log.Error(err.Error())
+	}
+
+	for {
+		select {
+		case <-ctx.Done():
+			log.Info("stream files stopped", "client", "proxy")
+			return
+		default:
+			rsp, err := stream.Recv()
+			if err == io.EOF {
+				break // Stream is closed by the server
+			}
+			if err != nil {
+				log.Error(err.Error())
+			}
+			if err := clientStream.Send(rsp); err != nil {
+				p, _ := peer.FromContext(clientStream.Context())
+				addr := "unknown"
+				if p != nil {
+					addr = p.Addr.String()
+				}
+				log.Error("proxy send stream failed", "client", addr)
+			}
+		}
+	}
 }

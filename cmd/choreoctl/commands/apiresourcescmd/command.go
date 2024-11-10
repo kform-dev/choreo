@@ -106,21 +106,21 @@ func (r *APIResourcesOptions) Run(ctx context.Context) error {
 	}
 	w := r.Streams.Out
 
-	var errm error
+	var errs error
 	for _, apiResource := range apiresources {
 		switch r.Output {
 		case "name":
 			// used for autocompletion
 			name := fmt.Sprintf("%s.%s", apiResource.Resource, apiResource.Group)
 			if _, err := fmt.Fprintf(w, "%s\n", name); err != nil {
-				errm = errors.Join(errm, err)
+				errs = errors.Join(errs, err)
 			}
 		default:
 			if _, err := fmt.Fprintf(w, "%v\n", apiResource); err != nil {
-				errm = errors.Join(errm, err)
+				errs = errors.Join(errs, err)
 			}
 		}
 	}
 
-	return errm
+	return errs
 }

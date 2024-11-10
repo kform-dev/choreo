@@ -18,6 +18,7 @@ package choreo
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 
@@ -32,13 +33,14 @@ import (
 	"github.com/sdcio/data-server/pkg/tree"
 	treejson "github.com/sdcio/data-server/pkg/tree/importer/json"
 	sdcpb "github.com/sdcio/sdc-protos/sdcpb"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/utils/ptr"
 )
 
 type NodeConfig struct {
-	Provider      string
-	PlatformType  string
-	Version       string
+	Node          *Node
 	RunningConfig any                          // json struct
 	Configs       []*unstructured.Unstructured // json struct
 }
@@ -76,8 +78,8 @@ func (r *ConfigValidator) runConfigValidation(ctx context.Context, bctx *BranchC
 			continue
 		}
 		scb := schemaclient.NewMemSchemaClientBound(schemastore, &sdcpb.Schema{
-			Vendor:  nodeInfo.Provider,
-			Version: nodeInfo.Version,
+			Vendor:  nodeInfo.Node.GetProvider(),
+			Version: nodeInfo.Node.GetVersion(),
 		})
 
 		tc := tree.NewTreeContext(tree.NewTreeSchemaCacheClient(node, nil, scb), "test")
@@ -97,28 +99,64 @@ func (r *ConfigValidator) runConfigValidation(ctx context.Context, bctx *BranchC
 		}
 		root.FinishInsertionPhase()
 
+		if err := r.applyRunningConfig(ctx, bctx, nodeInfo.Node, nodeInfo.RunningConfig, ""); err != nil {
+			errs = errors.Join(errs, err)
+			continue
+		}
+
+		j1, err := root.ToJson(false)
+		if err != nil {
+			errs = errors.Join(errs, err)
+			continue
+		}
+
+		if err := r.applyRunningConfig(ctx, bctx, nodeInfo.Node, j1, "tree"); err != nil {
+			errs = errors.Join(errs, err)
+			continue
+		}
+
 		// Load configs
 		for _, u := range nodeInfo.Configs {
-			fmt.Println("loading config", node, u.GetName())
 			config := &Config{Unstructured: u}
 			for _, val := range config.GetConfigs() {
 				jti = treejson.NewJsonTreeImporter(val)
 				err = root.ImportConfig(ctx, jti, u.GetName(), 20)
 				if err != nil {
-					return err
+					errs = errors.Join(errs, err)
+					continue
 				}
 				root.FinishInsertionPhase()
 			}
 		}
-		/*
-			title := "CONFIG"
 
-			fmt.Printf("\n%s IN %q FORMAT:\n\n", title, strings.ToUpper("json"))
-			j, err := root.ToJson(false)
+		j2, err := root.ToJson(false)
+		if err != nil {
+			return err
+		}
+		if err := r.applyConfig(ctx, bctx, nodeInfo.Node, j2); err != nil {
+			errs = errors.Join(errs, err)
+			continue
+		}
+		/*
+			oldb, err := yaml.Marshal(j1)
 			if err != nil {
 				return err
 			}
+			newb, err := yaml.Marshal(j2)
+			if err != nil {
+				return err
+			}
+			fmt.Println("######### old config #########")
+			fmt.Println(string(oldb))
+			fmt.Println("##############################")
+			fmt.Println("######### new config #########")
+			fmt.Println(string(newb))
+			fmt.Println("##############################")
+
+			diff := cmp.Diff(j1, j2)
+			fmt.Println(diff)
 		*/
+
 		/*
 			newConfigbyteDoc, err := json.MarshalIndent(j, "", " ")
 			if err != nil {
@@ -189,6 +227,103 @@ func (r *ConfigValidator) runConfigValidation(ctx context.Context, bctx *BranchC
 	return errs
 }
 
+func (r *ConfigValidator) applyRunningConfig(ctx context.Context, bctx *BranchCtx, node *Node, data any, suffix string) error {
+	b, err := json.Marshal(data)
+	if err != nil {
+		return err
+	}
+
+	name := node.GetName()
+	if suffix != "" {
+		name = fmt.Sprintf("%s.%s", name, suffix)
+	}
+
+	runningConfig := configv1alpha1.BuildRunningConfig(
+		metav1.ObjectMeta{
+			Name:      name,
+			Namespace: node.GetNamespace(),
+			OwnerReferences: []metav1.OwnerReference{
+				{
+					APIVersion: node.GetAPIVersion(),
+					Kind:       node.GetKind(),
+					Name:       node.GetName(),
+					UID:        node.GetUID(),
+					Controller: ptr.To(true),
+				},
+			},
+		},
+		configv1alpha1.RunningConfigSpec{},
+		configv1alpha1.RunningConfigStatus{Value: runtime.RawExtension{Raw: b}},
+	)
+
+	b, err = json.Marshal(runningConfig)
+	if err != nil {
+		return err
+	}
+	obj := map[string]any{}
+	if err := json.Unmarshal(b, &obj); err != nil {
+		return err
+	}
+
+	return r.choreo.GetClient().Apply(ctx, &unstructured.Unstructured{Object: obj}, &resourceclient.ApplyOptions{
+		FieldManager: loader.ManagedFieldManagerInput,
+		Branch:       bctx.Branch,
+	})
+}
+
+func (r *ConfigValidator) applyConfig(ctx context.Context, bctx *BranchCtx, node *Node, data any) error {
+	b, err := json.Marshal(data)
+	if err != nil {
+		return err
+	}
+
+	config := configv1alpha1.BuildConfig(
+		metav1.ObjectMeta{
+			Name:      node.GetName(),
+			Namespace: node.GetNamespace(),
+			Labels: map[string]string{
+				config.TargetNameKey:      node.GetName(),
+				config.TargetNamespaceKey: node.GetNamespace(),
+			},
+			OwnerReferences: []metav1.OwnerReference{
+				{
+					APIVersion: node.GetAPIVersion(),
+					Kind:       node.GetKind(),
+					Name:       node.GetName(),
+					UID:        node.GetUID(),
+					Controller: ptr.To(true),
+				},
+			},
+		},
+		configv1alpha1.ConfigSpec{
+			Priority: 10,
+			Config: []configv1alpha1.ConfigBlob{
+				{
+					Path: "/",
+					Value: runtime.RawExtension{
+						Raw: b,
+					},
+				},
+			},
+		},
+		configv1alpha1.ConfigStatus{},
+	)
+
+	b, err = json.Marshal(config)
+	if err != nil {
+		return err
+	}
+	obj := map[string]any{}
+	if err := json.Unmarshal(b, &obj); err != nil {
+		return err
+	}
+
+	return r.choreo.GetClient().Apply(ctx, &unstructured.Unstructured{Object: obj}, &resourceclient.ApplyOptions{
+		FieldManager: loader.ManagedFieldManagerInput,
+		Branch:       bctx.Branch,
+	})
+}
+
 func (r *ConfigValidator) gatherNodeInfo(ctx context.Context, bctx *BranchCtx) error {
 	ul := &unstructured.UnstructuredList{}
 	ul.SetAPIVersion(infrav1alpha1.SchemeGroupVersion.Identifier())
@@ -201,12 +336,11 @@ func (r *ConfigValidator) gatherNodeInfo(ctx context.Context, bctx *BranchCtx) e
 	}
 
 	for _, u := range ul.Items {
-		node := &Node{Unstructured: &u}
 		r.nodeConfigs[u.GetName()] = &NodeConfig{
-			Provider:     node.GetProvider(),
-			PlatformType: node.GetPlatformType(),
-			Version:      node.GetVersion(),
+			Node:    &Node{Unstructured: &u},
+			Configs: []*unstructured.Unstructured{},
 		}
+
 	}
 	return nil
 }
@@ -257,6 +391,10 @@ func (r *ConfigValidator) gatherConfigs(ctx context.Context, bctx *BranchCtx) er
 		nodeConfig, ok := r.nodeConfigs[nodeName]
 		if !ok {
 			log.Info("got config w/o a matching node %s", "name", u.GetName(), "nodeName", nodeName)
+			continue
+		}
+		// dont add the final configs to the tree since the config was derived from the config snippets
+		if nodeName == u.GetName() {
 			continue
 		}
 		if nodeConfig.Configs == nil {

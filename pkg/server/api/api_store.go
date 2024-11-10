@@ -135,9 +135,13 @@ func (r *APIStore) GetExternalGVKSet() sets.Set[schema.GroupVersionKind] {
 }
 
 func (r *APIStore) Import(other *APIStore) {
+	apis := map[store.Key]*ResourceContext{}
 	other.Storer.List(func(k store.Key, rc *ResourceContext) {
-		r.Storer.Apply(k, rc)
+		apis[k] = rc
 	})
+	for k, rc := range apis {
+		r.Storer.Apply(k, rc)
+	}
 }
 
 func (r *APIStore) Watch(ctx context.Context, opts ...store.ListOption) (watch.WatchInterface[*ResourceContext], error) {

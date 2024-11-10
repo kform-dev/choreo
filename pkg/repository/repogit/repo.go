@@ -62,8 +62,8 @@ func NewUpstreamRepo2(ctx context.Context, repopath, url string) (repository.Rep
 	}, nil
 }
 
-func NewUpstreamRepo(ctx context.Context, repopath, url, commitHash string) (repository.Repository, *object.Commit, error) {
-	gitrepo, commit, err := lgit.Open(ctx, repopath, url, commitHash)
+func NewUpstreamRepo(ctx context.Context, repopath, url, commitHash string, progressFn func(string)) (repository.Repository, *object.Commit, error) {
+	gitrepo, commit, err := lgit.Open(ctx, repopath, url, commitHash, progressFn)
 	if err != nil {
 		return nil, nil, err
 	}

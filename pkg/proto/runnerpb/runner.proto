@@ -25,7 +25,7 @@ import "google/protobuf/timestamp.proto";
 service Runner {
     rpc Start (Start.Request) returns (Start.Response) {}
     rpc Stop (Stop.Request) returns (Stop.Response) {}
-    rpc Once (Once.Request) returns (Once.Response) {}
+    rpc Once (Once.Request) returns (stream Once.Response) {}
     rpc Load (Load.Request) returns (Load.Response) {}
   }
 
@@ -73,17 +73,47 @@ message Once {
     }
 
     message Response {
-        bool success = 1;
-        repeated Result results = 2;
+        MessageType Type = 1;
+        oneof data {
+            ProgressUpdate progressUpdate = 2;
+            Error error = 3;
+            RunResponse runResponse = 4;
+            SDCResponse sdcResponse = 5;
+        }
     }
 
-    message Result {
+    enum MessageType {
+        PROGRESS_UPDATE = 0;
+        ERROR = 2;
+        RUN_RESPONSE = 3;
+        SDC_RESPONSE = 4;
+        COMPLETED = 5;
+    }
+
+    message ProgressUpdate {
+        string message = 1;
+    }
+
+    message Error {
+        string message = 1;
+    }
+
+    message RunResponse {
+        bool success = 1;
+        repeated RunResult results = 2;
+    }
+
+    message RunResult {
         string reconcilerRunner = 1;
         bool success = 2;
         string taskId = 3; // reconcilername + group + kind + namespace + name when failed
         string message = 4;
         string executionTime = 5;
         repeated ReconcileResult results = 6;
+    }
+
+    message SDCResponse {
+        string message = 1;
     }
 }
 

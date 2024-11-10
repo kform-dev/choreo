@@ -66,7 +66,6 @@ func (r *SchemaLoader) Load(ctx context.Context) error {
 			errs = errors.Join(errs, fmt.Errorf("invalid schema %s, err: %v", k.Name, err))
 			return
 		}
-		fmt.Println("schemaloader schema", schema.Name)
 
 		// upload the schema to the schemastore
 		_, err = r.Parent.SchemaStore().GetSchemaDetails(ctx, &sdcpb.GetSchemaDetailsRequest{
