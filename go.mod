@@ -34,13 +34,13 @@ require (
 	google.golang.org/protobuf v1.35.1
 	k8s.io/api v0.31.1
 	k8s.io/apiextensions-apiserver v0.31.1
-	k8s.io/apimachinery v0.32.0-alpha.1
+	k8s.io/apimachinery v0.32.0-beta.0
 	k8s.io/apiserver v0.31.1
 	k8s.io/client-go v0.31.1
 	k8s.io/kube-openapi v0.0.0-20240903163716-9e1beecbcb38
-	k8s.io/utils v0.0.0-20240902221715-702e33fdd3c3
+	k8s.io/utils v0.0.0-20241104100929-3ea5e8cea738
 	sigs.k8s.io/kustomize/kyaml v0.18.1
-	sigs.k8s.io/structured-merge-diff/v4 v4.4.1
+	sigs.k8s.io/structured-merge-diff/v4 v4.4.2
 	sigs.k8s.io/yaml v1.4.0
 )
 
