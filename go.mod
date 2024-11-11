@@ -32,11 +32,11 @@ require (
 	golang.org/x/text v0.19.0
 	google.golang.org/grpc v1.67.1
 	google.golang.org/protobuf v1.35.1
-	k8s.io/api v0.31.1
+	k8s.io/api v0.31.2
 	k8s.io/apiextensions-apiserver v0.31.1
 	k8s.io/apimachinery v0.32.0-alpha.1
-	k8s.io/apiserver v0.31.1
-	k8s.io/client-go v0.31.1
+	k8s.io/apiserver v0.31.2
+	k8s.io/client-go v0.31.2
 	k8s.io/kube-openapi v0.0.0-20240903163716-9e1beecbcb38
 	k8s.io/utils v0.0.0-20240902221715-702e33fdd3c3
 	sigs.k8s.io/kustomize/kyaml v0.18.1
@@ -176,7 +176,7 @@ require (
 	gopkg.in/warnings.v0 v0.1.2 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
-	k8s.io/component-base v0.31.1 // indirect
+	k8s.io/component-base v0.31.2 // indirect
 	k8s.io/klog/v2 v2.130.1 // indirect
 	k8s.io/kms v0.32.0-alpha.2 // indirect
 	oras.land/oras-go/v2 v2.5.0 // indirect
