@@ -77,14 +77,14 @@ func NewRootChoreoInstance(ctx context.Context, config *Config) (ChoreoInstance,
 	if config.Cfg.ServerFlags.SDC != nil && *config.Cfg.ServerFlags.SDC {
 		var err error
 
-		r.schemastore, err = persiststore.New(ctx, filepath.Join(r.pathInRepo, ".choreo/schemastore"), &schemaconfig.SchemaPersistStoreCacheConfig{})
+		r.schemastore, err = persiststore.New(ctx, filepath.Join(r.tempPath, "schemastore"), &schemaconfig.SchemaPersistStoreCacheConfig{})
 		if err != nil {
 			return nil, err
 		}
 
 		r.schemaloader, err = schemaloader.New(r.schemastore, &schemaloader.Config{
-			TmpPath:     filepath.Join(r.pathInRepo, ".choreo/tmp"),
-			SchemasPath: filepath.Join(r.pathInRepo, ".choreo/schemas"),
+			TmpPath:     filepath.Join(r.tempPath, "tmp"),
+			SchemasPath: filepath.Join(r.tempPath, "schemas"),
 		})
 		if err != nil {
 			return nil, err

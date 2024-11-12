@@ -17,7 +17,6 @@ limitations under the License.
 package choreo
 
 import (
-	"fmt"
 	"sync"
 
 	"github.com/kform-dev/choreo/pkg/proto/choreopb"
@@ -75,7 +74,6 @@ func Initializing() ChoreoStatus {
 }
 
 func Success(ci instance.ChoreoInstance, choreoCtx *choreopb.ChoreoContext) ChoreoStatus {
-	fmt.Println("success", choreoCtx)
 	return ChoreoStatus{
 		Status:             true,
 		Reason:             "",

@@ -3,13 +3,10 @@
 ## choreo
 
 - (P1) update choreo docs
-- (P0) streaming once runner
 - {P2} snapshots are stored in memory. Is this the right approach ?
 - (P2) garbage collector: do we ignore the version -> currently we do a special trick in kuid to change the ownereference to v1alpha1 in the backend apis( as, vlan, genid, etc)
 - (P2) fetch repo assumes main branch -> need to check the actual used branch
-
-- (P2) do we need to add reconcilers, libraries to the api or not ?
-    - right now we dont
+- (P2) do we need to add reconcilers, libraries to the api or not ? -> right now we don't
 - (P2) how to handle secrets? Vault ?
 - (P2) k8s API versus grpc API ??
 - (P2) project scaffold
@@ -17,8 +14,8 @@
 - OK config-diff integration
 
 ## kubenet
-- (P1,5) fix genid
-- (P1) addtional logic and config generation
+- (P1) fix genid
+- (P1) addtional config templates
 
 ## choreo controller
 
