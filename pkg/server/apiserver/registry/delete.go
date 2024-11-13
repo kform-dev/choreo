@@ -49,7 +49,7 @@ func (r *storage) Delete(ctx context.Context, name string, opts ...rest.DeleteOp
 	}
 
 	u := &unstructured.Unstructured{Object: old.UnstructuredContent()}
-	log.Info("delete choreoapiserver", "apiVersion", u.GetAPIVersion(), "kind", u.GetKind(), "name", u.GetName())
+	log.Debug("delete choreoapiserver", "apiVersion", u.GetAPIVersion(), "kind", u.GetKind(), "name", u.GetName())
 
 	oldObjectMeta, err := meta.Accessor(old)
 	if err != nil {

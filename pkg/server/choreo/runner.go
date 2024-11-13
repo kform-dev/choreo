@@ -266,6 +266,7 @@ func (r *run) once(ctx context.Context, bctx *BranchCtx) {
 
 // loads upstream refs, apis, reconcilers, data and garbage collect
 func (r *run) Load(ctx context.Context, branchCtx *BranchCtx) error {
+	log := log.FromContext(ctx)
 	// we only work with checkout branch
 	rootChoreoInstance := r.choreo.GetRootChoreoInstance()
 
@@ -284,7 +285,7 @@ func (r *run) Load(ctx context.Context, branchCtx *BranchCtx) error {
 	rootChoreoInstance.InitAPIs()
 	apis := rootChoreoInstance.GetAPIs()
 	if err := r.loadAPIs(ctx, branchCtx, rootChoreoInstance, apis); err != nil {
-		fmt.Println("apis", err)
+		log.Error("loading apis failed", "error", err)
 		return err
 	}
 
@@ -350,7 +351,7 @@ func (r *run) Load(ctx context.Context, branchCtx *BranchCtx) error {
 		u.SetName(ref.Name)
 		u.SetNamespace(ref.Namespace)
 
-		fmt.Println("delete garbage", u.GetAPIVersion(), u.GetKind(), u.GetName())
+		log.Info("delete garbage resource", "apiVersion", u.GetAPIVersion(), "kind", u.GetKind(), "name", u.GetName())
 
 		if err := r.choreo.GetClient().Delete(ctx, u, &resourceclient.DeleteOptions{
 			Branch: branchCtx.Branch,

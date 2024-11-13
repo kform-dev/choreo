@@ -155,8 +155,8 @@ func (r Inventory) getRoots() []*treeNode {
 func (r Inventory) CollectGarbage() sets.Set[corev1.ObjectReference] {
 	g := newGarbageCollector()
 	for _, node := range r {
-		if node.Resource == nil {
-			fmt.Println("CollectGarbage", node.Resource)
+		if node.Resource == nil || node.Resource.GetDeletionTimestamp() != nil {
+			//fmt.Println("CollectGarbage", node.Resource)
 			g.collect(node)
 		}
 	}
