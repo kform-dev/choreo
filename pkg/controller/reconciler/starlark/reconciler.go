@@ -70,8 +70,8 @@ func NewReconcilerFn(client resourceclient.Client, reconcileConfig *choreov1alph
 			"get_prefixlength":     starlark.NewBuiltin("get_prefixlength", getPrefixLength),
 			"get_subnetname":       starlark.NewBuiltin("get_subnetname", getSubnetName),
 			"get_address":          starlark.NewBuiltin("get_address", getAddress),
-			"isIPv4":               starlark.NewBuiltin("isIPv4", isIPv4),
-			"isIPv6":               starlark.NewBuiltin("isIPv6", isIPv6),
+			"is_ipv4":              starlark.NewBuiltin("is_ipv4", isIPv4),
+			"is_ipv6":              starlark.NewBuiltin("is_ipv6", isIPv6),
 			"is_conditionready":    starlark.NewBuiltin("is_condition_ready", isConditionReady),
 		}
 
