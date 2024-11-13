@@ -25,6 +25,7 @@ import (
 
 	"github.com/henderiw/logger/log"
 	"github.com/kform-dev/choreo/pkg/client/go/config"
+	"github.com/kform-dev/choreo/pkg/proto/runnerpb"
 	"github.com/kform-dev/choreo/pkg/proto/snapshotpb"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -40,6 +41,7 @@ type Client interface {
 	Delete(ctx context.Context, u runtime.Unstructured, opts ...DeleteOption) error
 	List(ctx context.Context, u runtime.Unstructured, opts ...ListOption) error
 	Diff(ctx context.Context, opts ...DiffOption) ([]byte, error)
+	Result(ctx context.Context, opts ...ResultOption) (*runnerpb.Once_RunResponse, error)
 	Watch(ctx context.Context, u runtime.Unstructured, opts ...ListOption) chan *snapshotpb.Watch_Response
 	Close() error
 }
@@ -156,6 +158,23 @@ func (r *client) Diff(ctx context.Context, opts ...DiffOption) ([]byte, error) {
 	}
 	//b = rsp.Object
 	return rsp.Object, nil
+}
+
+func (r *client) Result(ctx context.Context, opts ...ResultOption) (*runnerpb.Once_RunResponse, error) {
+	o := ResultOptions{}
+	o.ApplyOptions(opts)
+
+	rsp, err := r.client.Result(ctx, &snapshotpb.Result_Request{
+		Options: &snapshotpb.Result_Options{
+			ProxyName:      o.Proxy.Name,
+			ProxyNamespace: o.Proxy.Namespace,
+		},
+	})
+	if err != nil {
+		return nil, err
+	}
+	//b = rsp.Object
+	return rsp.RunResponse, nil
 }
 
 func (r *client) Watch(ctx context.Context, u runtime.Unstructured, opts ...ListOption) chan *snapshotpb.Watch_Response {
@@ -395,6 +414,29 @@ func (o *DiffOptions) ApplyToDiff(lo *DiffOptions) {
 // ApplyOptions applies the given get options on these options,
 // and then returns itself (for convenient chaining).
 func (o *DiffOptions) ApplyOptions(opts []DiffOption) *DiffOptions {
+	for _, opt := range opts {
+		opt.ApplyToDiff(o)
+	}
+	return o
+}
+
+type ResultOption interface {
+	ApplyToDiff(*ResultOptions)
+}
+
+var _ ResultOption = &ResultOptions{}
+
+type ResultOptions struct {
+	Proxy types.NamespacedName
+}
+
+func (o *ResultOptions) ApplyToDiff(lo *ResultOptions) {
+	lo.Proxy = o.Proxy
+}
+
+// ApplyOptions applies the given get options on these options,
+// and then returns itself (for convenient chaining).
+func (o *ResultOptions) ApplyOptions(opts []ResultOption) *ResultOptions {
 	for _, opt := range opts {
 		opt.ApplyToDiff(o)
 	}

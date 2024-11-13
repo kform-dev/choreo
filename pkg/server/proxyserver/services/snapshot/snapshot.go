@@ -82,4 +82,12 @@ func (r *proxy) Diff(ctx context.Context, req *snapshotpb.Diff_Request) (*snapsh
 	return choreoCtx.SnapshotClient.Diff(ctx, req)
 }
 
+func (r *proxy) Result(ctx context.Context, req *snapshotpb.Result_Request) (*snapshotpb.Result_Response, error) {
+	choreoCtx, err := r.getChoreoCtx(types.NamespacedName{Namespace: req.Options.ProxyNamespace, Name: req.Options.ProxyName})
+	if err != nil {
+		return &snapshotpb.Result_Response{}, err
+	}
+	return choreoCtx.SnapshotClient.Result(ctx, req)
+}
+
 // TODO implement watch

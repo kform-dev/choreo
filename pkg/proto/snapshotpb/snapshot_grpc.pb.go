@@ -26,6 +26,7 @@ type SnapshotClient interface {
 	List(ctx context.Context, in *List_Request, opts ...grpc.CallOption) (*List_Response, error)
 	Delete(ctx context.Context, in *Delete_Request, opts ...grpc.CallOption) (*Delete_Response, error)
 	Diff(ctx context.Context, in *Diff_Request, opts ...grpc.CallOption) (*Diff_Response, error)
+	Result(ctx context.Context, in *Result_Request, opts ...grpc.CallOption) (*Result_Response, error)
 	Watch(ctx context.Context, in *Watch_Request, opts ...grpc.CallOption) (Snapshot_WatchClient, error)
 }
 
@@ -73,6 +74,15 @@ func (c *snapshotClient) Diff(ctx context.Context, in *Diff_Request, opts ...grp
 	return out, nil
 }
 
+func (c *snapshotClient) Result(ctx context.Context, in *Result_Request, opts ...grpc.CallOption) (*Result_Response, error) {
+	out := new(Result_Response)
+	err := c.cc.Invoke(ctx, "/snapshotpb.Snapshot/Result", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *snapshotClient) Watch(ctx context.Context, in *Watch_Request, opts ...grpc.CallOption) (Snapshot_WatchClient, error) {
 	stream, err := c.cc.NewStream(ctx, &Snapshot_ServiceDesc.Streams[0], "/snapshotpb.Snapshot/Watch", opts...)
 	if err != nil {
@@ -113,6 +123,7 @@ type SnapshotServer interface {
 	List(context.Context, *List_Request) (*List_Response, error)
 	Delete(context.Context, *Delete_Request) (*Delete_Response, error)
 	Diff(context.Context, *Diff_Request) (*Diff_Response, error)
+	Result(context.Context, *Result_Request) (*Result_Response, error)
 	Watch(*Watch_Request, Snapshot_WatchServer) error
 	mustEmbedUnimplementedSnapshotServer()
 }
@@ -132,6 +143,9 @@ func (UnimplementedSnapshotServer) Delete(context.Context, *Delete_Request) (*De
 }
 func (UnimplementedSnapshotServer) Diff(context.Context, *Diff_Request) (*Diff_Response, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Diff not implemented")
+}
+func (UnimplementedSnapshotServer) Result(context.Context, *Result_Request) (*Result_Response, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Result not implemented")
 }
 func (UnimplementedSnapshotServer) Watch(*Watch_Request, Snapshot_WatchServer) error {
 	return status.Errorf(codes.Unimplemented, "method Watch not implemented")
@@ -221,6 +235,24 @@ func _Snapshot_Diff_Handler(srv interface{}, ctx context.Context, dec func(inter
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Snapshot_Result_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(Result_Request)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SnapshotServer).Result(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/snapshotpb.Snapshot/Result",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SnapshotServer).Result(ctx, req.(*Result_Request))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _Snapshot_Watch_Handler(srv interface{}, stream grpc.ServerStream) error {
 	m := new(Watch_Request)
 	if err := stream.RecvMsg(m); err != nil {
@@ -264,6 +296,10 @@ var Snapshot_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "Diff",
 			Handler:    _Snapshot_Diff_Handler,
+		},
+		{
+			MethodName: "Result",
+			Handler:    _Snapshot_Result_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{

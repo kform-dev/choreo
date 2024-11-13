@@ -24,6 +24,7 @@ import (
 	"github.com/kform-dev/choreo/cmd/choreoctl/commands/runcmd/loadcmd"
 	"github.com/kform-dev/choreo/cmd/choreoctl/commands/runcmd/oncecmd"
 	"github.com/kform-dev/choreo/cmd/choreoctl/commands/runcmd/pushcmd"
+	"github.com/kform-dev/choreo/cmd/choreoctl/commands/runcmd/resultcmd"
 	"github.com/kform-dev/choreo/cmd/choreoctl/commands/runcmd/startcmd"
 	"github.com/kform-dev/choreo/cmd/choreoctl/commands/runcmd/stopcmd"
 	"github.com/kform-dev/choreo/pkg/cli/genericclioptions"
@@ -53,6 +54,7 @@ func NewCmdRun(f util.Factory, streams *genericclioptions.IOStreams) *cobra.Comm
 		commitcmd.NewCmdCommit(f, streams),
 		depscmd.NewCmdDeps(f, streams),
 		diffcmd.NewCmdDiff(f, streams),
+		resultcmd.NewCmdResult(f, streams),
 		listcmd.NewCmdList(f, streams),
 		loadcmd.NewCmdLoad(f, streams),
 		oncecmd.NewCmdOnce(f, streams),

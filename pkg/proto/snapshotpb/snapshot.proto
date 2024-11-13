@@ -17,6 +17,7 @@ limitations under the License.
 syntax = "proto3";
 
 package snapshotpb;
+import "runner.proto";
 option go_package = "github.com/kform-dev/choreo/pkg/proto/snapshotpb";
 
 
@@ -25,6 +26,7 @@ service Snapshot {
     rpc List (List.Request) returns (List.Response) {}
     rpc Delete (Delete.Request) returns (Delete.Response) {}
     rpc Diff (Diff.Request) returns (Diff.Response) {}
+    rpc Result (Result.Request) returns (Result.Response) {}
     rpc Watch (Watch.Request) returns (stream Watch.Response) {}
     
   }
@@ -89,6 +91,21 @@ message Diff {
         string proxyNamespace = 2;
         bool showManagedField = 3;
         bool showChoreoAPIs = 4;
+    }
+}
+
+message Result {
+    message Request {
+        Options options = 1;
+    }
+
+    message Response {
+        runnerpb.Once.RunResponse runResponse = 4;
+    }
+
+    message Options {
+        string proxyName = 1;
+        string proxyNamespace = 2;
     }
 }
 
