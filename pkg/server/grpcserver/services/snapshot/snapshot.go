@@ -50,6 +50,10 @@ func (r *srv) Diff(ctx context.Context, req *snapshotpb.Diff_Request) (*snapshot
 	return r.choreo.SnapshotManager().Diff(req)
 }
 
+func (r *srv) Result(ctx context.Context, req *snapshotpb.Result_Request) (*snapshotpb.Result_Response, error) {
+	return r.choreo.SnapshotManager().Result(req)
+}
+
 /*
 func (r *srv) Watch(req *snapshotpb.Watch_Request, stream snapshotpb.Snapshot_WatchServer) error {
 	ctx := stream.Context()

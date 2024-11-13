@@ -14,6 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-//go:generate protoc -I . ./snapshot.proto --go_out=./ --go_opt=paths=source_relative --go-grpc_out=. --go-grpc_opt=paths=source_relative
+//go:generate protoc --proto_path=../runnerpb -I . snapshot.proto --go_out=./ --go_opt=paths=source_relative --go-grpc_out=. --go-grpc_opt=paths=source_relative
 
 package snapshotpb

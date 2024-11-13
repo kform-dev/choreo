@@ -238,3 +238,14 @@ func (r *SnapshotManager) Diff(req *snapshotpb.Diff_Request) (*snapshotpb.Diff_R
 		Object: b,
 	}, nil
 }
+
+func (r *SnapshotManager) Result(_ *snapshotpb.Result_Request) (*snapshotpb.Result_Response, error) {
+	latestSnapshot, found := r.getLatest()
+	if !found {
+		return &snapshotpb.Result_Response{}, status.Errorf(codes.NotFound, "latest snapshot not available")
+	}
+
+	return &snapshotpb.Result_Response{
+		RunResponse: latestSnapshot.snapshot.RunResponse.RunResponse,
+	}, nil
+}

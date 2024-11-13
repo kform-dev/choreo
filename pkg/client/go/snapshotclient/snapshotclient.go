@@ -36,6 +36,7 @@ type SnapshotClient interface {
 	List(ctx context.Context, in *snapshotpb.List_Request, opts ...grpc.CallOption) (*snapshotpb.List_Response, error)
 	Delete(ctx context.Context, in *snapshotpb.Delete_Request, opts ...grpc.CallOption) (*snapshotpb.Delete_Response, error)
 	Diff(ctx context.Context, in *snapshotpb.Diff_Request, opts ...grpc.CallOption) (*snapshotpb.Diff_Response, error)
+	Result(ctx context.Context, in *snapshotpb.Result_Request, opts ...grpc.CallOption) (*snapshotpb.Result_Response, error)
 	Watch(ctx context.Context, in *snapshotpb.Watch_Request, opts ...grpc.CallOption) chan *snapshotpb.Watch_Response
 	Close() error
 }
@@ -84,6 +85,10 @@ func (r *snapshotclient) Delete(ctx context.Context, in *snapshotpb.Delete_Reque
 
 func (r *snapshotclient) Diff(ctx context.Context, in *snapshotpb.Diff_Request, opts ...grpc.CallOption) (*snapshotpb.Diff_Response, error) {
 	return r.client.Diff(ctx, in, opts...)
+}
+
+func (r *snapshotclient) Result(ctx context.Context, in *snapshotpb.Result_Request, opts ...grpc.CallOption) (*snapshotpb.Result_Response, error) {
+	return r.client.Result(ctx, in, opts...)
 }
 
 func (r *snapshotclient) Watch(ctx context.Context, in *snapshotpb.Watch_Request, opts ...grpc.CallOption) chan *snapshotpb.Watch_Response {
