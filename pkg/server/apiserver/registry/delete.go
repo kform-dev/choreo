@@ -97,6 +97,10 @@ func (r *storage) Delete(ctx context.Context, name string, opts ...rest.DeleteOp
 		return old, nil
 	}
 
+	if len(o.DryRun) > 0 {
+		return old, nil
+	}
+
 	if err := r.storage.Delete(store.ToKey(name)); err != nil {
 		return nil, status.Errorf(codes.Internal, "cannot delete object err: %s", err.Error())
 	}
