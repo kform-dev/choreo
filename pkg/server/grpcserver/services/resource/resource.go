@@ -23,6 +23,7 @@ import (
 
 	"github.com/go-git/go-git/v5/plumbing/object"
 	"github.com/henderiw/logger/log"
+	"github.com/kform-dev/choreo/pkg/proto/grpcerrors"
 	"github.com/kform-dev/choreo/pkg/proto/resourcepb"
 	"github.com/kform-dev/choreo/pkg/server/api"
 	"github.com/kform-dev/choreo/pkg/server/apiserver/rest"
@@ -320,7 +321,9 @@ func (r *srv) Delete(ctx context.Context, req *resourcepb.Delete_Request) (*reso
 		Trace:  req.Options.Trace,
 		Origin: req.Options.Origin,
 	}); err != nil {
-		return &resourcepb.Delete_Response{}, err
+		if !grpcerrors.IsNotFound(err) {
+			return &resourcepb.Delete_Response{}, err
+		}
 	}
 
 	if req.Options.Origin == "choreoctl" {

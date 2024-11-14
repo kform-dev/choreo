@@ -121,6 +121,10 @@ func (r *storage) update(ctx context.Context, new, old runtime.Unstructured, o *
 		UpdateGeneration(newObjectMeta, object.GetGeneration(old))
 	}
 
+	if len(o.DryRun) > 0 {
+		return new, nil
+	}
+
 	if err = r.storage.Update(store.ToKey(newObjectMeta.GetName()), new); err != nil {
 		return nil, status.Errorf(codes.Internal, "cannot update object in store, err: %s", err.Error())
 	}
