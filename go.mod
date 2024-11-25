@@ -32,11 +32,11 @@ require (
 	golang.org/x/text v0.19.0
 	google.golang.org/grpc v1.67.1
 	google.golang.org/protobuf v1.35.1
-	k8s.io/api v0.31.1
+	k8s.io/api v0.31.3
 	k8s.io/apiextensions-apiserver v0.31.1
 	k8s.io/apimachinery v0.32.0-alpha.1
 	k8s.io/apiserver v0.31.1
-	k8s.io/client-go v0.31.1
+	k8s.io/client-go v0.31.3
 	k8s.io/kube-openapi v0.0.0-20240903163716-9e1beecbcb38
 	k8s.io/utils v0.0.0-20240902221715-702e33fdd3c3
 	sigs.k8s.io/kustomize/kyaml v0.18.1
