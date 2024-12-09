@@ -9,7 +9,7 @@ require (
 	github.com/flosch/pongo2/v6 v6.0.0
 	github.com/gdamore/tcell/v2 v2.7.4
 	github.com/go-git/go-git/v5 v5.12.0
-	github.com/google/cel-go v0.21.0
+	github.com/google/cel-go v0.22.1
 	github.com/google/go-cmp v0.6.0
 	github.com/google/uuid v1.6.0
 	github.com/henderiw/iputil v0.0.0-20231218081610-37f78ad9c81c
@@ -45,6 +45,7 @@ require (
 )
 
 require (
+	cel.dev/expr v0.18.0 // indirect
 	dario.cat/mergo v1.0.0 // indirect
 	github.com/Microsoft/go-winio v0.6.2 // indirect
 	github.com/NYTimes/gziphandler v1.1.1 // indirect
