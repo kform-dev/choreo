@@ -56,10 +56,7 @@ func (inv Inventory) Diff(invBefore Inventory, diff *choreov1alpha1.Diff, opts *
 				Namespace: ref.Namespace,
 			}
 
-			fmt.Println("running config check")
-
 			if rctreeNode := inv.GetResource(ref.APIVersion, config.RunningConfigKind, ref.Name, ref.Namespace); rctreeNode != nil {
-				fmt.Println("running config exists")
 				copiedBeforeObj := rctreeNode.Resource.DeepCopy()
 				copiedAfterObj := treeNode.Resource.DeepCopy()
 
