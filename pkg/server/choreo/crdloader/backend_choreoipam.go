@@ -34,15 +34,18 @@ import (
 )
 
 func NewChoreoIPAMBackendstorage(
+	indexKind string,
 	entryStorage, claimStorage rest.Storage,
 ) ipambe.BackendStorage {
 	return &kuidbe{
+		indexKind:    indexKind,
 		entryStorage: entryStorage,
 		claimStorage: claimStorage,
 	}
 }
 
 type kuidbe struct {
+	indexKind    string
 	entryStorage rest.Storage
 	claimStorage rest.Storage
 }
@@ -136,7 +139,7 @@ func (r *kuidbe) ListClaims(ctx context.Context, k store.Key, opts ...ipambe.Lis
 		"spec.index": k.Name,
 	}
 	if o.OwnerKind != "" {
-		match["metadata.ownerReferences.exists(ref, ref.kind == 'IPIndexKind')"] = "true"
+		match[fmt.Sprintf("metadata.ownerReferences.exists(ref, ref.kind == %q)", r.indexKind)] = "true"
 	}
 	selector, err := selector.ExprSelectorAsSelector(
 		&selectorv1alpha1.ExpressionSelector{

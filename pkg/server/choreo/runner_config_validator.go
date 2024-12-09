@@ -85,7 +85,7 @@ func (r *ConfigValidator) runConfigValidation(ctx context.Context, bctx *BranchC
 		tc := tree.NewTreeContext(tree.NewTreeSchemaCacheClient(node, nil, scb), "test")
 		root, err := tree.NewTreeRoot(ctx, tc)
 		if err != nil {
-			errs = errors.Join(errs, err)
+			errs = errors.Join(errs, fmt.Errorf("new root tree err: %v", err))
 			continue
 		}
 		//
@@ -94,24 +94,24 @@ func (r *ConfigValidator) runConfigValidation(ctx context.Context, bctx *BranchC
 		jti := treejson.NewJsonTreeImporter(nodeInfo.RunningConfig)
 		err = root.ImportConfig(ctx, jti, tree.RunningIntentName, tree.RunningValuesPrio)
 		if err != nil {
-			errs = errors.Join(errs, err)
+			errs = errors.Join(errs, fmt.Errorf("import config err: %v", err))
 			continue
 		}
 		root.FinishInsertionPhase()
 
 		if err := r.applyRunningConfig(ctx, bctx, nodeInfo.Node, nodeInfo.RunningConfig, ""); err != nil {
-			errs = errors.Join(errs, err)
+			errs = errors.Join(errs, fmt.Errorf("apply running config err: %v", err))
 			continue
 		}
 
-		j1, err := root.ToJson(false)
+		j1, err := root.ToJson(false, true)
 		if err != nil {
 			errs = errors.Join(errs, err)
 			continue
 		}
 
 		if err := r.applyRunningConfig(ctx, bctx, nodeInfo.Node, j1, "tree"); err != nil {
-			errs = errors.Join(errs, err)
+			errs = errors.Join(errs, fmt.Errorf("j1 apply running config err: %v", err))
 			continue
 		}
 
@@ -122,19 +122,19 @@ func (r *ConfigValidator) runConfigValidation(ctx context.Context, bctx *BranchC
 				jti = treejson.NewJsonTreeImporter(val)
 				err = root.ImportConfig(ctx, jti, u.GetName(), 20)
 				if err != nil {
-					errs = errors.Join(errs, err)
+					errs = errors.Join(errs, fmt.Errorf("apply node config %serr: %v", u.GetName(), err))
 					continue
 				}
 				root.FinishInsertionPhase()
 			}
 		}
 
-		j2, err := root.ToJson(false)
+		j2, err := root.ToJson(false, true)
 		if err != nil {
 			return err
 		}
 		if err := r.applyConfig(ctx, bctx, nodeInfo.Node, j2); err != nil {
-			errs = errors.Join(errs, err)
+			errs = errors.Join(errs, fmt.Errorf("j2 apply node config err: %v", err))
 			continue
 		}
 		/*
@@ -282,8 +282,9 @@ func (r *ConfigValidator) applyConfig(ctx context.Context, bctx *BranchCtx, node
 			Name:      node.GetName(),
 			Namespace: node.GetNamespace(),
 			Labels: map[string]string{
-				config.TargetNameKey:      node.GetName(),
-				config.TargetNamespaceKey: node.GetNamespace(),
+				config.TargetNameKey:           node.GetName(),
+				config.TargetNamespaceKey:      node.GetNamespace(),
+				"config.sdcio.dev/finalconfig": "true",
 			},
 			OwnerReferences: []metav1.OwnerReference{
 				{

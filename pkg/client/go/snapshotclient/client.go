@@ -151,6 +151,7 @@ func (r *client) Diff(ctx context.Context, opts ...DiffOption) ([]byte, error) {
 			ProxyNamespace:   o.Proxy.Namespace,
 			ShowManagedField: o.ShowManagedFields,
 			ShowChoreoAPIs:   o.ShowChoreoAPIs,
+			ShowFinalConfig:  o.ShowFinalConfig,
 		},
 	})
 	if err != nil {
@@ -403,12 +404,14 @@ type DiffOptions struct {
 	Proxy             types.NamespacedName
 	ShowManagedFields bool
 	ShowChoreoAPIs    bool
+	ShowFinalConfig   bool
 }
 
 func (o *DiffOptions) ApplyToDiff(lo *DiffOptions) {
 	lo.Proxy = o.Proxy
 	lo.ShowManagedFields = o.ShowManagedFields
 	lo.ShowChoreoAPIs = o.ShowChoreoAPIs
+	lo.ShowFinalConfig = o.ShowFinalConfig
 }
 
 // ApplyOptions applies the given get options on these options,

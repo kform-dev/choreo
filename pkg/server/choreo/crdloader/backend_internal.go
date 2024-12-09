@@ -120,9 +120,9 @@ func AddStorage(backends map[string]*BackendConfig, apiStore *api.APIStore) erro
 		}
 
 		if group == ipam.GroupName {
-			backendConfig.Backend.AddStorageInterfaces(NewChoreoIPAMBackendstorage(entryStorage, claimStorage))
+			backendConfig.Backend.AddStorageInterfaces(NewChoreoIPAMBackendstorage(backendConfig.IndexKind, entryStorage, claimStorage))
 		} else {
-			backendConfig.Backend.AddStorageInterfaces(NewChoreoGenericBackendstorage(entryStorage, claimStorage, backendConfig.EntryObjectFn, backendConfig.ClaimObjectFn))
+			backendConfig.Backend.AddStorageInterfaces(NewChoreoGenericBackendstorage(backendConfig.IndexKind, entryStorage, claimStorage, backendConfig.EntryObjectFn, backendConfig.ClaimObjectFn))
 		}
 	}
 	return errm

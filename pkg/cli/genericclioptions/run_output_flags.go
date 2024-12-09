@@ -24,6 +24,7 @@ import (
 const (
 	FlagShowChoreoAPIs  = "show-choreo-apis"
 	FlagShowDiffDetails = "show-diff-details"
+	FlagShowFinalConfig = "show-final-config"
 )
 
 // ResourceFlags are flags for generic resources.
@@ -31,6 +32,7 @@ type RunOutputFlags struct {
 	ShowChoreoAPIs    *bool
 	ShowManagedFields *bool
 	ShowDiffDetails   *bool
+	ShowFinalConfig   *bool
 }
 
 func NewRunOutputFlags() *RunOutputFlags {
@@ -38,6 +40,7 @@ func NewRunOutputFlags() *RunOutputFlags {
 		ShowChoreoAPIs:    ptr.To(false),
 		ShowManagedFields: ptr.To(false),
 		ShowDiffDetails:   ptr.To(false),
+		ShowFinalConfig:   ptr.To(false),
 	}
 }
 
@@ -58,5 +61,9 @@ func (r *RunOutputFlags) AddFlags(flags *pflag.FlagSet) {
 	if r.ShowDiffDetails != nil {
 		flags.BoolVarP(r.ShowDiffDetails, FlagShowDiffDetails, "a", *r.ShowDiffDetails,
 			"if true, show the detailed diff when the resources between the snapshots are different")
+	}
+	if r.ShowFinalConfig != nil {
+		flags.BoolVarP(r.ShowFinalConfig, FlagShowFinalConfig, "c", *r.ShowFinalConfig,
+			"if true, show the diff only for the final config resource")
 	}
 }

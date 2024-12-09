@@ -81,6 +81,7 @@ func (r *DiffFlags) ToOptions(cmd *cobra.Command, f util.Factory, streams *gener
 		ShowChoreoAPIs:    *r.RunOuput.ShowChoreoAPIs,
 		ShowManagedFields: *r.RunOuput.ShowManagedFields,
 		ShowDiffDetails:   *r.RunOuput.ShowDiffDetails,
+		ShowFinalConfig:   *r.RunOuput.ShowFinalConfig,
 	}
 	return options, nil
 }
@@ -91,6 +92,7 @@ type DiffOptions struct {
 	ShowChoreoAPIs    bool
 	ShowManagedFields bool
 	ShowDiffDetails   bool
+	ShowFinalConfig   bool
 }
 
 func (r *DiffOptions) Validate(args []string) error {
@@ -105,6 +107,7 @@ func (r *DiffOptions) Run(ctx context.Context, args []string) error {
 		Proxy:             r.Factory.GetProxy(),
 		ShowManagedFields: r.ShowManagedFields,
 		ShowChoreoAPIs:    r.ShowChoreoAPIs,
+		ShowFinalConfig:   r.ShowFinalConfig,
 	})
 	if err != nil {
 		return err

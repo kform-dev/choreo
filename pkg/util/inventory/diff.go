@@ -29,6 +29,11 @@ import (
 	"sigs.k8s.io/yaml"
 )
 
+func diffconfig(beforeByte, afterByte any) (string, error) {
+	diff := cmp.Diff(beforeByte, afterByte)
+	return diff, nil
+}
+
 func diff2(beforeu, afteru *unstructured.Unstructured) (string, error) {
 	//var reporter DiffReporter
 	//cmp.Equal(beforeu.Object, afteru.Object, cmp.Reporter(&reporter))

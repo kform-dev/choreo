@@ -152,6 +152,19 @@ func (r Inventory) getRoots() []*treeNode {
 	return roots
 }
 
+func (r Inventory) GetResource(apiVersion, kind, name, namespace string) *treeNode {
+	for ref, node := range r {
+		if ref.APIVersion == apiVersion &&
+			ref.Kind == kind &&
+			ref.Name == name &&
+			ref.Namespace == namespace {
+			return node
+		}
+	}
+
+	return nil
+}
+
 func (r Inventory) CollectGarbage() sets.Set[corev1.ObjectReference] {
 	g := newGarbageCollector()
 	for _, node := range r {

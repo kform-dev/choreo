@@ -91,6 +91,7 @@ message Diff {
         string proxyNamespace = 2;
         bool showManagedField = 3;
         bool showChoreoAPIs = 4;
+        bool showFinalConfig = 5;
     }
 }
 

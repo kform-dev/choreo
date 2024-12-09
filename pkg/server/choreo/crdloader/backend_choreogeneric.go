@@ -32,11 +32,13 @@ import (
 )
 
 func NewChoreoGenericBackendstorage(
+	indexKind string,
 	entryStorage, claimStorage rest.Storage,
 	entryObjectFn func(runtime.Unstructured) (backend.EntryObject, error),
 	claimObjectFn func(runtime.Unstructured) (backend.ClaimObject, error),
 ) genericbe.BackendStorage {
 	return &kuidgenericbe{
+		indexKind:     indexKind,
 		entryStorage:  entryStorage,
 		claimStorage:  claimStorage,
 		claimObjectFn: claimObjectFn,
@@ -45,6 +47,7 @@ func NewChoreoGenericBackendstorage(
 }
 
 type kuidgenericbe struct {
+	indexKind     string
 	entryStorage  rest.Storage
 	claimStorage  rest.Storage
 	entryObjectFn func(runtime.Unstructured) (backend.EntryObject, error)
@@ -106,7 +109,10 @@ func (r *kuidgenericbe) applyEntry(ctx context.Context, obj backend.EntryObject)
 		Object: newuobj,
 	}
 	newu.SetAPIVersion(obj.GetChoreoAPIVersion())
-	if _, err := r.entryStorage.Apply(ctx, newu, &rest.ApplyOptions{FieldManager: "backend"}); err != nil {
+	if _, err := r.entryStorage.Apply(ctx, newu, &rest.ApplyOptions{
+		FieldManager: "backend",
+		DryRun:       []string{"recursion"},
+	}); err != nil {
 		log.Error("cannot apply entry", "error", err)
 		return err
 	}
@@ -115,19 +121,32 @@ func (r *kuidgenericbe) applyEntry(ctx context.Context, obj backend.EntryObject)
 
 func (r *kuidgenericbe) DeleteEntry(ctx context.Context, obj backend.EntryObject) error {
 	log := log.FromContext(ctx)
-	if _, err := r.entryStorage.Delete(ctx, obj.GetName(), &rest.DeleteOptions{}); err != nil {
+	if _, err := r.entryStorage.Delete(ctx, obj.GetName(), &rest.DeleteOptions{
+		DryRun: []string{"recursion"},
+	}); err != nil {
 		log.Error("cannot delete entry", "error", err)
 		return err
 	}
 	return nil
 }
 
-func (r *kuidgenericbe) ListClaims(ctx context.Context, k store.Key) (map[string]backend.ClaimObject, error) {
+func (r *kuidgenericbe) ListClaims(ctx context.Context, k store.Key, opts ...genericbe.ListOption) (map[string]backend.ClaimObject, error) {
+	o := &genericbe.ListOptions{}
+	o.ApplyOptions(opts)
+
+	log := log.FromContext(ctx).With("implementation", "choreo generic backend")
+	log.Debug("listClaims")
+
+	match := map[string]string{
+		"spec.index": k.Name,
+	}
+	if o.OwnerKind != "" {
+		match[fmt.Sprintf("metadata.ownerReferences.exists(ref, ref.kind == %q)", r.indexKind)] = "true"
+	}
+
 	selector, err := selector.ExprSelectorAsSelector(
 		&selectorv1alpha1.ExpressionSelector{
-			Match: map[string]string{
-				"spec.index": k.Name,
-			},
+			Match: match,
 		},
 	)
 	if err != nil {
@@ -158,4 +177,44 @@ func (r *kuidgenericbe) ListClaims(ctx context.Context, k store.Key) (map[string
 		})
 	}
 	return claimMap, nil
+}
+
+func (r *kuidgenericbe) CreateClaim(ctx context.Context, obj backend.ClaimObject) error {
+	return r.applyClaim(ctx, obj)
+}
+
+func (r *kuidgenericbe) UpdateClaim(ctx context.Context, obj, old backend.ClaimObject) error {
+	return r.applyClaim(ctx, obj)
+}
+
+func (r *kuidgenericbe) applyClaim(ctx context.Context, obj backend.ClaimObject) error {
+	log := log.FromContext(ctx)
+	newuobj, err := runtime.DefaultUnstructuredConverter.ToUnstructured(obj)
+	if err != nil {
+		return err
+	}
+	newu := &unstructured.Unstructured{
+		Object: newuobj,
+	}
+	newu.SetAPIVersion(obj.GetChoreoAPIVersion())
+	log.Debug("choreo apply claim", "obj", newu.Object)
+	if _, err := r.claimStorage.Apply(ctx, newu, &rest.ApplyOptions{
+		FieldManager: "backend",
+		DryRun:       []string{"recursion"},
+	}); err != nil {
+		log.Error("choreo apply claim", "error", err)
+		return err
+	}
+	return nil
+}
+
+func (r *kuidgenericbe) DeleteClaim(ctx context.Context, obj backend.ClaimObject) error {
+	log := log.FromContext(ctx)
+	if _, err := r.claimStorage.Delete(ctx, obj.GetName(), &rest.DeleteOptions{
+		DryRun: []string{"recursion"},
+	}); err != nil {
+		log.Error("cannot delete entry", "error", err)
+		return err
+	}
+	return nil
 }

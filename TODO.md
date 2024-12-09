@@ -2,7 +2,6 @@
 
 ## choreo
 
-- (P1) update choreo docs
 - {P2} snapshots are stored in memory. Is this the right approach ?
 - (P2) garbage collector: do we ignore the version -> currently we do a special trick in kuid to change the ownereference to v1alpha1 in the backend apis( as, vlan, genid, etc)
 - (P2) fetch repo assumes main branch -> need to check the actual used branch
@@ -11,10 +10,11 @@
 - (P2) k8s API versus grpc API ??
 - (P2) project scaffold
 - (P2) pydantic api definition
-- OK config-diff integration
+- float versus int64
+- data export/import
+- overall processors -> apply replacement alike
 
 ## kubenet
-- (P1) fix genid
 - (P1) addtional config templates
 
 ## choreo controller
@@ -24,9 +24,9 @@
 
 ## kuid
 
-- (P2) rework the generic backend in the same way as IPAM -> allows for real claims
 - (P2) proto generation
-- (P2) reconcilers (non IPAM)
+- (P2) per component enablement
+- (P2) POSTGRES DB
 
 ## main
 
