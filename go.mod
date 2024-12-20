@@ -2,8 +2,6 @@ module github.com/kform-dev/choreo
 
 go 1.23.3
 
-//replace github.com/sdcio/cache => /Users/henderiw/code/sdcio/cache
-
 require (
 	github.com/adrg/xdg v0.5.3
 	github.com/flosch/pongo2/v6 v6.0.0

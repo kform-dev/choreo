@@ -32,7 +32,7 @@ const (
 	ManagedFieldManagerInput = "inputfileloader"
 )
 
-func getCRDFromUnstructured(u *unstructured.Unstructured) (*apiextensionsv1.CustomResourceDefinition, error) {
+func GetCRDFromUnstructured(u *unstructured.Unstructured) (*apiextensionsv1.CustomResourceDefinition, error) {
 	b, err := yaml.Marshal(u.Object)
 	if err != nil {
 		return nil, err
@@ -53,7 +53,7 @@ type APIStoreLoader struct {
 }
 
 func (r *APIStoreLoader) Load(ctx context.Context, u *unstructured.Unstructured) error {
-	crd, err := getCRDFromUnstructured(u)
+	crd, err := GetCRDFromUnstructured(u)
 	if err != nil {
 		return err
 	}
