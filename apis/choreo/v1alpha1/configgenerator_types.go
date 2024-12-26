@@ -27,7 +27,7 @@ type ConfigGeneratorSpec struct {
 	// Resource defines the resource identifier on the basis of apiVersion (group/version) and kind
 	//ResourceGVK `json:",inline" protobuf:"bytes,1,opt,name=resource"`
 	// ProviderSelector defines how to select the provider
-	ProviderSelector ConfigGeneratorProviderSelector `json:"providerSelector" protobuf:"bytes,2,opt,name=providerSelector"`
+	ProviderSelector ConfigGeneratorProviderSelector `json:"providerSelector" protobuf:"bytes,1,opt,name=providerSelector"`
 	// Name of the basepath where the vendor translation logic is located
 	// Right now we assume a structure <basePath>/<providername as per selector>/<group_resource>
 	// This might be expanded in the future
@@ -53,9 +53,9 @@ type ConfigGeneratorProviderSelector struct {
 	// map is equivalent to an element of matchExpressions, whose expression field is "expression", the
 	// operator is "In", and the values array contains only "value". The requirements are ANDed.
 	// +optional
-	Match map[string]string `json:"match" protobuf:"bytes,1,rep,name=match"`
+	Match map[string]string `json:"match" protobuf:"bytes,2,rep,name=match"`
 	// FieldPath that provides the provider information
-	FieldPath string `json:"fieldPath" protobuf:"bytes,2,opt,name=fieldPath"`
+	FieldPath string `json:"fieldPath" protobuf:"bytes,3,opt,name=fieldPath"`
 }
 
 // ConfigGeneratorStatus defines the observed state of ConfigGenerator

@@ -49,10 +49,10 @@ func HasChoreoEmbeddedAPIAnnotation(a map[string]string) bool {
 }
 
 type LoaderAnnotation struct {
-	Kind      string `json:"kind"`
-	URL       string `json:"url,omitempty"`
-	Directory string `json:"directory,omitempty"`
-	Ref       string `json:"ref,omitempty"`
+	Kind      string `json:"kind" protobuf:"bytes,1,opt,name=kind"`
+	URL       string `json:"url,omitempty" protobuf:"bytes,2,opt,name=url"`
+	Directory string `json:"directory,omitempty" protobuf:"bytes,3,opt,name=directory"`
+	Ref       string `json:"ref,omitempty" protobuf:"bytes,4,opt,name=ref"`
 }
 
 func (r LoaderAnnotation) String() string {

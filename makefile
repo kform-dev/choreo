@@ -4,10 +4,10 @@
 
 VERSION ?= latest
 REGISTRY ?= europe-docker.pkg.dev/srlinux/eu.gcr.io
-PROJECT ?= choreoctl
+PROJECT ?= choreo
 IMG ?= $(REGISTRY)/${PROJECT}:$(VERSION)
 
-REPO = github.com/kform-dev/config-server
+REPO = github.com/kform-dev/choreo
 USERID := 10000
 
 
@@ -47,6 +47,12 @@ fmt: ## Run go fmt against code.
 vet: ## Run go vet against code.
 	go vet ./...
 
+.PHONY: genproto
+genproto:
+	go run ./tools/apiserver-runtime-gen \
+		-g go-to-protobuf \
+		--module $(REPO) \
+
 .PHONY:
 docker-build: ## Build docker image with the manager.
 	ssh-add ./keys/id_rsa 2>/dev/null; true
@@ -59,8 +65,6 @@ docker-push: docker-build ## Push docker image with the manager.
 .PHONY: all
 all: fmt vet manifests ## Build manager binary.
 	go build -ldflags "-X github.com/kform-dev/choreo/cmd/choreoctl/commands.version=${GIT_COMMIT}" -o $(LOCALBIN)/choreoctl -v cmd/choreoctl/main.go
-
-
 
 ##@ Build Dependencies
 

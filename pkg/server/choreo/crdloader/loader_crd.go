@@ -54,9 +54,8 @@ func LoadCRD(ctx context.Context, pathInRepo, dbpath string, crd *apiextensionsv
 		internal := true
 		//version := runtime.APIVersionInternal
 		version := v.Name
-		_, _, _, ok := parseKubeVersion(v.Name)
+		_, _, _, ok := parseKubeVersion(version)
 		if ok {
-
 			internal = false
 		}
 
