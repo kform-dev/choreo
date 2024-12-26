@@ -7,6 +7,7 @@ require (
 	github.com/flosch/pongo2/v6 v6.0.0
 	github.com/gdamore/tcell/v2 v2.7.4
 	github.com/go-git/go-git/v5 v5.12.0
+	github.com/gogo/protobuf v1.3.2
 	github.com/google/cel-go v0.22.1
 	github.com/google/go-cmp v0.6.0
 	github.com/google/uuid v1.6.0
@@ -31,11 +32,11 @@ require (
 	golang.org/x/text v0.21.0
 	google.golang.org/grpc v1.68.1
 	google.golang.org/protobuf v1.36.0
-	k8s.io/api v0.31.3
+	k8s.io/api v0.32.0
 	k8s.io/apiextensions-apiserver v0.31.3
-	k8s.io/apimachinery v0.31.3
+	k8s.io/apimachinery v0.32.0
 	k8s.io/apiserver v0.31.3
-	k8s.io/client-go v0.31.3
+	k8s.io/client-go v0.32.0
 	k8s.io/code-generator v0.31.3
 	k8s.io/kube-openapi v0.0.0-20241127205056-99599406b04f
 	k8s.io/utils v0.0.0-20241104163129-6fe5fd82f078
@@ -82,7 +83,6 @@ require (
 	github.com/go-openapi/jsonpointer v0.21.0 // indirect
 	github.com/go-openapi/jsonreference v0.21.0 // indirect
 	github.com/go-openapi/swag v0.23.0 // indirect
-	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	github.com/golang/protobuf v1.5.4 // indirect
 	github.com/google/flatbuffers v24.3.25+incompatible // indirect
@@ -96,7 +96,6 @@ require (
 	github.com/henderiw/apiserver-builder v0.0.4-0.20241027084658-10d7f9d97252 // indirect
 	github.com/henderiw/apiserver-store v0.0.3-0.20241125153507-9408ac40ee00 // indirect
 	github.com/henderiw/idxtable v0.0.0-20241126090137-4f6e57a5aec4 // indirect
-	github.com/imdario/mergo v0.3.16 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/jbenet/go-context v0.0.0-20150711004518-d14ea06fba99 // indirect
 	github.com/jellydator/ttlcache/v3 v3.3.0 // indirect
