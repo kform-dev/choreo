@@ -7,6 +7,7 @@ require (
 	github.com/flosch/pongo2/v6 v6.0.0
 	github.com/gdamore/tcell/v2 v2.7.4
 	github.com/go-git/go-git/v5 v5.12.0
+	github.com/gogo/protobuf v1.3.2
 	github.com/google/cel-go v0.22.1
 	github.com/google/go-cmp v0.6.0
 	github.com/google/uuid v1.6.0
@@ -40,7 +41,7 @@ require (
 	k8s.io/kube-openapi v0.0.0-20241127205056-99599406b04f
 	k8s.io/utils v0.0.0-20241104163129-6fe5fd82f078
 	sigs.k8s.io/kustomize/kyaml v0.18.1
-	sigs.k8s.io/structured-merge-diff/v4 v4.4.3
+	sigs.k8s.io/structured-merge-diff/v4 v4.6.0
 	sigs.k8s.io/yaml v1.4.0
 )
 
@@ -82,7 +83,6 @@ require (
 	github.com/go-openapi/jsonpointer v0.21.0 // indirect
 	github.com/go-openapi/jsonreference v0.21.0 // indirect
 	github.com/go-openapi/swag v0.23.0 // indirect
-	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	github.com/golang/protobuf v1.5.4 // indirect
 	github.com/google/flatbuffers v24.3.25+incompatible // indirect
