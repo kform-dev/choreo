@@ -76,7 +76,7 @@ func TestRender(t *testing.T) {
 
 			fmt.Println("input\n", u)
 
-			p, err := New(templateFiles)
+			p, err := New(templateFiles, "main.jinja2")
 			if err != nil {
 				t.Errorf("creating parser failed: %v", err)
 				return

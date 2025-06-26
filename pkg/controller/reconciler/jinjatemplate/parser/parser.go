@@ -42,12 +42,12 @@ func (r *Loader) Get(name string) (io.Reader, error) {
 
 }
 
-func New(templates map[string]string) (*Parser, error) {
+func New(templates map[string]string, mainName string) (*Parser, error) {
 	ts := pongo2.NewSet("choreo", &Loader{
 		templates: templates,
 	})
 
-	mainTemplate, err := ts.FromString(templates["main.jinja2"])
+	mainTemplate, err := ts.FromString(templates[mainName])
 	if err != nil {
 		return nil, err
 	}
