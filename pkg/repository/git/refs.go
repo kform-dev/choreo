@@ -17,13 +17,14 @@ limitations under the License.
 package git
 
 import (
+	"os"
+
 	"github.com/go-git/go-git/v5/plumbing"
 )
 
 const (
 	//DefaultMainReferenceName plumbing.ReferenceName = "refs/heads/main"
 	OriginName string     = "origin"
-	MainBranch BranchName = "main"
 
 	BranchPrefixInRemoteRepo = "refs/remotes/" + OriginName + "/"
 	BranchPrefixInLocalRepo  = "refs/heads/"
@@ -52,6 +53,8 @@ var (
 			config.RefSpec(tagsPrefixInLocalRepo + "*:" + tagsPrefixInRemoteRepo + "*"),
 		}
 	*/
+	
+	MainBranch BranchName = BranchName(os.Getenv("GIT_MAIN_BRANCH"))
 )
 
 // BranchName represents a relative branch name (i.e. 'main', 'drafts/bucket/v1')

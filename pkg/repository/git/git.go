@@ -28,6 +28,7 @@ import (
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/go-git/go-git/v5/plumbing/object"
 	"github.com/go-git/go-git/v5/plumbing/transport"
+	"github.com/go-git/go-git/v5/plumbing/transport/http"
 	"github.com/henderiw/logger/log"
 )
 
@@ -179,16 +180,19 @@ func fetchAll(ctx context.Context, repo *git.Repository) error {
 		},
 		Tags: git.AllTags,
 	}
-	err := repo.Fetch(fetchOptions)
-	if err != nil {
-		if err == git.NoErrAlreadyUpToDate {
-			log.Debug("Repository already up-to-date")
-			return nil
+	return doGitWithAuth(ctx, func(auth transport.AuthMethod) error {
+		fetchOptions.Auth = auth
+		err := repo.Fetch(fetchOptions)
+		if err != nil {
+			if err == git.NoErrAlreadyUpToDate {
+				log.Debug("Repository already up-to-date")
+				return nil
+			}
+			log.Error("Failed to fetch updates", "error", err)
+			return fmt.Errorf("failed to fetch updates: %v", err)
 		}
-		log.Error("Failed to fetch updates", "error", err)
-		return fmt.Errorf("failed to fetch updates: %v", err)
-	}
-	return nil
+		return nil
+	})
 }
 
 func resetToRemoteHead(ctx context.Context, repo *git.Repository, branch plumbing.ReferenceName) error {
@@ -334,6 +338,16 @@ func doGitWithAuth(ctx context.Context, op func(transport.AuthMethod) error) err
 // getAuthMethod fetches the credentials for authenticating to git. It caches the
 // credentials between calls and refresh credentials when the tokens have expired.
 func getAuthMethod(_ context.Context, _ bool) (transport.AuthMethod, error) {
+	username := os.Getenv("GIT_USERNAME")
+	password := os.Getenv("GIT_PASSWORD")
+
+	if username != "" && password != "" {
+		return &http.BasicAuth{
+			Username: username,
+			Password: password,
+		}, nil
+	}
+	
 	// If no secret is provided, we try without any auth.
 	return nil, nil
 }

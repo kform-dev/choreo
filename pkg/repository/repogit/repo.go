@@ -646,8 +646,8 @@ func (r *repo) PushBranch(branch string) error {
 			config.RefSpec("+" + lgit.BranchName(branch).BranchInRemote() + "*:" + lgit.BranchName(branch).BranchInLocal() + "*"),
 		},
 		Auth: &http.BasicAuth{
-			Username: "henderiw",
-			Password: "your-access-token",
+			Username: os.Getenv("GIT_USERNAME"),
+			Password: os.Getenv("GIT_PASSWORD"),
 		},
 	})
 }
